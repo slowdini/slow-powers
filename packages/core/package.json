@@ -2,7 +2,10 @@
   "name": "@slowdini/superpowers-core",
   "version": "5.1.0",
   "description": "Core skills library for superpowers",
-  "files": ["skills/", "assets/"],
+  "files": [
+    "skills/",
+    "assets/"
+  ],
   "exports": {
     "./skills/*": "./skills/*",
     "./assets/*": "./assets/*"

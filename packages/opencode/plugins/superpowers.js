@@ -5,11 +5,11 @@
  * Auto-registers skills directory via config hook (no symlinks needed).
  */
 
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
-import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -18,11 +18,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Works in both workspace (symlinked) and npm-installed contexts
 let superpowersSkillsDir;
 try {
-  const corePackageJson = require.resolve('@slowdini/superpowers-core/package.json');
-  superpowersSkillsDir = path.join(path.dirname(corePackageJson), 'skills');
+  const corePackageJson = require.resolve(
+    "@slowdini/superpowers-core/package.json",
+  );
+  superpowersSkillsDir = path.join(path.dirname(corePackageJson), "skills");
 } catch {
   // Fallback for development when core is not yet installed
-  superpowersSkillsDir = path.resolve(__dirname, '../../core/skills');
+  superpowersSkillsDir = path.resolve(__dirname, "../../core/skills");
 }
 
 // Simple frontmatter extraction (avoid dependency on skills-core for bootstrap)
@@ -34,11 +36,14 @@ const extractAndStripFrontmatter = (content) => {
   const body = match[2];
   const frontmatter = {};
 
-  for (const line of frontmatterStr.split('\n')) {
-    const colonIdx = line.indexOf(':');
+  for (const line of frontmatterStr.split("\n")) {
+    const colonIdx = line.indexOf(":");
     if (colonIdx > 0) {
       const key = line.slice(0, colonIdx).trim();
-      const value = line.slice(colonIdx + 1).trim().replace(/^["']|["']$/g, '');
+      const value = line
+        .slice(colonIdx + 1)
+        .trim()
+        .replace(/^["']|["']$/g, "");
       frontmatter[key] = value;
     }
   }
@@ -48,12 +53,12 @@ const extractAndStripFrontmatter = (content) => {
 
 // Normalize a path: trim whitespace, expand ~, resolve to absolute
 const normalizePath = (p, homeDir) => {
-  if (!p || typeof p !== 'string') return null;
+  if (!p || typeof p !== "string") return null;
   let normalized = p.trim();
   if (!normalized) return null;
-  if (normalized.startsWith('~/')) {
+  if (normalized.startsWith("~/")) {
     normalized = path.join(homeDir, normalized.slice(2));
-  } else if (normalized === '~') {
+  } else if (normalized === "~") {
     normalized = homeDir;
   }
   return path.resolve(normalized);
@@ -63,12 +68,15 @@ const normalizePath = (p, homeDir) => {
 // The SKILL.md file does not change during a session, so reading + parsing it
 // once eliminates redundant fs.existsSync + fs.readFileSync + regex work on
 // every agent step.  See #1202 for the full analysis.
-let _bootstrapCache = undefined; // undefined = not yet loaded, null = file missing
+let _bootstrapCache; // undefined = not yet loaded, null = file missing
 
-export const SuperpowersPlugin = async ({ client, directory }) => {
+export const SuperpowersPlugin = async ({
+  client: _client,
+  directory: _directory,
+}) => {
   const homeDir = os.homedir();
   const envConfigDir = normalizePath(process.env.OPENCODE_CONFIG_DIR, homeDir);
-  const configDir = envConfigDir || path.join(homeDir, '.config/opencode');
+  const _configDir = envConfigDir || path.join(homeDir, ".config/opencode");
 
   // Helper to generate bootstrap content (cached after first call)
   const getBootstrapContent = () => {
@@ -76,13 +84,17 @@ export const SuperpowersPlugin = async ({ client, directory }) => {
     if (_bootstrapCache !== undefined) return _bootstrapCache;
 
     // Try to load using-superpowers skill
-    const skillPath = path.join(superpowersSkillsDir, 'using-superpowers', 'SKILL.md');
+    const skillPath = path.join(
+      superpowersSkillsDir,
+      "using-superpowers",
+      "SKILL.md",
+    );
     if (!fs.existsSync(skillPath)) {
       _bootstrapCache = null;
       return null;
     }
 
-    const fullContent = fs.readFileSync(skillPath, 'utf8');
+    const fullContent = fs.readFileSync(skillPath, "utf8");
     const { content } = extractAndStripFrontmatter(fullContent);
 
     const toolMapping = `**Tool Mapping for OpenCode:**
@@ -129,19 +141,24 @@ ${toolMapping}
     // opencode's prompt.ts reloads messages from DB each step.  Fresh message
     // arrays may need injection again, so getBootstrapContent() must not do
     // repeated disk work.
-    'experimental.chat.messages.transform': async (_input, output) => {
+    "experimental.chat.messages.transform": async (_input, output) => {
       const bootstrap = getBootstrapContent();
       if (!bootstrap || !output.messages.length) return;
-      const firstUser = output.messages.find(m => m.info.role === 'user');
-      if (!firstUser || !firstUser.parts.length) return;
+      const firstUser = output.messages.find((m) => m.info.role === "user");
+      if (!firstUser?.parts.length) return;
 
       // Guard: skip if first user message already contains bootstrap.
       // This prevents double injection when OpenCode passes an already
       // transformed in-memory message array through the hook again.
-      if (firstUser.parts.some(p => p.type === 'text' && p.text.includes('EXTREMELY_IMPORTANT'))) return;
+      if (
+        firstUser.parts.some(
+          (p) => p.type === "text" && p.text.includes("EXTREMELY_IMPORTANT"),
+        )
+      )
+        return;
 
       const ref = firstUser.parts[0];
-      firstUser.parts.unshift({ ...ref, type: 'text', text: bootstrap });
-    }
+      firstUser.parts.unshift({ ...ref, type: "text", text: bootstrap });
+    },
   };
 };
