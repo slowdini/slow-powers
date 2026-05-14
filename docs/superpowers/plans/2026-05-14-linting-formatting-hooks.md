@@ -1,6 +1,6 @@
 # Linting, Formatting, and Git Hooks — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add Biome (JS/JSON), markdownlint (MD), and Husky + lint-staged (pre-commit hooks) to the Superpowers monorepo.
 

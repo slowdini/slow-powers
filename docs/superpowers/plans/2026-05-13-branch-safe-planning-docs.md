@@ -1,6 +1,6 @@
 # Branch-Safe Planning Doc Commits Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add branch-safety checks to the `brainstorming` and `writing-plans` skills so that planning documents (specs and implementation plans) are never committed directly to `main` or `master`.
 
@@ -255,10 +255,7 @@ Expected: The three commits are listed, confirming they exist only on the featur
 
 ## Execution Handoff
 
-**Plan complete and saved to `docs/superpowers/plans/2026-05-13-branch-safe-planning-docs.md`. Two execution options:**
+**Plan complete and saved to `docs/superpowers/plans/2026-05-13-branch-safe-planning-docs.md`.**
 
-**1. Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration
-
-**2. Inline Execution** — Execute tasks in this session using executing-plans, batch execution with checkpoints
-
-**Which approach?**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Fresh subagent per task + two-stage review

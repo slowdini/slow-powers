@@ -1,6 +1,6 @@
 # Monorepo Restructure Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Convert the flat superpowers repo into a Bun workspace monorepo with separate packages for core, claude, codex, cursor, opencode, and gemini.
 
@@ -947,10 +947,7 @@ All spec requirements are covered. No gaps.
 
 **Plan saved to `docs/superpowers/plans/2026-05-14-monorepo-restructure.md`.**
 
-Two execution options:
+Ready to execute with subagent-driven-development.
 
-**1. Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration.
-
-**2. Inline Execution** — Execute tasks in this session using executing-plans, batch execution with checkpoints.
-
-Which approach would you like?
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Fresh subagent per task + two-stage review
