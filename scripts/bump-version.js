@@ -15,15 +15,35 @@ const files = [
   "packages/opencode/package.json",
   "packages/gemini/package.json",
   "packages/claude/plugin.json",
-  "packages/claude/marketplace.json",
   "packages/codex/plugin.json",
-  "packages/cursor/plugin.json",
+  "packages/cursor/.cursor-plugin/plugin.json",
   "packages/gemini/extension.json",
+  "marketplace.json",
+  ".agents/plugins/marketplace.json",
 ];
 
 for (const file of files) {
   const content = JSON.parse(readFileSync(file, "utf8"));
-  content.version = version;
-  writeFileSync(file, `${JSON.stringify(content, null, 2)}\n`);
-  console.log(`Bumped ${file}`);
+  let updated = false;
+
+  if (content.version !== undefined) {
+    content.version = version;
+    updated = true;
+  }
+
+  if (Array.isArray(content.plugins)) {
+    for (const plugin of content.plugins) {
+      if (plugin.version !== undefined) {
+        plugin.version = version;
+        updated = true;
+      }
+    }
+  }
+
+  if (updated) {
+    writeFileSync(file, `${JSON.stringify(content, null, 2)}\n`);
+    console.log(`Bumped ${file}`);
+  } else {
+    console.log(`Skipped ${file} (no version field)`);
+  }
 }
