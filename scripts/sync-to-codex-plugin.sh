@@ -4,7 +4,7 @@
 #
 # Sync this superpowers checkout → prime-radiant-inc/openai-codex-plugins.
 # Clones the fork fresh into a temp dir, rsyncs tracked upstream plugin content
-# (including committed Codex files under .codex-plugin/ and assets/), preserves
+# (including committed Codex files under packages/codex/ and packages/core/assets/), preserves
 # OpenAI-owned marketplace metadata already in the destination plugin, commits,
 # pushes a sync branch, and opens a PR.
 # Path/user agnostic — auto-detects upstream from script location.
@@ -170,10 +170,10 @@ command -v python3 >/dev/null || die "python3 not found in PATH"
 gh auth status >/dev/null 2>&1 || die "gh not authenticated — run 'gh auth login'"
 
 [[ -d "$UPSTREAM/.git" ]]         || die "upstream '$UPSTREAM' is not a git checkout"
-[[ -f "$UPSTREAM/.codex-plugin/plugin.json" ]] || die "committed Codex manifest missing at $UPSTREAM/.codex-plugin/plugin.json"
+[[ -f "$UPSTREAM/packages/codex/plugin.json" ]] || die "committed Codex manifest missing at $UPSTREAM/packages/codex/plugin.json"
 
 # Read the upstream version from the committed Codex manifest.
-UPSTREAM_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$UPSTREAM/.codex-plugin/plugin.json")"
+UPSTREAM_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$UPSTREAM/packages/codex/plugin.json")"
 [[ -n "$UPSTREAM_VERSION" ]] || die "could not read 'version' from committed Codex manifest"
 
 UPSTREAM_BRANCH="$(cd "$UPSTREAM" && git branch --show-current)"
@@ -419,7 +419,7 @@ if [[ $BOOTSTRAP -eq 1 ]]; then
   COMMIT_TITLE="bootstrap superpowers v$UPSTREAM_VERSION from upstream main @ $UPSTREAM_SHORT"
   PR_BODY="Initial bootstrap of the superpowers plugin from upstream \`main\` @ \`$UPSTREAM_SHORT\` (v$UPSTREAM_VERSION).
 
-Creates \`plugins/superpowers/\` by copying the tracked plugin files from upstream, including \`.codex-plugin/plugin.json\` and \`assets/\`.
+Creates \`plugins/superpowers/\` by copying the tracked plugin files from upstream, including \`packages/codex/plugin.json\` and \`packages/core/assets/\`.
 
 Run via: \`scripts/sync-to-codex-plugin.sh --bootstrap\`
 Upstream commit: https://github.com/obra/superpowers/commit/$UPSTREAM_SHA
