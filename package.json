@@ -13,7 +13,10 @@
     "test:opencode": "bun run --filter opencode test",
     "test:gemini": "bun run --filter gemini test",
     "version": "node scripts/bump-version.js",
-    "publish:all": "bun run --filter '*' publish --access public"
+    "publish:all": "bun run --filter '*' publish --access public",
+    "lint": "biome check . && markdownlint-cli2 '**/*.md' '#node_modules' '#.worktrees'",
+    "format": "biome check --write . && markdownlint-cli2 --fix '**/*.md' '#node_modules' '#.worktrees'",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
