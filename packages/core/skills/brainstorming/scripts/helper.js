@@ -1,5 +1,5 @@
 (() => {
-  const WS_URL = "ws://" + window.location.host;
+  const WS_URL = `ws://${window.location.host}`;
   let ws = null;
   let eventQueue = [];
 
@@ -7,7 +7,9 @@
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
-      eventQueue.forEach((e) => ws.send(JSON.stringify(e)));
+      eventQueue.forEach((e) => {
+        ws.send(JSON.stringify(e));
+      });
       eventQueue = [];
     };
 
@@ -78,9 +80,9 @@
     const container = el.closest(".options") || el.closest(".cards");
     const multi = container && container.dataset.multiselect !== undefined;
     if (container && !multi) {
-      container
-        .querySelectorAll(".option, .card")
-        .forEach((o) => o.classList.remove("selected"));
+      container.querySelectorAll(".option, .card").forEach((o) => {
+        o.classList.remove("selected");
+      });
     }
     if (multi) {
       el.classList.toggle("selected");

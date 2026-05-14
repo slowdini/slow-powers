@@ -8,12 +8,12 @@
  * not shipped to end users).
  */
 
-const { spawn } = require("child_process");
-const http = require("http");
+const { spawn } = require("node:child_process");
+const http = require("node:http");
 const WebSocket = require("ws");
-const fs = require("fs");
-const path = require("path");
-const assert = require("assert");
+const fs = require("node:fs");
+const path = require("node:path");
+const assert = require("node:assert");
 
 const SERVER_PATH = path.join(
   __dirname,

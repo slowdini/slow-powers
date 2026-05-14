@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const version = process.argv[2];
 if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
@@ -24,6 +24,6 @@ const files = [
 for (const file of files) {
   const content = JSON.parse(readFileSync(file, "utf8"));
   content.version = version;
-  writeFileSync(file, JSON.stringify(content, null, 2) + "\n");
+  writeFileSync(file, `${JSON.stringify(content, null, 2)}\n`);
   console.log(`Bumped ${file}`);
 }

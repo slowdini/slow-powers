@@ -11,9 +11,9 @@
  *   - OPCODES: { TEXT, CLOSE, PING, PONG }
  */
 
-const assert = require("assert");
-const crypto = require("crypto");
-const path = require("path");
+const assert = require("node:assert");
+const crypto = require("node:crypto");
+const path = require("node:path");
 
 // The module under test — will be the new zero-dep server file
 const SERVER_PATH = path.join(

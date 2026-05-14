@@ -16,8 +16,7 @@
     "test:gemini": "bun run --filter gemini test",
     "version": "node scripts/bump-version.js",
     "publish:all": "bun run --filter '*' publish --access public",
-    "lint": "biome check . && markdownlint-cli2 '**/*.md' '!**/node_modules/**' '!**/.worktrees/**'",
-    "format": "biome format --write . && markdownlint-cli2 --fix '**/*.md' '!**/node_modules/**' '!**/.worktrees/**'",
+    "check": "biome check --write . && markdownlint-cli2 --fix '**/*.md' '!**/node_modules/**' '!**/.worktrees/**'",
     "prepare": "husky"
   },
   "devDependencies": {

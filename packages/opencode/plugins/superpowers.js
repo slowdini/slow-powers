@@ -5,11 +5,11 @@
  * Auto-registers skills directory via config hook (no symlinks needed).
  */
 
-import fs from "fs";
-import { createRequire } from "module";
-import os from "os";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -70,10 +70,13 @@ const normalizePath = (p, homeDir) => {
 // every agent step.  See #1202 for the full analysis.
 let _bootstrapCache; // undefined = not yet loaded, null = file missing
 
-export const SuperpowersPlugin = async ({ client, directory }) => {
+export const SuperpowersPlugin = async ({
+  client: _client,
+  directory: _directory,
+}) => {
   const homeDir = os.homedir();
   const envConfigDir = normalizePath(process.env.OPENCODE_CONFIG_DIR, homeDir);
-  const configDir = envConfigDir || path.join(homeDir, ".config/opencode");
+  const _configDir = envConfigDir || path.join(homeDir, ".config/opencode");
 
   // Helper to generate bootstrap content (cached after first call)
   const getBootstrapContent = () => {
@@ -142,7 +145,7 @@ ${toolMapping}
       const bootstrap = getBootstrapContent();
       if (!bootstrap || !output.messages.length) return;
       const firstUser = output.messages.find((m) => m.info.role === "user");
-      if (!firstUser || !firstUser.parts.length) return;
+      if (!firstUser?.parts.length) return;
 
       // Guard: skip if first user message already contains bootstrap.
       // This prevents double injection when OpenCode passes an already

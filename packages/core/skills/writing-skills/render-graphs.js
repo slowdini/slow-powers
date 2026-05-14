@@ -13,16 +13,17 @@
  * Requires: graphviz (dot) installed on system
  */
 
-const fs = require("fs");
-const path = require("path");
-const { execSync } = require("child_process");
+const fs = require("node:fs");
+const path = require("node:path");
+const { execSync } = require("node:child_process");
 
 function extractDotBlocks(markdown) {
   const blocks = [];
   const regex = /```dot\n([\s\S]*?)```/g;
   let match;
 
-  while ((match = regex.exec(markdown)) !== null) {
+  match = regex.exec(markdown);
+  while (match !== null) {
     const content = match[1].trim();
 
     // Extract digraph name
@@ -30,6 +31,7 @@ function extractDotBlocks(markdown) {
     const name = nameMatch ? nameMatch[1] : `graph_${blocks.length + 1}`;
 
     blocks.push({ name, content });
+    match = regex.exec(markdown);
   }
 
   return blocks;
@@ -56,7 +58,7 @@ function combineGraphs(blocks, skillName) {
     label="${block.name}";
     ${body
       .split("\n")
-      .map((line) => "  " + line)
+      .map((line) => `  ${line}`)
       .join("\n")}
   }`;
   });
