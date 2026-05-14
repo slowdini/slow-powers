@@ -1,0 +1,4 @@
+{
+  "*.{js,json,jsonc}": ["biome check --write"],
+  "*.md": ["markdownlint-cli2 --fix"]
+}
