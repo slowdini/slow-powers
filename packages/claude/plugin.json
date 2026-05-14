@@ -16,5 +16,9 @@
     "collaboration",
     "best-practices",
     "workflows"
-  ]
+  ],
+  "skills": "../core/skills/",
+  "agents": "./agents/",
+  "commands": "./commands/",
+  "hooks": "./hooks/hooks.json"
 }

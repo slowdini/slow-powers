@@ -18,7 +18,7 @@
     "best-practices",
     "workflows"
   ],
-  "skills": "./skills/",
+  "skills": "../core/skills/",
   "agents": "./agents/",
   "commands": "./commands/",
   "hooks": "./hooks/hooks-cursor.json"
