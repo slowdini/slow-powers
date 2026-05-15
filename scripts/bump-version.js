@@ -8,14 +8,9 @@ if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
 
 const files = [
   "package.json",
-  "packages/core/package.json",
-  "packages/claude/package.json",
-  "packages/codex/package.json",
-  "packages/cursor/package.json",
-  "packages/opencode/package.json",
-  "packages/claude/plugin.json",
-  "packages/codex/plugin.json",
-  "packages/cursor/.cursor-plugin/plugin.json",
+  "claude/plugin.json",
+  "codex/plugin.json",
+  "cursor/.cursor-plugin/plugin.json",
   "gemini-extension.json",
   "marketplace.json",
   ".agents/plugins/marketplace.json",
