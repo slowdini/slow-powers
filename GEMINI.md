@@ -15,7 +15,7 @@ This monorepo ships Superslow across five harnesses:
 - `packages/codex/` — OpenAI Codex plugin
 - `packages/cursor/` — Cursor plugin
 - `packages/opencode/` — OpenCode plugin (`@slowdini/superslow-opencode`)
-- `packages/gemini/` — Gemini CLI extension
+- `extension.json` + `GEMINI.md` — Gemini CLI extension (root-level)
 
 The skills themselves keep upstream's `superpowers:` prefix and vocabulary
 (e.g. `superpowers:brainstorming`, `using-superpowers`). The *product* is

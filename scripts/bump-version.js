@@ -13,11 +13,10 @@ const files = [
   "packages/codex/package.json",
   "packages/cursor/package.json",
   "packages/opencode/package.json",
-  "packages/gemini/package.json",
   "packages/claude/plugin.json",
   "packages/codex/plugin.json",
   "packages/cursor/.cursor-plugin/plugin.json",
-  "packages/gemini/extension.json",
+  "extension.json",
   "marketplace.json",
   ".agents/plugins/marketplace.json",
 ];

@@ -12,7 +12,6 @@
     "test:codex": "bun run --filter codex test",
     "test:cursor": "bun run --filter cursor test",
     "test:opencode": "bun run --filter opencode test",
-    "test:gemini": "bun run --filter gemini test",
     "version": "node scripts/bump-version.js",
     "check": "biome check --write . && markdownlint-cli2 --fix '**/*.md' '!**/node_modules/**' '!**/.worktrees/**'"
   },

@@ -134,7 +134,7 @@ Bun workspaces monorepo:
 - `packages/codex/` — OpenAI Codex plugin
 - `packages/cursor/` — Cursor plugin
 - `packages/opencode/` — OpenCode plugin
-- `packages/gemini/` — Gemini CLI extension
+- `extension.json` + `GEMINI.md` — Gemini CLI extension (root-level)
 
 ## Contributing
 
