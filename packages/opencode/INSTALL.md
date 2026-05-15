@@ -11,7 +11,7 @@ Add Superslow to the `plugin` array in your `opencode.json` (global or project-l
 
 ```json
 {
-  "plugin": ["@slowdini/superslow-opencode@git+https://github.com/slowdini/superslow.git"]
+  "plugin": ["superslow@git+https://github.com/slowdini/superslow.git"]
 }
 ```
 
@@ -34,7 +34,7 @@ To pin a specific tag, use the same plugin entry with a ref suffix:
 
 ```json
 {
-  "plugin": ["@slowdini/superslow-opencode@git+https://github.com/slowdini/superslow.git#v1.0.0"]
+  "plugin": ["superslow@git+https://github.com/slowdini/superslow.git#v1.0.0"]
 }
 ```
 

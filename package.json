@@ -4,18 +4,7 @@
   "version": "1.0.0",
   "description": "Superslow — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
-  "exports": {
-    "./server": "./packages/opencode/plugins/superpowers.js"
-  },
-  "files": [
-    "README.md",
-    "LICENSE",
-    "packages/opencode/plugins/",
-    "packages/core/skills/"
-  ],
+  "main": "./packages/opencode/plugins/superpowers.js",
   "scripts": {
     "test": "bun run --filter '*' test",
     "test:core": "bun run --filter core test",
