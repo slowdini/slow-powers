@@ -16,8 +16,8 @@ export OPENCODE_CONFIG_DIR="$TEST_HOME/.config/opencode"
 
 # Packed install layout:
 #   $OPENCODE_CONFIG_DIR/superslow/package.json
-#   $OPENCODE_CONFIG_DIR/superslow/packages/core/skills/
-#   $OPENCODE_CONFIG_DIR/superslow/packages/opencode/plugins/superpowers.js
+#   $OPENCODE_CONFIG_DIR/superslow/skills/
+#   $OPENCODE_CONFIG_DIR/superslow/opencode/plugins/superpowers.js
 #   $OPENCODE_CONFIG_DIR/plugins/superpowers.js
 
 cleanup_test_env() {
@@ -37,8 +37,8 @@ trap cleanup_setup_on_error ERR
 
 SUPERPOWERS_DIR="$OPENCODE_CONFIG_DIR/superslow"
 SUPERPOWERS_PACKAGE_JSON="$SUPERPOWERS_DIR/package.json"
-SUPERPOWERS_SKILLS_DIR="$SUPERPOWERS_DIR/packages/core/skills"
-SUPERPOWERS_PLUGIN_FILE="$SUPERPOWERS_DIR/packages/opencode/plugins/superpowers.js"
+SUPERPOWERS_SKILLS_DIR="$SUPERPOWERS_DIR/skills"
+SUPERPOWERS_PLUGIN_FILE="$SUPERPOWERS_DIR/opencode/plugins/superpowers.js"
 
 PACK_OUTPUT="$(npm pack --json --pack-destination "$TEST_HOME" "$REPO_ROOT")"
 PACK_FILE_RELATIVE="$(printf '%s' "$PACK_OUTPUT" | node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(0, "utf8")); process.stdout.write(data[0].filename);')"

@@ -15,12 +15,12 @@ const rootPackageJson = JSON.parse(
 const packResult = JSON.parse(fs.readFileSync(packJsonPath, 'utf8'))[0];
 const packedFiles = new Set(packResult.files.map((file) => file.path));
 
-assert.equal(rootPackageJson.name, 'superslow', 'root package name should stay superslow');
+assert.equal(rootPackageJson.name, '@slowdini/superslow-opencode', 'root package name should be @slowdini/superslow-opencode');
 assert.equal(rootPackageJson.private, true, 'root package should stay private');
 assert.equal(
-  rootPackageJson.exports?.['./server'],
-  './packages/opencode/plugins/superpowers.js',
-  'root package should expose an OpenCode server export',
+  rootPackageJson.main,
+  './opencode/plugins/superpowers.js',
+  'root package should point main to opencode plugin',
 );
 assert.equal(
   Object.hasOwn(rootPackageJson.scripts ?? {}, 'publish:all'),
@@ -37,32 +37,27 @@ assert.equal(packedFiles.has('package.json'), true, 'packed root package.json sh
 assert.equal(packedFiles.has('README.md'), true, 'packed README should be present');
 assert.equal(packedFiles.has('LICENSE'), true, 'packed LICENSE should be present');
 assert.equal(
-  packedFiles.has('packages/opencode/plugins/superpowers.js'),
+  packedFiles.has('opencode/plugins/superpowers.js'),
   true,
   'packed plugin entry should be present',
 );
 assert.equal(
-  packedFiles.has('packages/core/skills/using-superpowers/SKILL.md'),
+  packedFiles.has('skills/using-superpowers/SKILL.md'),
   true,
   'packed using-superpowers skill should be present',
 );
 assert.equal(
-  packedFiles.has('packages/opencode/package.json'),
+  packedFiles.has('opencode/package.json'),
   false,
   'internal OpenCode workspace metadata should not ship in the root artifact',
 );
 assert.equal(
-  packedFiles.has('packages/core/package.json'),
-  false,
-  'internal core workspace metadata should not ship in the root artifact',
-);
-assert.equal(
-  packedFiles.has('packages/gemini/extension.json'),
+  packedFiles.has('gemini-extension.json'),
   false,
   'Gemini files should stay out of the OpenCode root package artifact',
 );
 assert.equal(
-  packedFiles.has('packages/opencode/tests/opencode/test-plugin-loading.sh'),
+  packedFiles.has('tests/opencode/test-plugin-loading.sh'),
   false,
   'OpenCode tests should not ship in the root artifact',
 );

@@ -24,10 +24,10 @@ else
     exit 1
 fi
 
-if [ -d "$SUPERPOWERS_DIR/packages/core/skills" ]; then
+if [ -d "$SUPERPOWERS_SKILLS_DIR" ]; then
     echo "  [PASS] Packed root includes bundled skills"
 else
-    echo "  [FAIL] Packed root skills directory not found at $SUPERPOWERS_DIR/packages/core/skills"
+    echo "  [FAIL] Packed root skills directory not found at $SUPERPOWERS_SKILLS_DIR"
     exit 1
 fi
 
