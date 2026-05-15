@@ -174,11 +174,11 @@ write_upstream_fixture() {
     local with_pure_ignored="${2:-1}"
 
     mkdir -p \
-        "$repo/packages/codex" \
+        "$repo/codex" \
         "$repo/.private-journal" \
-        "$repo/packages/core/assets" \
+        "$repo/assets" \
         "$repo/scripts" \
-        "$repo/packages/core/skills/example"
+        "$repo/skills/example"
 
     if [[ "$with_pure_ignored" == "1" ]]; then
         mkdir -p "$repo/ignored-cache/tmp"
@@ -203,20 +203,20 @@ ignored-cache/
 EOF
     fi
 
-    cat > "$repo/packages/codex/plugin.json" <<EOF
+    cat > "$repo/codex/plugin.json" <<EOF
 {
   "name": "superpowers",
   "version": "$MANIFEST_VERSION"
 }
 EOF
 
-    cat > "$repo/packages/core/assets/superpowers-small.svg" <<'EOF'
+    cat > "$repo/assets/superpowers-small.svg" <<'EOF'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>
 EOF
 
-    printf 'png fixture\n' > "$repo/packages/core/assets/app-icon.png"
+    printf 'png fixture\n' > "$repo/assets/app-icon.png"
 
-    cat > "$repo/packages/core/skills/example/SKILL.md" <<'EOF'
+    cat > "$repo/skills/example/SKILL.md" <<'EOF'
 # Example Skill
 
 Fixture content.
@@ -229,13 +229,13 @@ EOF
     fi
 
     git -C "$repo" add \
-        packages/codex/plugin.json \
+        codex/plugin.json \
         .gitignore \
-        packages/core/assets/app-icon.png \
-        packages/core/assets/superpowers-small.svg \
+        assets/app-icon.png \
+        assets/superpowers-small.svg \
         package.json \
         scripts/sync-to-codex-plugin.sh \
-        packages/core/skills/example/SKILL.md
+        skills/example/SKILL.md
     git -C "$repo" add -f .private-journal/keep.txt
 
     commit_fixture "$repo" "Initial upstream fixture"
@@ -244,15 +244,15 @@ EOF
 write_destination_fixture() {
     local repo="$1"
 
-    mkdir -p "$repo/plugins/superpowers/packages/core/skills/example"
+    mkdir -p "$repo/plugins/superpowers/skills/example"
     printf 'fixture keep\n' > "$repo/plugins/superpowers/.fixture-keep"
-    cat > "$repo/plugins/superpowers/packages/core/skills/example/SKILL.md" <<'EOF'
+    cat > "$repo/plugins/superpowers/skills/example/SKILL.md" <<'EOF'
 # Example Skill
 
 Fixture content.
 EOF
     git -C "$repo" add plugins/superpowers/.fixture-keep
-    git -C "$repo" add plugins/superpowers/packages/core/skills/example/SKILL.md
+    git -C "$repo" add plugins/superpowers/skills/example/SKILL.md
 
     commit_fixture "$repo" "Initial destination fixture"
 }
@@ -260,15 +260,15 @@ EOF
 add_openai_agent_metadata_fixture() {
     local repo="$1"
 
-    mkdir -p "$repo/plugins/superpowers/packages/core/skills/example/agents"
+    mkdir -p "$repo/plugins/superpowers/skills/example/agents"
 
-    cat > "$repo/plugins/superpowers/packages/core/skills/example/agents/openai.yaml" <<'EOF'
+    cat > "$repo/plugins/superpowers/skills/example/agents/openai.yaml" <<'EOF'
 interface:
   display_name: "Example"
   short_description: "Destination-owned OpenAI metadata"
 EOF
 
-    git -C "$repo" add plugins/superpowers/packages/core/skills/example/agents/openai.yaml
+    git -C "$repo" add plugins/superpowers/skills/example/agents/openai.yaml
 
     commit_fixture "$repo" "Add OpenAI agent metadata fixture"
 }
@@ -276,7 +276,7 @@ EOF
 dirty_tracked_destination_skill() {
     local repo="$1"
 
-    cat > "$repo/plugins/superpowers/packages/core/skills/example/SKILL.md" <<'EOF'
+    cat > "$repo/plugins/superpowers/skills/example/SKILL.md" <<'EOF'
 # Example Skill
 
 Locally modified fixture content.
@@ -287,32 +287,32 @@ write_synced_destination_fixture() {
     local repo="$1"
 
     mkdir -p \
-        "$repo/plugins/superpowers/packages/codex" \
+        "$repo/plugins/superpowers/codex" \
         "$repo/plugins/superpowers/.private-journal" \
-        "$repo/plugins/superpowers/packages/core/assets" \
-        "$repo/plugins/superpowers/packages/core/skills/example/agents" \
-        "$repo/plugins/superpowers/packages/core/skills/example"
+        "$repo/plugins/superpowers/assets" \
+        "$repo/plugins/superpowers/skills/example/agents" \
+        "$repo/plugins/superpowers/skills/example"
 
-    cat > "$repo/plugins/superpowers/packages/codex/plugin.json" <<EOF
+    cat > "$repo/plugins/superpowers/codex/plugin.json" <<EOF
 {
   "name": "superpowers",
   "version": "$MANIFEST_VERSION"
 }
 EOF
 
-    cat > "$repo/plugins/superpowers/packages/core/assets/superpowers-small.svg" <<'EOF'
+    cat > "$repo/plugins/superpowers/assets/superpowers-small.svg" <<'EOF'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>
 EOF
 
-    printf 'png fixture\n' > "$repo/plugins/superpowers/packages/core/assets/app-icon.png"
+    printf 'png fixture\n' > "$repo/plugins/superpowers/assets/app-icon.png"
 
-    cat > "$repo/plugins/superpowers/packages/core/skills/example/SKILL.md" <<'EOF'
+    cat > "$repo/plugins/superpowers/skills/example/SKILL.md" <<'EOF'
 # Example Skill
 
 Fixture content.
 EOF
 
-    cat > "$repo/plugins/superpowers/packages/core/skills/example/agents/openai.yaml" <<'EOF'
+    cat > "$repo/plugins/superpowers/skills/example/agents/openai.yaml" <<'EOF'
 interface:
   display_name: "Example"
   short_description: "Destination-owned OpenAI metadata"
@@ -321,11 +321,11 @@ EOF
     printf 'tracked keep\n' > "$repo/plugins/superpowers/.private-journal/keep.txt"
 
     git -C "$repo" add \
-        plugins/superpowers/packages/codex/plugin.json \
-        plugins/superpowers/packages/core/assets/app-icon.png \
-        plugins/superpowers/packages/core/assets/superpowers-small.svg \
-        plugins/superpowers/packages/core/skills/example/agents/openai.yaml \
-        plugins/superpowers/packages/core/skills/example/SKILL.md \
+        plugins/superpowers/codex/plugin.json \
+        plugins/superpowers/assets/app-icon.png \
+        plugins/superpowers/assets/superpowers-small.svg \
+        plugins/superpowers/skills/example/agents/openai.yaml \
+        plugins/superpowers/skills/example/SKILL.md \
         plugins/superpowers/.private-journal/keep.txt
 
     commit_fixture "$repo" "Initial synced destination fixture"
@@ -383,7 +383,7 @@ run_preview_without_manifest() {
     local dest="$2"
     local fake_bin="$3"
 
-    rm -f "$upstream/packages/codex/plugin.json"
+    rm -f "$upstream/codex/plugin.json"
     PATH="$fake_bin:$PATH" "$BASH_UNDER_TEST" "$upstream/scripts/sync-to-codex-plugin.sh" -n --local "$dest" 2>&1
 }
 
@@ -528,24 +528,24 @@ main() {
     script_source="$(cat "$upstream/scripts/sync-to-codex-plugin.sh")"
     preview_section="$(printf '%s\n' "$preview_output" | sed -n '/^=== Preview (rsync --dry-run) ===$/,/^=== End preview ===$/p')"
     stale_preview_section="$(printf '%s\n' "$stale_preview_output" | sed -n '/^=== Preview (rsync --dry-run) ===$/,/^=== End preview ===$/p')"
-    dirty_skill_path="$dirty_apply_dest/plugins/superpowers/packages/core/skills/example/SKILL.md"
-    noop_openai_metadata_path="$noop_apply_dest/plugins/superpowers/packages/core/skills/example/agents/openai.yaml"
+    dirty_skill_path="$dirty_apply_dest/plugins/superpowers/skills/example/SKILL.md"
+    noop_openai_metadata_path="$noop_apply_dest/plugins/superpowers/skills/example/agents/openai.yaml"
 
     echo ""
     echo "Preview assertions..."
     assert_equals "$preview_status" "0" "Preview exits successfully"
     assert_contains "$preview_output" "Version:  $MANIFEST_VERSION" "Preview uses manifest version"
     assert_not_contains "$preview_output" "Version:  $PACKAGE_VERSION" "Preview does not use package.json version"
-    assert_contains "$preview_section" "packages/codex/plugin.json" "Preview includes manifest path"
-    assert_contains "$preview_section" "packages/core/assets/superpowers-small.svg" "Preview includes SVG asset"
-    assert_contains "$preview_section" "packages/core/assets/app-icon.png" "Preview includes PNG asset"
+    assert_contains "$preview_section" "codex/plugin.json" "Preview includes manifest path"
+    assert_contains "$preview_section" "assets/superpowers-small.svg" "Preview includes SVG asset"
+    assert_contains "$preview_section" "assets/app-icon.png" "Preview includes PNG asset"
     assert_contains "$preview_section" ".private-journal/keep.txt" "Preview includes tracked ignored file"
     assert_not_contains "$preview_section" ".private-journal/leak.txt" "Preview excludes ignored untracked file"
     assert_not_contains "$preview_section" "ignored-cache/" "Preview excludes pure ignored directories"
-    assert_not_contains "$preview_output" "Overlay file (packages/codex/plugin.json) will be regenerated" "Preview omits overlay regeneration note"
+    assert_not_contains "$preview_output" "Overlay file (codex/plugin.json) will be regenerated" "Preview omits overlay regeneration note"
     assert_not_contains "$preview_output" "Assets (superpowers-small.svg, app-icon.png) will be seeded from" "Preview omits assets seeding note"
-    assert_contains "$preview_section" "packages/core/skills/example/SKILL.md" "Preview reflects dirty tracked destination file"
-    assert_not_matches "$preview_section" "\\*deleting +packages/core/skills/example/agents/openai\\.yaml" "Preview preserves destination-owned OpenAI agent metadata"
+    assert_contains "$preview_section" "skills/example/SKILL.md" "Preview reflects dirty tracked destination file"
+    assert_not_matches "$preview_section" "\\*deleting +skills/example/agents/openai\\.yaml" "Preview preserves destination-owned OpenAI agent metadata"
     assert_current_branch "$dest" "$dest_branch" "Preview leaves destination checkout on its original branch"
     assert_branch_absent "$dest" "sync/superpowers-*" "Preview does not create sync branch in destination checkout"
 
