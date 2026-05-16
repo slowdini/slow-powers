@@ -49,6 +49,13 @@ codex plugin marketplace add slowdini/superslow
 Then install the `superpowers` plugin from the `superslow` marketplace
 through Codex's plugin interface.
 
+To enable automatic `SessionStart` bootstrap in current Codex releases, add this to `~/.codex/config.toml` and restart Codex:
+
+```toml
+[features]
+plugin_hooks = true
+```
+
 ### Cursor
 
 Cursor has no native git-install path. The Superslow installer clones the
@@ -132,9 +139,9 @@ Superslow is released across five agent handlers. Each harness reads a different
 | File | Harness | Purpose |
 |---|---|---|
 | `package.json` | OpenCode | Plugin manifest (`@slowdini/superslow-opencode`), dev tooling scripts |
-| `marketplace.json` | Claude Code | Marketplace registry pointing to `claude/` source |
-| `claude/plugin.json` | Claude Code | Plugin manifest for Claude's `/plugin` system |
-| `codex/plugin.json` | Codex CLI | Plugin manifest for Codex's plugin system |
+| `.claude-plugin/marketplace.json` | Claude Code | Marketplace registry pointing to `claude/` source |
+| `claude/.claude-plugin/plugin.json` | Claude Code | Plugin manifest for Claude's `/plugin` system |
+| `.codex-plugin/plugin.json` | Codex CLI | Plugin manifest for Codex's plugin system |
 | `cursor/.cursor-plugin/plugin.json` | Cursor | Cursor plugin manifest |
 | `cursor/install.sh` | Cursor | Installation script (symlinked into `~/.cursor/plugins/local/`) |
 | `gemini-extension.json` | Gemini CLI | Extension manifest (points to `gemini-instructions.md`) |
@@ -150,11 +157,11 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `assets/` — Icons and images shared across harnesses
 - `tests/` — Cross-cutting and harness-specific tests
 - `claude/` — Claude Code plugin manifest and hooks
-- `codex/` — OpenAI Codex plugin manifest
+- `.codex-plugin/` — OpenAI Codex plugin manifest
 - `cursor/` — Cursor plugin manifest, hooks, and install script
 - `opencode/` — OpenCode plugin and installation docs
 - `gemini-extension.json` + `gemini-instructions.md` — Gemini CLI extension
-- `marketplace.json` — Claude Code marketplace registry
+- `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
 
 ## Contributing

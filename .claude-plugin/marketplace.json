@@ -1,16 +1,16 @@
 {
-  "name": "superslow",
-  "description": "Superslow plugin marketplace for Claude Code",
+  "name": "slowdini",
+  "description": "slowdini's plugin marketplace for Claude Code",
   "owner": {
     "name": "Max Haarhaus",
     "email": "samiamorwas@gmail.com"
   },
   "plugins": [
     {
-      "name": "superpowers",
+      "name": "superslow",
       "description": "Superslow gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
       "version": "1.0.1",
-      "source": "./claude/",
+      "source": "./",
       "author": {
         "name": "Max Haarhaus",
         "email": "samiamorwas@gmail.com"

@@ -1,15 +1,15 @@
 {
-  "name": "superslow",
+  "name": "slowdini",
   "interface": {
-    "displayName": "Superslow"
+    "displayName": "slowdini"
   },
   "plugins": [
     {
-      "name": "superpowers",
+      "name": "superslow",
       "version": "1.0.1",
       "source": {
-        "source": "local",
-        "path": "../../codex"
+        "source": "url",
+        "url": "./"
       },
       "policy": {
         "installation": "AVAILABLE",

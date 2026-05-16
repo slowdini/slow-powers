@@ -1,5 +1,5 @@
 {
-  "name": "superpowers",
+  "name": "superslow",
   "description": "Superslow gives your agent superpowers: TDD, debugging, collaboration patterns, and proven techniques",
   "version": "1.0.1",
   "author": {
@@ -16,9 +16,5 @@
     "collaboration",
     "best-practices",
     "workflows"
-  ],
-  "skills": "./skills/",
-  "agents": "./agents/",
-  "commands": "./commands/",
-  "hooks": "./hooks/hooks.json"
+  ]
 }

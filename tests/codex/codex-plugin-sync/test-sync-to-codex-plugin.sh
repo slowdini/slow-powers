@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 SYNC_SCRIPT_SOURCE="$REPO_ROOT/scripts/sync-to-codex-plugin.sh"
 BASH_UNDER_TEST="/bin/bash"
 PACKAGE_VERSION="1.2.3"
@@ -174,9 +174,10 @@ write_upstream_fixture() {
     local with_pure_ignored="${2:-1}"
 
     mkdir -p \
-        "$repo/codex" \
+        "$repo/.codex-plugin" \
         "$repo/.private-journal" \
         "$repo/assets" \
+        "$repo/hooks" \
         "$repo/scripts" \
         "$repo/skills/example"
 
@@ -203,12 +204,33 @@ ignored-cache/
 EOF
     fi
 
-    cat > "$repo/codex/plugin.json" <<EOF
+    cat > "$repo/.codex-plugin/plugin.json" <<EOF
 {
   "name": "superpowers",
   "version": "$MANIFEST_VERSION"
 }
 EOF
+
+    cat > "$repo/hooks/hooks.json" <<'EOF'
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+
+    printf '#!/usr/bin/env bash\n' > "$repo/hooks/session-start"
+    printf '@echo off\n' > "$repo/hooks/run-hook.cmd"
 
     cat > "$repo/assets/superpowers-small.svg" <<'EOF'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>
@@ -229,10 +251,13 @@ EOF
     fi
 
     git -C "$repo" add \
-        codex/plugin.json \
+        .codex-plugin/plugin.json \
         .gitignore \
         assets/app-icon.png \
         assets/superpowers-small.svg \
+        hooks/hooks.json \
+        hooks/run-hook.cmd \
+        hooks/session-start \
         package.json \
         scripts/sync-to-codex-plugin.sh \
         skills/example/SKILL.md
@@ -287,18 +312,40 @@ write_synced_destination_fixture() {
     local repo="$1"
 
     mkdir -p \
-        "$repo/plugins/superpowers/codex" \
+        "$repo/plugins/superpowers/.codex-plugin" \
         "$repo/plugins/superpowers/.private-journal" \
         "$repo/plugins/superpowers/assets" \
+        "$repo/plugins/superpowers/hooks" \
         "$repo/plugins/superpowers/skills/example/agents" \
         "$repo/plugins/superpowers/skills/example"
 
-    cat > "$repo/plugins/superpowers/codex/plugin.json" <<EOF
+    cat > "$repo/plugins/superpowers/.codex-plugin/plugin.json" <<EOF
 {
   "name": "superpowers",
   "version": "$MANIFEST_VERSION"
 }
 EOF
+
+    cat > "$repo/plugins/superpowers/hooks/hooks.json" <<'EOF'
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+
+    printf '#!/usr/bin/env bash\n' > "$repo/plugins/superpowers/hooks/session-start"
+    printf '@echo off\n' > "$repo/plugins/superpowers/hooks/run-hook.cmd"
 
     cat > "$repo/plugins/superpowers/assets/superpowers-small.svg" <<'EOF'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>
@@ -321,9 +368,12 @@ EOF
     printf 'tracked keep\n' > "$repo/plugins/superpowers/.private-journal/keep.txt"
 
     git -C "$repo" add \
-        plugins/superpowers/codex/plugin.json \
+        plugins/superpowers/.codex-plugin/plugin.json \
         plugins/superpowers/assets/app-icon.png \
         plugins/superpowers/assets/superpowers-small.svg \
+        plugins/superpowers/hooks/hooks.json \
+        plugins/superpowers/hooks/run-hook.cmd \
+        plugins/superpowers/hooks/session-start \
         plugins/superpowers/skills/example/agents/openai.yaml \
         plugins/superpowers/skills/example/SKILL.md \
         plugins/superpowers/.private-journal/keep.txt
@@ -383,7 +433,7 @@ run_preview_without_manifest() {
     local dest="$2"
     local fake_bin="$3"
 
-    rm -f "$upstream/codex/plugin.json"
+    rm -f "$upstream/.codex-plugin/plugin.json"
     PATH="$fake_bin:$PATH" "$BASH_UNDER_TEST" "$upstream/scripts/sync-to-codex-plugin.sh" -n --local "$dest" 2>&1
 }
 
@@ -536,13 +586,14 @@ main() {
     assert_equals "$preview_status" "0" "Preview exits successfully"
     assert_contains "$preview_output" "Version:  $MANIFEST_VERSION" "Preview uses manifest version"
     assert_not_contains "$preview_output" "Version:  $PACKAGE_VERSION" "Preview does not use package.json version"
-    assert_contains "$preview_section" "codex/plugin.json" "Preview includes manifest path"
+    assert_contains "$preview_section" ".codex-plugin/plugin.json" "Preview includes manifest path"
     assert_contains "$preview_section" "assets/superpowers-small.svg" "Preview includes SVG asset"
     assert_contains "$preview_section" "assets/app-icon.png" "Preview includes PNG asset"
+    assert_contains "$preview_section" "hooks/hooks.json" "Preview includes hook config"
     assert_contains "$preview_section" ".private-journal/keep.txt" "Preview includes tracked ignored file"
     assert_not_contains "$preview_section" ".private-journal/leak.txt" "Preview excludes ignored untracked file"
     assert_not_contains "$preview_section" "ignored-cache/" "Preview excludes pure ignored directories"
-    assert_not_contains "$preview_output" "Overlay file (codex/plugin.json) will be regenerated" "Preview omits overlay regeneration note"
+    assert_not_contains "$preview_output" "Overlay file (.codex-plugin/plugin.json) will be regenerated" "Preview omits overlay regeneration note"
     assert_not_contains "$preview_output" "Assets (superpowers-small.svg, app-icon.png) will be seeded from" "Preview omits assets seeding note"
     assert_contains "$preview_section" "skills/example/SKILL.md" "Preview reflects dirty tracked destination file"
     assert_not_matches "$preview_section" "\\*deleting +skills/example/agents/openai\\.yaml" "Preview preserves destination-owned OpenAI agent metadata"
