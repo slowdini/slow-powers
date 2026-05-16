@@ -1,0 +1,43 @@
+{
+  "name": "superpowers",
+  "version": "1.0.1",
+  "description": "Superslow gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
+  "author": {
+    "name": "Max Haarhaus",
+    "email": "samiamorwas@gmail.com",
+    "url": "https://github.com/slowdini"
+  },
+  "homepage": "https://github.com/slowdini/superslow",
+  "repository": "https://github.com/slowdini/superslow",
+  "license": "MIT",
+  "keywords": [
+    "brainstorming",
+    "subagent-driven-development",
+    "skills",
+    "planning",
+    "tdd",
+    "debugging",
+    "code-review",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Superslow",
+    "shortDescription": "Planning, TDD, debugging, and collaboration workflows for coding agents",
+    "longDescription": "Use Superslow to guide agent work through brainstorming, implementation planning, test-driven development, systematic debugging, parallel execution, code review, and finish-the-branch workflows.",
+    "developerName": "Max Haarhaus",
+    "category": "Coding",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "defaultPrompt": [
+      "I've got an idea for something I'd like to build.",
+      "Let's add a feature to this project."
+    ],
+    "websiteURL": "https://github.com/slowdini/superslow",
+    "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
+    "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+    "brandColor": "#F59E0B",
+    "composerIcon": "./assets/superpowers-small.svg",
+    "logo": "./assets/app-icon.png",
+    "screenshots": []
+  }
+}

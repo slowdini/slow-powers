@@ -1,0 +1,24 @@
+{
+  "name": "superpowers",
+  "description": "Superslow gives your agent superpowers: TDD, debugging, collaboration patterns, and proven techniques",
+  "version": "1.0.1",
+  "author": {
+    "name": "Max Haarhaus",
+    "email": "samiamorwas@gmail.com"
+  },
+  "homepage": "https://github.com/slowdini/superslow",
+  "repository": "https://github.com/slowdini/superslow",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "tdd",
+    "debugging",
+    "collaboration",
+    "best-practices",
+    "workflows"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "commands": "./commands/",
+  "hooks": "./hooks/hooks.json"
+}

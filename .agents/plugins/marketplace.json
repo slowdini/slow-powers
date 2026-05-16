@@ -9,7 +9,7 @@
       "version": "1.0.1",
       "source": {
         "source": "local",
-        "path": "../../packages/codex"
+        "path": "../../codex"
       },
       "policy": {
         "installation": "AVAILABLE",

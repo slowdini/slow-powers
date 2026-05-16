@@ -1,6 +1,0 @@
-{
-  "name": "@slowdini/superslow-codex",
-  "version": "1.0.1",
-  "description": "Superslow integration for OpenAI Codex",
-  "private": true
-}

@@ -56,11 +56,11 @@ repo (or reuses an existing checkout) and symlinks the plugin into Cursor's
 local plugin directory.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/slowdini/superslow/main/packages/cursor/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/slowdini/superslow/main/cursor/install.sh | sh
 ```
 
 Review the script before running if you prefer:
-<https://github.com/slowdini/superslow/blob/main/packages/cursor/install.sh>
+<https://github.com/slowdini/superslow/blob/main/cursor/install.sh>
 
 Restart Cursor after install.
 
@@ -69,10 +69,10 @@ Restart Cursor after install.
 Tell OpenCode:
 
 ```
-Fetch and follow instructions from https://raw.githubusercontent.com/slowdini/superslow/refs/heads/main/packages/opencode/INSTALL.md
+Fetch and follow instructions from https://raw.githubusercontent.com/slowdini/superslow/refs/heads/main/opencode/INSTALL.md
 ```
 
-Detailed docs: [`packages/opencode/INSTALL.md`](packages/opencode/INSTALL.md).
+Detailed docs: [`opencode/INSTALL.md`](opencode/INSTALL.md).
 
 ### Gemini CLI
 
@@ -125,16 +125,37 @@ workflows, not suggestions.
 - Complexity reduction — simplicity as a primary goal
 - Evidence over claims — verify before declaring success
 
+## How it's distributed
+
+Superslow is released across five agent handlers. Each harness reads a different set of files from this repository:
+
+| File | Harness | Purpose |
+|---|---|---|
+| `package.json` | OpenCode | Plugin manifest (`@slowdini/superslow-opencode`), dev tooling scripts |
+| `marketplace.json` | Claude Code | Marketplace registry pointing to `claude/` source |
+| `claude/plugin.json` | Claude Code | Plugin manifest for Claude's `/plugin` system |
+| `codex/plugin.json` | Codex CLI | Plugin manifest for Codex's plugin system |
+| `cursor/.cursor-plugin/plugin.json` | Cursor | Cursor plugin manifest |
+| `cursor/install.sh` | Cursor | Installation script (symlinked into `~/.cursor/plugins/local/`) |
+| `gemini-extension.json` | Gemini CLI | Extension manifest (points to `gemini-instructions.md`) |
+| `gemini-instructions.md` | Gemini CLI | Instructions loaded by Gemini on extension activation |
+| `skills/` | All | Shared skill library |
+| `assets/` | All | Shared assets (icons, images) |
+
 ## Repository structure
 
-Bun workspaces monorepo:
+Flat layout — skills and assets live at root, harness-specific integration lives in top-level directories:
 
-- `packages/core/` — Skills, assets, cross-cutting tests
-- `packages/claude/` — Claude Code plugin
-- `packages/codex/` — OpenAI Codex plugin
-- `packages/cursor/` — Cursor plugin
-- `packages/opencode/` — OpenCode plugin
-- `extension.json` + `GEMINI.md` — Gemini CLI extension (root-level)
+- `skills/` — All superpowers skills
+- `assets/` — Icons and images shared across harnesses
+- `tests/` — Cross-cutting and harness-specific tests
+- `claude/` — Claude Code plugin manifest and hooks
+- `codex/` — OpenAI Codex plugin manifest
+- `cursor/` — Cursor plugin manifest, hooks, and install script
+- `opencode/` — OpenCode plugin and installation docs
+- `gemini-extension.json` + `gemini-instructions.md` — Gemini CLI extension
+- `marketplace.json` — Claude Code marketplace registry
+- `package.json` — OpenCode plugin manifest + dev tooling
 
 ## Contributing
 

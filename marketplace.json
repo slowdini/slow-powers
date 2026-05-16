@@ -10,7 +10,7 @@
       "name": "superpowers",
       "description": "Superslow gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
       "version": "1.0.1",
-      "source": "./packages/claude/",
+      "source": "./claude/",
       "author": {
         "name": "Max Haarhaus",
         "email": "samiamorwas@gmail.com"
