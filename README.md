@@ -7,9 +7,8 @@ that ensures the agent reaches for them at the right moments.
 ## About this fork
 
 Superslow is a fork of [obra/superpowers](https://github.com/obra/superpowers)
-at v5.1.0. The skill content and vocabulary (the `superpowers:` skill
-prefix, the `using-superpowers` bootstrap) are preserved verbatim — the
-*product* is Superslow, the *skills* are still called superpowers.
+at v5.1.0. We preserve the overall workflow of superpowers, while fixing bugs
+and clarifying skill content.
 
 Upstream's full release history is archived at
 [`UPSTREAM-RELEASE-NOTES.md`](./UPSTREAM-RELEASE-NOTES.md). Superslow's own
@@ -17,14 +16,14 @@ release notes live in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Quickstart
 
-Give your agent Superslow: [Claude Code](#claude-code) · [Copilot CLI](#copilot-cli) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode) · [Gemini CLI](#gemini-cli).
+Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Copilot CLI](#copilot-cli) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode) · [Gemini CLI](#gemini-cli).
 
 ## How it works
 
-From the moment you fire up your coding agent, Superslow steps in before
-code gets written. It teases out a spec through conversation, presents it
-in digestible chunks, then writes an implementation plan clear enough for
-a junior engineer to follow. It enforces red/green TDD, YAGNI, and DRY,
+Superslow steps in before code gets written, providing workflows for
+professional development work. It teases out a spec through conversation,
+presents it in digestible chunks, then writes an implementation plan clear
+enough for a junior engineer to follow. It enforces red/green TDD, YAGNI, and DRY,
 and dispatches subagents per task with two-stage review. Skills trigger
 automatically — you don't have to invoke them manually.
 
@@ -70,11 +69,11 @@ repo (or reuses an existing checkout) and symlinks the plugin into Cursor's
 local plugin directory.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/slowdini/superslow/main/cursor/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/slowdini/superslow/main/.cursor-plugin/install.sh | sh
 ```
 
 Review the script before running if you prefer:
-<https://github.com/slowdini/superslow/blob/main/cursor/install.sh>
+<https://github.com/slowdini/superslow/blob/main/.cursor-plugin/install.sh>
 
 Restart Cursor after install.
 
@@ -139,23 +138,6 @@ workflows, not suggestions.
 - Complexity reduction — simplicity as a primary goal
 - Evidence over claims — verify before declaring success
 
-## How it's distributed
-
-Superslow is released across five agent handlers. Each harness reads a different set of files from this repository:
-
-| File | Harness | Purpose |
-|---|---|---|
-| `package.json` | OpenCode | Plugin manifest (`@slowdini/superslow-opencode`), dev tooling scripts |
-| `.claude-plugin/marketplace.json` | Claude Code | Marketplace registry pointing to `claude/` source |
-| `claude/.claude-plugin/plugin.json` | Claude Code | Plugin manifest for Claude's `/plugin` system |
-| `.codex-plugin/plugin.json` | Codex CLI | Plugin manifest for Codex's plugin system |
-| `cursor/.cursor-plugin/plugin.json` | Cursor | Cursor plugin manifest |
-| `cursor/install.sh` | Cursor | Installation script (symlinked into `~/.cursor/plugins/local/`) |
-| `gemini-extension.json` | Gemini CLI | Extension manifest (points to `gemini-instructions.md`) |
-| `gemini-instructions.md` | Gemini CLI | Instructions loaded by Gemini on extension activation |
-| `skills/` | All | Shared skill library |
-| `assets/` | All | Shared assets (icons, images) |
-
 ## Repository structure
 
 Flat layout — skills and assets live at root, harness-specific integration lives in top-level directories:
@@ -163,9 +145,9 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `skills/` — All superpowers skills
 - `assets/` — Icons and images shared across harnesses
 - `tests/` — Cross-cutting and harness-specific tests
-- `claude/` — Claude Code plugin manifest and hooks
+- `.claude-plugin/` — Claude Code plugin manifest and hooks
 - `.codex-plugin/` — OpenAI Codex plugin manifest
-- `cursor/` — Cursor plugin manifest, hooks, and install script
+- `.cursor-plugin/` — Cursor plugin manifest, hooks, and install script
 - `opencode/` — OpenCode plugin and installation docs
 - `gemini-extension.json` + `gemini-instructions.md` — Gemini CLI extension
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
@@ -175,16 +157,6 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 
 See [`CLAUDE.md`](./CLAUDE.md) for contributor guidelines. Issues live at
 <https://github.com/slowdini/superslow/issues>.
-
-## Updating
-
-| Harness | Update command |
-|---|---|
-| Claude Code | `/plugin marketplace update superslow` |
-| Codex CLI | `codex plugin marketplace upgrade superslow` |
-| Cursor | Re-run `install.sh` (it pulls latest into the cloned repo) |
-| OpenCode | Re-run the INSTALL.md flow |
-| Gemini CLI | `gemini extensions update superpowers` |
 
 ## License
 

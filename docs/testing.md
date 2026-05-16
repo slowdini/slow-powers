@@ -10,7 +10,7 @@ Testing skills that involve subagents, workflows, and complex interactions requi
 
 ```
 tests/
-├── claude-code/
+├── claude/claude-code/
 │   ├── test-helpers.sh                    # Shared test utilities
 │   ├── test-subagent-driven-development-integration.sh
 │   ├── analyze-token-usage.py             # Token analysis tool
@@ -25,7 +25,7 @@ Integration tests execute real Claude Code sessions with actual skills:
 
 ```bash
 # Run the subagent-driven-development integration test
-cd tests/claude-code
+cd tests/claude/claude-code
 ./test-subagent-driven-development-integration.sh
 ```
 
@@ -141,7 +141,7 @@ STATUS: PASSED
 Analyze token usage from any Claude Code session:
 
 ```bash
-python3 tests/claude-code/analyze-token-usage.py ~/.claude/projects/<project-dir>/<session-id>.jsonl
+python3 tests/claude/claude-code/analyze-token-usage.py ~/.claude/projects/<project-dir>/<session-id>.jsonl
 ```
 
 ### Finding Session Files

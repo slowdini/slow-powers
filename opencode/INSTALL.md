@@ -113,4 +113,4 @@ When skills reference Claude Code tools:
 ## Getting Help
 
 - [Report issues](https://github.com/slowdini/superslow/issues)
-- [Full documentation](https://github.com/slowdini/superslow/blob/main/docs/README.opencode.md)
+- [Full documentation](https://github.com/slowdini/superslow/blob/main/README.md)

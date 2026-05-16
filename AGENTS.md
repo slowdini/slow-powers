@@ -11,11 +11,11 @@ for historical reference.
 This repo ships Superslow across five harnesses:
 
 - `skills/` — Skills, assets, and cross-cutting tests
-- `claude/` — Claude Code plugin
-- `codex/` — OpenAI Codex plugin
-- `cursor/` — Cursor plugin
+- `.claude-plugin/` — Claude Code plugin
+- `.codex-plugin/` — OpenAI Codex plugin
+- `.cursor-plugin/` — Cursor plugin
 - `opencode/` — OpenCode plugin (`@slowdini/superslow-opencode`)
-- `gemini-extension.json` + `GEMINI.md` — Gemini CLI extension (root-level)
+- `gemini-extension.json` + `gemini-instructions.md` — Gemini CLI extension (root-level)
 
 The skills themselves keep upstream's `superpowers:` prefix and vocabulary
 (e.g. `superpowers:brainstorming`, `using-superpowers`). The *product* is

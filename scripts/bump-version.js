@@ -10,7 +10,7 @@ const files = [
   "package.json",
   ".claude-plugin/plugin.json",
   ".codex-plugin/plugin.json",
-  "cursor/.cursor-plugin/plugin.json",
+  ".cursor-plugin/plugin.json",
   "gemini-extension.json",
   ".claude-plugin/marketplace.json",
   ".agents/plugins/marketplace.json",
