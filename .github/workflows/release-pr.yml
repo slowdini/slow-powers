@@ -1,0 +1,71 @@
+name: Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Next version (e.g. 1.2.0)"
+        required: true
+        type: string
+
+jobs:
+  open-release-pr:
+    name: Bump version and open release PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate version format
+        run: |
+          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must be X.Y.Z (no pre-release suffixes). Got: ${{ inputs.version }}"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PR_TOKEN }}
+
+      - name: Confirm version is strictly greater than current
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          NEXT="${{ inputs.version }}"
+          HIGHEST=$(printf '%s\n%s\n' "$CURRENT" "$NEXT" | sort -V | tail -n1)
+          if [ "$CURRENT" = "$NEXT" ] || [ "$HIGHEST" != "$NEXT" ]; then
+            echo "::error::New version ($NEXT) must be strictly greater than current ($CURRENT)"
+            exit 1
+          fi
+          echo "Bumping $CURRENT -> $NEXT"
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Bump version in all manifests
+        run: node scripts/bump-version.js "${{ inputs.version }}"
+
+      - name: Commit and push bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: bump version to ${{ inputs.version }}"
+          git push origin dev
+
+      - name: Open release PR
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN }}
+        run: |
+          PR_BODY_FILE=$(mktemp)
+          cat > "$PR_BODY_FILE" <<'EOF'
+          <!-- release-notes -->
+          ## Release notes
+
+          _Replace this paragraph with a short narrative for the release. If left unchanged, GitHub's auto-generated notes will be used instead._
+          EOF
+
+          PR_URL=$(gh pr create \
+            --base main \
+            --head dev \
+            --title "Release v${{ inputs.version }}" \
+            --body-file "$PR_BODY_FILE")
+
+          echo "Opened release PR: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
