@@ -31,7 +31,7 @@ Skills are invoked through your platform's dedicated skill mechanism — whateve
 
 ## Tool Vocabulary
 
-Skills describe capabilities, not tool names. Map each capability to whatever tool your platform provides. When a capability has a property that matters (persistence, hook-visibility, special loader), the skill names the property — that's the requirement, not the tool name.
+Skills describe capabilities, not tool names. Map each capability to whatever tool your platform provides. When a capability has a property that matters (e.g., persistence across subagent dispatches, special loader behavior), the skill names the property — that's the requirement, not the tool name.
 
 # Using Skills
 
