@@ -17,7 +17,7 @@ const assert = require("node:assert");
 
 const SERVER_PATH = path.join(
   __dirname,
-  "../../skills/brainstorming/scripts/server.cjs",
+  "../../../skills/brainstorming/scripts/server.cjs",
 );
 const TEST_PORT = 3334;
 const TEST_DIR = "/tmp/brainstorm-test";
@@ -471,7 +471,7 @@ async function runTests() {
 
     await test("helper.js defines required APIs", () => {
       const helperContent = fs.readFileSync(
-        path.join(__dirname, "../../skills/brainstorming/scripts/helper.js"),
+        path.join(__dirname, "../../../skills/brainstorming/scripts/helper.js"),
         "utf-8",
       );
       assert(
@@ -497,7 +497,7 @@ async function runTests() {
       const template = fs.readFileSync(
         path.join(
           __dirname,
-          "../../skills/brainstorming/scripts/frame-template.html",
+          "../../../skills/brainstorming/scripts/frame-template.html",
         ),
         "utf-8",
       );

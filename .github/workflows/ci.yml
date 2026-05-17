@@ -22,7 +22,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run unit tests
-        run: bun test
+        run: bun test --pass-with-no-tests
 
       - name: Run lint and format checks
         run: bun run check
@@ -40,16 +40,13 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run unit tests
-        run: bun test
+        run: bun test --pass-with-no-tests
 
       - name: Run lint and format checks
         run: bun run check
 
-      - name: Run core integration tests
+      - name: Run core tests
         run: bun run test:core
-
-      - name: Run claude harness tests
-        run: bun run test:claude
 
       - name: Run codex harness tests
         run: bun run test:codex

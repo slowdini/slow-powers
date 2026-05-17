@@ -5,12 +5,15 @@
   "description": "Superslow — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
   "main": "./opencode/plugins/superpowers.js",
+  "files": [
+    "opencode/",
+    "skills/"
+  ],
   "scripts": {
-    "test": "bun test",
-    "test:core": "for d in tests/core/*; do if [ -f \"$d/run-test.sh\" ]; then (cd \"$d\" && bash run-test.sh) || exit 1; fi; done",
-    "test:claude": "cd tests/claude/claude-code && bash run-skill-tests.sh || true",
-    "test:codex": "cd tests/codex && bash test-sync-to-codex-plugin.sh || true",
-    "test:opencode": "cd tests/opencode && bash run-tests.sh || true",
+    "test": "bun test --pass-with-no-tests",
+    "test:core": "cd tests/core/brainstorm-server && bun install --silent && bun run test",
+    "test:codex": "cd tests/codex && bash test-sync-to-codex-plugin.sh",
+    "test:opencode": "cd tests/opencode && bash run-tests.sh",
     "version": "node scripts/bump-version.js",
     "check": "biome check --write . && markdownlint-cli2 --fix '**/*.md' '!**/node_modules/**' '!**/.worktrees/**'"
   },

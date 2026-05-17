@@ -5,7 +5,7 @@ set -eEuo pipefail
 
 # Get the repository root from this sourced script location.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Create temp home directory for isolation
 export TEST_HOME

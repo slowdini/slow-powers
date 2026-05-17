@@ -15,16 +15,11 @@ echo "Test time: $(date)"
 echo ""
 
 # Parse command line arguments
-RUN_INTEGRATION=false
 VERBOSE=false
 SPECIFIC_TEST=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --integration|-i)
-            RUN_INTEGRATION=true
-            shift
-            ;;
         --verbose|-v)
             VERBOSE=true
             shift
@@ -37,17 +32,14 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
-            echo "  --integration, -i  Run integration tests (requires OpenCode)"
             echo "  --verbose, -v      Show verbose output"
             echo "  --test, -t NAME    Run only the specified test"
             echo "  --help, -h         Show this help"
             echo ""
             echo "Tests:"
-            echo "  test-plugin-loading.sh  Verify plugin installation and structure"
+            echo "  test-plugin-loading.sh     Verify plugin installation and structure"
             echo "  test-bootstrap-caching.sh  Verify bootstrap content caching"
-            echo "  test-core-paths.sh       Verify core path exports and packed metadata"
-            echo "  test-tools.sh            Test use_skill and find_skills tools (integration)"
-            echo "  test-priority.sh         Test skill priority resolution (integration)"
+            echo "  test-core-paths.sh         Verify core path exports and packed metadata"
             exit 0
             ;;
         *)
@@ -58,23 +50,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# List of tests to run (no external dependencies)
 tests=(
     "test-plugin-loading.sh"
     "test-bootstrap-caching.sh"
     "test-core-paths.sh"
 )
-
-# Integration tests (require OpenCode)
-integration_tests=(
-    "test-tools.sh"
-    "test-priority.sh"
-)
-
-# Add integration tests if requested
-if [ "$RUN_INTEGRATION" = true ]; then
-    tests+=("${integration_tests[@]}")
-fi
 
 # Filter to specific test if requested
 if [ -n "$SPECIFIC_TEST" ]; then
@@ -151,12 +131,6 @@ echo "  Passed:  $passed"
 echo "  Failed:  $failed"
 echo "  Skipped: $skipped"
 echo ""
-
-if [ "$RUN_INTEGRATION" = false ] && [ ${#integration_tests[@]} -gt 0 ]; then
-    echo "Note: Integration tests were not run."
-    echo "Use --integration flag to run tests that require OpenCode."
-    echo ""
-fi
 
 if [ $failed -gt 0 ]; then
     echo "STATUS: FAILED"

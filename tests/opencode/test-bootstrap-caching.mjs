@@ -13,7 +13,7 @@ if (!pluginPath || !supportedScenarios.includes(scenario)) {
   process.exit(2);
 }
 
-const expectedSkillsDir = path.resolve(path.dirname(pluginPath), '../../core/skills');
+const expectedSkillsDir = path.resolve(path.dirname(pluginPath), '../../skills');
 const expectedUsingSuperpowersSkillPath = path.join(
   expectedSkillsDir,
   'using-superpowers',
