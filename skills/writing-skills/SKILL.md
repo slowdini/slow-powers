@@ -19,6 +19,18 @@ You write test cases (pressure scenarios with subagents), watch them fail (basel
 
 **Official guidance:** For Anthropic's official skill authoring best practices, see anthropic-best-practices.md. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
 
+## Vocabulary
+
+Skills describe capabilities, not platform tool names. When you write a skill, use these terms. This is the canonical source — when a new load-bearing term is coined, add it here.
+
+| Term | Means | Don't say |
+|------|-------|-----------|
+| **Skill mechanism** | The platform's dedicated skill loader | "Skill tool" (Claude-specific) |
+| **Persistent task tracker** | A todo tool whose state survives subagent dispatches and context churn | "TodoWrite", "write_todos" |
+| **General-purpose subagent** | A subagent without a specialized role | "Task tool", "@generalist" |
+| **Capability** | A described action ("search file contents") | A platform tool name ("Grep") |
+| **Load-bearing property** | A property a capability must have for the workflow to work | (no shorter form) |
+
 ## What is a Skill?
 
 A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future Claude instances find and apply effective approaches.
@@ -595,7 +607,7 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 
 ## Skill Creation Checklist (TDD Adapted)
 
-**IMPORTANT: Use TodoWrite to create todos for EACH checklist item below.**
+**IMPORTANT: Use your persistent task tracker to create a task for EACH checklist item below.**
 
 **RED Phase - Write Failing Test:**
 - [ ] Create pressure scenarios (3+ combined pressures for discipline skills)
