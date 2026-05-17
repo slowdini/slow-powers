@@ -103,7 +103,7 @@ fi
 ```
 
 - **If already on a feature branch:** Proceed to write and commit in place
-- **If on `main`/`master`:** Invoke `superpowers:using-git-worktrees` skill to create an isolated workspace. The spec is written and committed in the worktree.
+- **If on `main`/`master`:** Invoke `superslow:using-git-worktrees` skill to create an isolated workspace. The spec is written and committed in the worktree.
 
 - Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
 - Ask after each section whether it looks right so far

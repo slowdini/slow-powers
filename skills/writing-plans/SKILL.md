@@ -13,7 +13,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
+**Context:** If working in an isolated worktree, it should have been created via the `superslow:using-git-worktrees` skill at execution time.
 
 **Branch safety:** Before writing the plan document, verify the current branch is safe:
 
@@ -26,7 +26,7 @@ fi
 ```
 
 - **If already isolated:** Write and commit in place
-- **If on `main`/`master`:** Invoke `superpowers:using-git-worktrees` skill first, then write and commit in the worktree
+- **If on `main`/`master`:** Invoke `superslow:using-git-worktrees` skill first, then write and commit in the worktree
 
 **Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
@@ -62,7 +62,7 @@ This structure informs the task decomposition. Each task should produce self-con
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superslow:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -150,5 +150,5 @@ After saving the plan, announce:
 
 **"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Ready to execute with subagent-driven-development."**
 
-- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- **REQUIRED SUB-SKILL:** Use superslow:subagent-driven-development
 - Fresh subagent per task + two-stage review

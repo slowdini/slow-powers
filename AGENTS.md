@@ -17,10 +17,6 @@ This repo ships Superslow across five harnesses:
 - `opencode/` — OpenCode plugin (`@slowdini/superslow-opencode`)
 - `gemini-extension.json` + `gemini-instructions.md` — Gemini CLI extension (root-level)
 
-The skills themselves keep upstream's `superpowers:` prefix and vocabulary
-(e.g. `superpowers:brainstorming`, `using-superpowers`). The *product* is
-Superslow; the *skills* are still called superpowers.
-
 ## Pull Request Requirements
 
 - One problem per PR. Bundled unrelated changes will be split or sent back.
@@ -36,7 +32,7 @@ Superslow; the *skills* are still called superpowers.
 
 If you modify skill content:
 
-- Use `superpowers:writing-skills` to develop and test changes.
+- Use `superslow:writing-skills` to develop and test changes.
 - Run adversarial pressure testing across multiple sessions, not just the
   happy path.
 - Show before/after eval results in the PR description.
