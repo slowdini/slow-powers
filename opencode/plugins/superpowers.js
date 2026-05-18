@@ -6,103 +6,36 @@
  */
 
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const superpowersSkillsDir = path.resolve(__dirname, "../../skills");
-const usingSuperpowersSkillPath = path.join(
-  superpowersSkillsDir,
-  "using-superpowers",
-  "SKILL.md",
-);
-const bootstrapMarker = "SUPERSLOW_OPENCODE_BOOTSTRAP";
-
-// Simple frontmatter extraction (avoid dependency on skills-core for bootstrap)
-const extractAndStripFrontmatter = (content) => {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) return { frontmatter: {}, content };
-
-  const frontmatterStr = match[1];
-  const body = match[2];
-  const frontmatter = {};
-
-  for (const line of frontmatterStr.split("\n")) {
-    const colonIdx = line.indexOf(":");
-    if (colonIdx > 0) {
-      const key = line.slice(0, colonIdx).trim();
-      const value = line
-        .slice(colonIdx + 1)
-        .trim()
-        .replace(/^["']|["']$/g, "");
-      frontmatter[key] = value;
-    }
-  }
-
-  return { frontmatter, content: body };
-};
-
-// Normalize a path: trim whitespace, expand ~, resolve to absolute
-const normalizePath = (p, homeDir) => {
-  if (!p || typeof p !== "string") return null;
-  let normalized = p.trim();
-  if (!normalized) return null;
-  if (normalized.startsWith("~/")) {
-    normalized = path.join(homeDir, normalized.slice(2));
-  } else if (normalized === "~") {
-    normalized = homeDir;
-  }
-  return path.resolve(normalized);
-};
+const bootstrapPath = path.resolve(__dirname, "../../bootstrap.md");
+// First line of bootstrap.md — used as an idempotency check so we don't
+// re-inject when OpenCode reruns the transform on an already-transformed
+// message array. Specific enough that user prompts won't accidentally match.
+const bootstrapLeadingPhrase = "# Instructions for using Superslow Skills";
 
 // Module-level cache for bootstrap content.
-// The SKILL.md file does not change during a session, so reading + parsing it
-// once eliminates redundant fs.existsSync + fs.readFileSync + regex work on
-// every agent step.  See #1202 for the full analysis.
+// The bootstrap.md file does not change during a session, so reading it
+// once eliminates redundant fs work on every agent step.
 let _bootstrapCache; // undefined = not yet loaded, null = file missing
 
 export const SuperpowersPlugin = async ({
   client: _client,
   directory: _directory,
 }) => {
-  const homeDir = os.homedir();
-  const envConfigDir = normalizePath(process.env.OPENCODE_CONFIG_DIR, homeDir);
-  const _configDir = envConfigDir || path.join(homeDir, ".config/opencode");
-
-  // Helper to generate bootstrap content (cached after first call)
+  // Helper to load bootstrap content (cached after first call)
   const getBootstrapContent = () => {
-    // Return cached result on subsequent calls
     if (_bootstrapCache !== undefined) return _bootstrapCache;
 
-    // Try to load using-superpowers skill
-    if (!fs.existsSync(usingSuperpowersSkillPath)) {
+    if (!fs.existsSync(bootstrapPath)) {
       _bootstrapCache = null;
       return null;
     }
 
-    const fullContent = fs.readFileSync(usingSuperpowersSkillPath, "utf8");
-    const { content } = extractAndStripFrontmatter(fullContent);
-
-    const toolMapping = `**Tool Mapping for OpenCode:**
-When skills reference tools you don't have, substitute OpenCode equivalents:
-- \`TodoWrite\` → \`todowrite\`
-- \`Task\` tool with subagents → Use OpenCode's subagent system (@mention)
-- \`Skill\` tool → OpenCode's native \`skill\` tool
-- \`Read\`, \`Write\`, \`Edit\`, \`Bash\` → Your native tools
-
-Use OpenCode's native \`skill\` tool to list and load skills.`;
-
-    _bootstrapCache = `<!-- ${bootstrapMarker} -->
-<EXTREMELY_IMPORTANT>
-You have superpowers.
-
-**IMPORTANT: The using-superpowers skill content is included below. It is ALREADY LOADED - you are currently following it. Do NOT use the skill tool to load "using-superpowers" again - that would be redundant.**
-
-${content}
-
-${toolMapping}
-</EXTREMELY_IMPORTANT>`;
+    _bootstrapCache = fs.readFileSync(bootstrapPath, "utf8");
 
     return _bootstrapCache;
   };
@@ -143,7 +76,7 @@ ${toolMapping}
       // transformed in-memory message array through the hook again.
       if (
         firstUser.parts[0]?.type === "text" &&
-        firstUser.parts[0].text.includes(bootstrapMarker)
+        firstUser.parts[0].text.startsWith(bootstrapLeadingPhrase)
       )
         return;
 

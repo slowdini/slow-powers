@@ -1,13 +1,14 @@
 {
   "name": "@slowdini/superslow-opencode",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Superslow — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
   "main": "./opencode/plugins/superpowers.js",
   "files": [
     "opencode/",
-    "skills/"
+    "skills/",
+    "bootstrap.md"
   ],
   "scripts": {
     "test": "bun test --pass-with-no-tests",

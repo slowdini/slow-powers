@@ -97,9 +97,10 @@ Before writing and committing the spec, verify the current branch is safe:
 ```bash
 BRANCH=$(git branch --show-current)
 DEFAULT=$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null | sed 's|^origin/||')
-if [ "$BRANCH" = "$DEFAULT" ] || [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
-    # On a protected branch — invoke using-git-worktrees to create isolation
-fi
+case "$BRANCH" in
+    "$DEFAULT"|main|master) echo "PROTECTED — invoke superslow:using-git-worktrees" ;;
+    *) echo "OK — on feature branch $BRANCH" ;;
+esac
 ```
 
 - **If already on a feature branch:** Proceed to write and commit in place

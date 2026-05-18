@@ -20,9 +20,10 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 ```bash
 BRANCH=$(git branch --show-current)
 DEFAULT=$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null | sed 's|^origin/||')
-if [ "$BRANCH" = "$DEFAULT" ] || [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
-    # On a protected branch — invoke using-git-worktrees to create isolation
-fi
+case "$BRANCH" in
+    "$DEFAULT"|main|master) echo "PROTECTED — invoke superslow:using-git-worktrees" ;;
+    *) echo "OK — on feature branch $BRANCH" ;;
+esac
 ```
 
 - **If already isolated:** Write and commit in place
@@ -30,6 +31,46 @@ fi
 
 **Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
+
+## Checklist
+
+You MUST complete these items in order:
+
+1. **Verify branch safety** — check if on protected branch; create a worktree if needed
+2. **Map file structure** — list files to create/modify and what each is responsible for
+3. **Decompose into bite-sized tasks** — each step is one action (2–5 minutes)
+4. **Write the plan** — header, exact paths, complete code in every step, exact commands
+5. **Self-review** — spec coverage, placeholder scan, type consistency (fix inline)
+6. **Save and commit** — to the plan path above
+7. **Invoke subagent-driven-development** — terminal state; do NOT pause
+
+## Process Flow
+
+```dot
+digraph writing_plans {
+    "Verify branch safety" [shape=box];
+    "On protected branch?" [shape=diamond];
+    "Invoke using-git-worktrees" [shape=box];
+    "Map file structure" [shape=box];
+    "Decompose into bite-sized tasks" [shape=box];
+    "Write the plan" [shape=box];
+    "Self-review (fix inline)" [shape=box];
+    "Save and commit" [shape=box];
+    "Invoke subagent-driven-development" [shape=doublecircle];
+
+    "Verify branch safety" -> "On protected branch?";
+    "On protected branch?" -> "Invoke using-git-worktrees" [label="yes"];
+    "On protected branch?" -> "Map file structure" [label="no"];
+    "Invoke using-git-worktrees" -> "Map file structure";
+    "Map file structure" -> "Decompose into bite-sized tasks";
+    "Decompose into bite-sized tasks" -> "Write the plan";
+    "Write the plan" -> "Self-review (fix inline)";
+    "Self-review (fix inline)" -> "Save and commit";
+    "Save and commit" -> "Invoke subagent-driven-development";
+}
+```
+
+**The terminal state is invoking subagent-driven-development.** Do NOT pause to ask the user for permission to proceed — the plan was already approved during brainstorming and spec review. Announcing "ready to execute" and waiting is a failure mode. Announce the invocation and proceed in the same turn.
 
 ## Scope Check
 
@@ -146,9 +187,11 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
-After saving the plan, announce:
+After saving the plan, announce and immediately invoke subagent-driven-development in the same turn:
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Ready to execute with subagent-driven-development."**
+**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Invoking subagent-driven-development now to execute task-by-task."**
+
+Then invoke `superslow:subagent-driven-development`. Do NOT pause for user confirmation between the announcement and the invocation — the plan has already been approved, and stopping here to ask "let me know when you want to proceed" is a failure mode. The user can interrupt if they want to change direction.
 
 - **REQUIRED SUB-SKILL:** Use superslow:subagent-driven-development
 - Fresh subagent per task + two-stage review

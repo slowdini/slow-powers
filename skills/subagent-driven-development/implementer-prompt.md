@@ -37,6 +37,7 @@ Dispatch a general-purpose subagent:
     6. Report back
 
     Work from: [directory]
+    All file edits, test runs, and commits must happen here. If this is a git worktree path, stay in it — do not cd to the main checkout or another worktree.
 
     **While you work:** If you encounter something unexpected or unclear, **ask questions**.
     It's always OK to pause and clarify. Don't guess or make assumptions.

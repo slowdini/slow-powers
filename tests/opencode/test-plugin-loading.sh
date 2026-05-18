@@ -57,12 +57,12 @@ else
     exit 1
 fi
 
-# Test 4: Check using-superpowers skill exists (critical for bootstrap)
-echo "Test 4: Checking using-superpowers skill (required for bootstrap)..."
-if [ -f "$SUPERPOWERS_SKILLS_DIR/using-superpowers/SKILL.md" ]; then
-    echo "  [PASS] using-superpowers skill exists"
+# Test 4: Check bootstrap.md exists (critical for bootstrap)
+echo "Test 4: Checking bootstrap.md (required for bootstrap)..."
+if [ -f "$SUPERPOWERS_DIR/bootstrap.md" ]; then
+    echo "  [PASS] bootstrap.md exists"
 else
-    echo "  [FAIL] using-superpowers skill not found (required for bootstrap)"
+    echo "  [FAIL] bootstrap.md not found"
     exit 1
 fi
 

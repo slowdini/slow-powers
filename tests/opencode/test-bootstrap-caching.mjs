@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 const [, , pluginPath, scenario] = process.argv;
 const supportedScenarios = ['present', 'missing-file', 'missing-skills-dir'];
-const bootstrapMarker = 'SUPERSLOW_OPENCODE_BOOTSTRAP';
+const bootstrapMarker = 'You have superpowers';
 
 if (!pluginPath || !supportedScenarios.includes(scenario)) {
   console.error(
@@ -14,11 +14,7 @@ if (!pluginPath || !supportedScenarios.includes(scenario)) {
 }
 
 const expectedSkillsDir = path.resolve(path.dirname(pluginPath), '../../skills');
-const expectedUsingSuperpowersSkillPath = path.join(
-  expectedSkillsDir,
-  'using-superpowers',
-  'SKILL.md'
-);
+const expectedBootstrapPath = path.resolve(path.dirname(pluginPath), '../../bootstrap.md');
 
 let existsCount = 0;
 let readCount = 0;
@@ -27,14 +23,14 @@ const originalExistsSync = fs.existsSync;
 const originalReadFileSync = fs.readFileSync;
 
 fs.existsSync = function (...args) {
-  if (normalizePath(args[0]) === normalizePath(expectedUsingSuperpowersSkillPath)) {
+  if (normalizePath(args[0]) === normalizePath(expectedBootstrapPath)) {
     existsCount += 1;
   }
   return originalExistsSync.apply(this, args);
 };
 
 fs.readFileSync = function (...args) {
-  if (normalizePath(args[0]) === normalizePath(expectedUsingSuperpowersSkillPath)) {
+  if (normalizePath(args[0]) === normalizePath(expectedBootstrapPath)) {
     readCount += 1;
   }
   return originalReadFileSync.apply(this, args);
@@ -69,7 +65,7 @@ const sameOutputBootstrapPartsAfterSecond = countBootstrapParts(sameOutput);
 const result = {
   scenario,
   expectedSkillsDir,
-  expectedUsingSuperpowersSkillPath,
+  expectedBootstrapPath,
   pluginStillReferencesCorePaths: pluginSource.includes('@slowdini/superslow-core/paths'),
   registeredSkillsPaths: config.skills?.paths ?? [],
   firstBootstrapParts: countBootstrapParts(firstOutput),
@@ -147,7 +143,7 @@ function assertPresentBootstrap(result) {
     failures.push(`expected second transform to inject one bootstrap part, got ${result.secondBootstrapParts}`);
   }
   if (result.firstReadCount !== 1) {
-    failures.push(`expected first transform to read SKILL.md once, got ${result.firstReadCount}`);
+    failures.push(`expected first transform to read bootstrap.md once, got ${result.firstReadCount}`);
   }
   if (result.secondReadCount !== result.firstReadCount) {
     failures.push(`expected cached second transform to do no additional reads, got ${result.secondReadCount - result.firstReadCount}`);
@@ -186,7 +182,7 @@ function assertMissingFileBootstrap(result) {
     );
   }
   if (result.firstBootstrapParts !== 0) {
-    failures.push(`expected no bootstrap when SKILL.md is missing, got ${result.firstBootstrapParts}`);
+    failures.push(`expected no bootstrap when bootstrap.md is missing, got ${result.firstBootstrapParts}`);
   }
   if (result.secondBootstrapParts !== 0) {
     failures.push(`expected no bootstrap on second missing-file transform, got ${result.secondBootstrapParts}`);
