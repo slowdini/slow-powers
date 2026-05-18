@@ -15,7 +15,7 @@ const bootstrapPath = path.resolve(__dirname, "../../bootstrap.md");
 // First line of bootstrap.md — used as an idempotency check so we don't
 // re-inject when OpenCode reruns the transform on an already-transformed
 // message array. Specific enough that user prompts won't accidentally match.
-const bootstrapLeadingPhrase = "You have superpowers.";
+const bootstrapLeadingPhrase = "# Instructions for using Superslow Skills";
 
 // Module-level cache for bootstrap content.
 // The bootstrap.md file does not change during a session, so reading it
