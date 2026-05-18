@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # SessionStart hook for Superslow's Claude Code plugin.
-# Injects the using-superpowers SKILL.md as additional context.
 
 set -euo pipefail
 
