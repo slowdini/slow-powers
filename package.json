@@ -7,7 +7,8 @@
   "main": "./opencode/plugins/superpowers.js",
   "files": [
     "opencode/",
-    "skills/"
+    "skills/",
+    "bootstrap.md"
   ],
   "scripts": {
     "test": "bun test --pass-with-no-tests",

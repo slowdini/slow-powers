@@ -42,9 +42,9 @@ assert.equal(
   'packed plugin entry should be present',
 );
 assert.equal(
-  packedFiles.has('skills/using-superpowers/SKILL.md'),
+  packedFiles.has('bootstrap.md'),
   true,
-  'packed using-superpowers skill should be present',
+  'packed bootstrap.md should be present',
 );
 assert.equal(
   packedFiles.has('opencode/package.json'),

@@ -128,9 +128,9 @@ hooks_path = resolve_component(manifest.get('hooks'), 'hooks')
 resolve_component(manifest.get('interface', {}).get('composerIcon'), 'interface.composerIcon')
 resolve_component(manifest.get('interface', {}).get('logo'), 'interface.logo')
 
-skill_path = os.path.join(skills_dir, 'using-superpowers', 'SKILL.md')
-if not os.path.isfile(skill_path):
-    raise SystemExit('using-superpowers skill missing from bundled skills directory')
+bootstrap_path = os.path.join(plugin_root, 'bootstrap.md')
+if not os.path.isfile(bootstrap_path):
+    raise SystemExit('bootstrap.md missing from plugin root')
 
 with open(hooks_path, 'r', encoding='utf-8') as handle:
     hooks = json.load(handle)
