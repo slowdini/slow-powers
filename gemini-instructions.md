@@ -1,1 +1,1 @@
-@./skills/using-superpowers/SKILL.md
+@./bootstrap.md

@@ -129,7 +129,7 @@ workflows, not suggestions.
 `receiving-code-review`, `using-git-worktrees`,
 `finishing-a-development-branch`, `subagent-driven-development`
 
-**Meta** — `writing-skills`, `using-superpowers`
+**Meta** — `writing-skills`
 
 ## Philosophy
 
