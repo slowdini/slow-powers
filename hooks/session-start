@@ -11,7 +11,7 @@ if [ ! -d "$SKILLS_DIR" ]; then
   exit 1
 fi
 
-using_superpowers_content=$(cat "${SCRIPT_DIR}/../bootstrap.md" 2>&1 || echo "Error reading bootstrap instructions")
+bootstrap_content=$(cat "${SCRIPT_DIR}/../bootstrap.md" 2>&1 || echo "Error reading bootstrap instructions")
 
 # Escape string for JSON embedding using bash parameter substitution.
 # Each ${s//old/new} is a single C-level pass - orders of magnitude
@@ -26,11 +26,10 @@ escape_for_json() {
     printf '%s' "$s"
 }
 
-using_superpowers_escaped=$(escape_for_json "$using_superpowers_content")
-session_context="<EXTREMELY_IMPORTANT>\nYou have superpowers.\n\n**Below are your core instructions for using skills. For all other skills, use the 'Skill' tool:**\n\n${using_superpowers_escaped}\n</EXTREMELY_IMPORTANT>"
+bootstrap_escaped=$(escape_for_json "$bootstrap_content")
 
 # Uses printf instead of heredoc to work around bash 5.3+ heredoc hang.
 # See: https://github.com/obra/superpowers/issues/571
-printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$session_context"
+printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$bootstrap_escaped"
 
 exit 0

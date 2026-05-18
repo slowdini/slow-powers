@@ -12,7 +12,10 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const superpowersSkillsDir = path.resolve(__dirname, "../../skills");
 const bootstrapPath = path.resolve(__dirname, "../../bootstrap.md");
-const bootstrapMarker = "SUPERSLOW_OPENCODE_BOOTSTRAP";
+// First line of bootstrap.md — used as an idempotency check so we don't
+// re-inject when OpenCode reruns the transform on an already-transformed
+// message array. Specific enough that user prompts won't accidentally match.
+const bootstrapLeadingPhrase = "You have superpowers.";
 
 // Module-level cache for bootstrap content.
 // The bootstrap.md file does not change during a session, so reading it
@@ -32,8 +35,7 @@ export const SuperpowersPlugin = async ({
       return null;
     }
 
-    const content = fs.readFileSync(bootstrapPath, "utf8");
-    _bootstrapCache = `<!-- ${bootstrapMarker} -->\n${content}`;
+    _bootstrapCache = fs.readFileSync(bootstrapPath, "utf8");
 
     return _bootstrapCache;
   };
@@ -74,7 +76,7 @@ export const SuperpowersPlugin = async ({
       // transformed in-memory message array through the hook again.
       if (
         firstUser.parts[0]?.type === "text" &&
-        firstUser.parts[0].text.includes(bootstrapMarker)
+        firstUser.parts[0].text.startsWith(bootstrapLeadingPhrase)
       )
         return;
 

@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 const [, , pluginPath, scenario] = process.argv;
 const supportedScenarios = ['present', 'missing-file', 'missing-skills-dir'];
-const bootstrapMarker = 'SUPERSLOW_OPENCODE_BOOTSTRAP';
+const bootstrapMarker = 'You have superpowers.';
 
 if (!pluginPath || !supportedScenarios.includes(scenario)) {
   console.error(
