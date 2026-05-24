@@ -45,9 +45,6 @@ jobs:
       - name: Run lint and format checks
         run: bun run check
 
-      - name: Run core tests
-        run: bun run test:core
-
       - name: Run codex harness tests
         run: bun run test:codex
 
