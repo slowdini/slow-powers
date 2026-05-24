@@ -15,7 +15,7 @@ This repo ships Superslow across five harnesses:
 - `.codex-plugin/` — OpenAI Codex plugin
 - `.cursor-plugin/` — Cursor plugin
 - `opencode/` — OpenCode plugin (`@slowdini/superslow-opencode`)
-- `gemini-extension.json` + `gemini-instructions.md` — Gemini CLI extension (root-level)
+- `antigravity-extension.json` + `antigravity-instructions.md` — Antigravity CLI plugin (root-level)
 
 ## Pull Request Requirements
 

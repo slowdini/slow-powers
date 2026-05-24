@@ -1,6 +1,6 @@
 {
   "name": "superslow",
-  "version": "1.1.2",
+  "version": "2.0.0",
   "description": "Superslow gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
   "author": {
     "name": "Max Haarhaus",
@@ -11,28 +11,24 @@
   "repository": "https://github.com/slowdini/superslow",
   "license": "MIT",
   "keywords": [
-    "brainstorming",
-    "subagent-driven-development",
-    "skills",
     "planning",
     "tdd",
     "debugging",
-    "code-review",
+    "verification",
+    "git-worktrees",
+    "git-hygiene",
+    "skills",
     "workflow"
   ],
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Superslow",
-    "shortDescription": "Planning, TDD, debugging, and collaboration workflows for coding agents",
-    "longDescription": "Use Superslow to guide agent work through brainstorming, implementation planning, test-driven development, systematic debugging, parallel execution, code review, and finish-the-branch workflows.",
+    "shortDescription": "TDD, debugging, and verification utilities for coding agents",
+    "longDescription": "Use Superslow to supercharge your coding agent with rigorous test-driven development (TDD), systematic scientific debugging, strict verification loops, isolated git worktrees, and clean branch-finishing hygiene.",
     "developerName": "Max Haarhaus",
     "category": "Coding",
-    "capabilities": [
-      "Interactive",
-      "Read",
-      "Write"
-    ],
+    "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": [
       "I've got an idea for something I'd like to build.",
       "Let's add a feature to this project."
