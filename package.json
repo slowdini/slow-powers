@@ -12,7 +12,6 @@
   ],
   "scripts": {
     "test": "bun test --pass-with-no-tests",
-    "test:core": "cd tests/core/brainstorm-server && bun install --silent && bun run test",
     "test:codex": "cd tests/codex && bash test-sync-to-codex-plugin.sh",
     "test:opencode": "cd tests/opencode && bash run-tests.sh",
     "version": "node scripts/bump-version.js",

@@ -28,11 +28,7 @@
     "longDescription": "Use Superslow to supercharge your coding agent with rigorous test-driven development (TDD), systematic scientific debugging, strict verification loops, isolated git worktrees, and clean branch-finishing hygiene.",
     "developerName": "Max Haarhaus",
     "category": "Coding",
-    "capabilities": [
-      "Interactive",
-      "Read",
-      "Write"
-    ],
+    "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": [
       "I've got an idea for something I'd like to build.",
       "Let's add a feature to this project."
