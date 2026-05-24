@@ -71,7 +71,7 @@ When running this from a shell-execution capability, use your platform's backgro
 scripts/start-server.sh --project-dir /path/to/project
 ```
 
-**Gemini CLI:**
+**Antigravity CLI:**
 ```bash
 # Use --foreground and set is_background: true on your shell tool call
 # so the process survives across turns
