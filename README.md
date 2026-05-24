@@ -16,7 +16,7 @@ release notes live in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Quickstart
 
-Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Copilot CLI](#copilot-cli) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode) · [Gemini CLI](#gemini-cli).
+Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Copilot CLI](#copilot-cli) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode) · [Antigravity CLI](#antigravity-cli).
 
 ## How it works
 
@@ -87,16 +87,16 @@ Fetch and follow instructions from https://raw.githubusercontent.com/slowdini/su
 
 Detailed docs: [`opencode/INSTALL.md`](opencode/INSTALL.md).
 
-### Gemini CLI
+### Antigravity CLI
 
 ```bash
-gemini extensions install https://github.com/slowdini/superslow
+agy plugin install https://github.com/slowdini/superslow
 ```
 
 To update:
 
 ```bash
-gemini extensions update superpowers
+agy plugin update superslow
 ```
 
 ## The Basic Workflow
@@ -149,7 +149,7 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `.codex-plugin/` — OpenAI Codex plugin manifest
 - `.cursor-plugin/` — Cursor plugin manifest, hooks, and install script
 - `opencode/` — OpenCode plugin and installation docs
-- `gemini-extension.json` + `gemini-instructions.md` — Gemini CLI extension
+- `antigravity-extension.json` + `antigravity-instructions.md` — Antigravity CLI plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
 

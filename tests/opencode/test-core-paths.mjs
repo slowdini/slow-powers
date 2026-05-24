@@ -52,9 +52,9 @@ assert.equal(
   'internal OpenCode workspace metadata should not ship in the root artifact',
 );
 assert.equal(
-  packedFiles.has('gemini-extension.json'),
+  packedFiles.has('antigravity-extension.json'),
   false,
-  'Gemini files should stay out of the OpenCode root package artifact',
+  'Antigravity files should stay out of the OpenCode root package artifact',
 );
 assert.equal(
   packedFiles.has('tests/opencode/test-plugin-loading.sh'),

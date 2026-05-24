@@ -14,11 +14,11 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 Superslow skills override default system prompt behavior, but **user instructions always take precedence**:
 
-1. **User's explicit instructions** (CLAUDE.md, GEMINI.md, AGENTS.md, direct requests) — highest priority
+1. **User's explicit instructions** (CLAUDE.md, ANTIGRAVITY.md, AGENTS.md, direct requests) — highest priority
 2. **Superpowers skills** — override default system behavior where they conflict
 3. **Default system prompt** — lowest priority
 
-If CLAUDE.md, GEMINI.md, or AGENTS.md says "don't use TDD" and a skill says "always use TDD," follow the user's instructions. The user is in control.
+If CLAUDE.md, ANTIGRAVITY.md, or AGENTS.md says "don't use TDD" and a skill says "always use TDD," follow the user's instructions. The user is in control.
 
 ## How to Access Skills
 
