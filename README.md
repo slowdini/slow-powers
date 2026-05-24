@@ -20,12 +20,7 @@ Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Copi
 
 ## How it works
 
-Superslow steps in before code gets written, providing workflows for
-professional development work. It teases out a spec through conversation,
-presents it in digestible chunks, then writes an implementation plan clear
-enough for a junior engineer to follow. It enforces red/green TDD, YAGNI, and DRY,
-and dispatches subagents per task with two-stage review. Skills trigger
-automatically — you don't have to invoke them manually.
+Superslow integrates directly into your agent's session, providing a highly disciplined set of technical execution utilities. It enforces strict test-driven development (TDD), systematic scientific debugging, rigorous verification checks, safe workspace isolation via git worktrees, and clean branch-finishing hygiene. It also enhances native agent planning phases with strict rules: banning placeholders, enforcing atomic task granularity, and requiring TDD-first checklists.
 
 ## Installation
 
@@ -99,37 +94,26 @@ To update:
 agy plugin update superslow
 ```
 
-## The Basic Workflow
+## The Core Execution Utilities
 
-1. **brainstorming** — refines rough ideas through questions, explores
-   alternatives, presents the design in sections for validation.
-2. **using-git-worktrees** — creates an isolated workspace on a new branch
-   after design approval.
-3. **writing-plans** — breaks the work into bite-sized tasks with exact
-   file paths and complete code.
-4. **subagent-driven-development** — dispatches a fresh subagent per task
-   with two-stage review (spec compliance, then code quality).
-5. **test-driven-development** — enforces RED-GREEN-REFACTOR.
-6. **requesting-code-review** — reviews against the plan, reports issues
-   by severity; critical issues block progress.
-7. **finishing-a-development-branch** — verifies tests, presents options
-   (merge, PR, keep, discard), cleans up the worktree.
+Superslow provides a set of highly focused, execution-level skills that ensure your agent operates with maximum discipline:
 
-The agent checks for relevant skills before any task. These are mandatory
-workflows, not suggestions.
+1. **`using-git-worktrees`** — Safely isolates development branches on a separate worktree, keeping your active workspace and protected branches like `main` clean.
+2. **`test-driven-development`** — Enforces a strict RED-GREEN-REFACTOR cycle, ensuring all production code is backed by failing test verification first.
+3. **`systematic-debugging`** — Guides the agent to locate the root cause of failures via scientific hypothesis testing, avoiding "guess-and-check" thrashing.
+4. **`verification-before-completion`** — Requires running actual test/build commands and presenting concrete evidence before making any success claims.
+5. **`finishing-a-development-branch`** — Manages local branch hygiene, runs final test verifications, and cleans up git worktrees.
+6. **`writing-skills`** — Handles future custom skill authoring and updates.
 
 ## What's inside
 
-**Testing** — `test-driven-development`
+**Testing & Verification** — `test-driven-development`, `verification-before-completion`
 
-**Debugging** — `systematic-debugging`, `verification-before-completion`
+**Debugging** — `systematic-debugging`
 
-**Collaboration** — `brainstorming`, `writing-plans`,
-`dispatching-parallel-agents`, `requesting-code-review`,
-`receiving-code-review`, `using-git-worktrees`,
-`finishing-a-development-branch`, `subagent-driven-development`
+**Workspace & Git Hygiene** — `using-git-worktrees`, `finishing-a-development-branch`
 
-**Meta** — `writing-skills`
+**Meta & Extension** — `writing-skills`
 
 ## Philosophy
 

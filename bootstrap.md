@@ -3,104 +3,49 @@
 You have superpowers, provided by superslow.
 
 <EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
-
-IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
-
-This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+If a skill applies to your current task, you MUST load and follow the skill. Do not skip or shortcut execution.
 </EXTREMELY-IMPORTANT>
 
 ## Instruction Priority
 
-Superslow skills override default system prompt behavior, but **user instructions always take precedence**:
-
-1. **User's explicit instructions** (CLAUDE.md, ANTIGRAVITY.md, AGENTS.md, direct requests) — highest priority
-2. **Superpowers skills** — override default system behavior where they conflict
+Superslow skills override default system behavior where they conflict, but user instructions always take precedence:
+1. **User's explicit instructions** (ANTIGRAVITY.md, AGENTS.md, direct requests) — highest priority
+2. **Superpowers skills / bootstrap guidelines** — override default system prompt behavior where they conflict
 3. **Default system prompt** — lowest priority
 
-If CLAUDE.md, ANTIGRAVITY.md, or AGENTS.md says "don't use TDD" and a skill says "always use TDD," follow the user's instructions. The user is in control.
+---
 
-## How to Access Skills
+## General Planning Guidelines
 
-Skills are invoked through your platform's dedicated skill mechanism — whatever your host exposes for loading a skill by name. Use it. **Do not open skill files as plain text** — the raw markdown bypasses the loader's framing, prerequisite chains, and session state.
+If your agent system or environment supports a planning phase (such as Antigravity's Planning Mode, `implementation_plan.md` artifacts, or task list panels), you MUST enrich your plans with these rules:
 
-## Tool Vocabulary
+1. **No Placeholders:**
+   * All planned tasks and file changes must be fully concrete.
+   * You are strictly FORBIDDEN from using placeholders (e.g., "TBD", "TODO", "implement error handling later"). Specify the exact implementation design.
+2. **Atomic Task Granularity:**
+   * Break your implementation roadmap (`task.md` or checklist) down into highly granular, atomic actions that take 2-to-5 minutes to execute.
+3. **TDD-First Steps:**
+   * For every feature or bugfix, your task checklist MUST explicitly structure a Red-Green-Refactor sequence:
+     1. Write the failing test.
+     2. Run the test and verify it fails correctly.
+     3. Implement the minimal code to pass.
+     4. Run the test and verify it passes.
 
-Skills describe capabilities, not tool names. Map each capability to whatever tool your platform provides. When a capability has a property that matters (e.g., persistence across subagent dispatches, special loader behavior), the skill names the property — that's the requirement, not the tool name.
+---
 
-# Using Skills
+## Active Skills Directory
 
-## The Rule
+When executing a task, check if any of these skills apply and load them immediately:
 
-**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check.
-
-```dot
-digraph skill_flow {
-    "User message received" [shape=doublecircle];
-    "About to enter plan mode?" [shape=doublecircle];
-    "Already brainstormed?" [shape=diamond];
-    "Invoke brainstorming skill" [shape=box];
-    "Might any skill apply?" [shape=diamond];
-    "Invoke skill tool" [shape=box];
-    "Announce: 'Using [skill] to [purpose]'" [shape=box];
-    "Has checklist?" [shape=diamond];
-    "Track each checklist item as a persistent task" [shape=box];
-    "Follow skill exactly" [shape=box];
-    "Respond (including clarifications)" [shape=doublecircle];
-
-    "About to enter plan mode?" -> "Already brainstormed?";
-    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
-    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
-    "Invoke brainstorming skill" -> "Might any skill apply?";
-
-    "User message received" -> "Might any skill apply?";
-    "Might any skill apply?" -> "Invoke skill tool" [label="yes, even 1%"];
-    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
-    "Invoke skill tool" -> "Announce: 'Using [skill] to [purpose]'";
-    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
-    "Has checklist?" -> "Track each checklist item as a persistent task" [label="yes"];
-    "Has checklist?" -> "Follow skill exactly" [label="no"];
-    "Track each checklist item as a persistent task" -> "Follow skill exactly";
-}
-```
-
-## Red Flags
-
-These thoughts mean STOP—you're rationalizing:
-
-| Thought | Reality |
-|---------|---------|
-| "This is just a simple question" | Questions are tasks. Check for skills. |
-| "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
-| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
-| "Let me gather information first" | Skills tell you HOW to gather information. |
-| "This doesn't need a formal skill" | If a skill exists, use it. |
-| "I remember this skill" | Skills evolve. Read current version. |
-| "This doesn't count as a task" | Action = task. Check for skills. |
-| "The skill is overkill" | Simple things become complex. Use it. |
-| "I'll just do this one thing first" | Check BEFORE doing anything. |
-| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
-| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
-
-## Skill Priority
-
-When multiple skills could apply, use this order:
-
-1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
-2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
-
-"Let's build X" → brainstorming first, then implementation skills.
-"Fix this bug" → debugging first, then domain-specific skills.
-
-## Skill Types
-
-**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
-
-**Flexible**: Adapt principles to context.
-
-The skill itself tells you which.
-
-## User Instructions
-
-Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+* **`using-git-worktrees`**
+  * *Trigger:* Use when starting any new feature development or bugfix to set up a safe, isolated worktree.
+* **`test-driven-development`**
+  * *Trigger:* Use whenever implementing code changes, refactoring, or bug fixes.
+* **`systematic-debugging`**
+  * *Trigger:* Use immediately when encountering any bug, unexpected behavior, or test failure.
+* **`verification-before-completion`**
+  * *Trigger:* Use before claiming any task is complete, fixed, or passing.
+* **`finishing-a-development-branch`**
+  * *Trigger:* Use when implementation is complete, all tests pass, and you need to safely merge, push, or clean up the branch.
+* **`writing-skills`**
+  * *Trigger:* Use when creating or updating custom skills.
