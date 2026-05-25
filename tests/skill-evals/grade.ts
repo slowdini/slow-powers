@@ -58,23 +58,38 @@ function ensureDir(path: string): void {
 	if (!existsSync(path)) mkdirSync(path, { recursive: true });
 }
 
-const { skill, iteration, mode } = parseArgs(Bun.argv.slice(2));
+let skill = "";
+let iteration = "";
+let iterationDir = "";
+let conditions: ConditionsRecord = {
+	mode: "new-skill",
+	conditions: [],
+	timestamp: "",
+};
+let conditionNames: string[] = [];
+let evalsConfig: EvalsConfig = { skill_name: "", evals: [] };
 
-const iterationDir = join(WORKSPACE_ROOT, skill, `iteration-${iteration}`);
-if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
+if (import.meta.main) {
+	const parsed = parseArgs(Bun.argv.slice(2));
+	skill = parsed.skill;
+	iteration = parsed.iteration;
 
-const conditionsPath = join(iterationDir, "conditions.json");
-if (!existsSync(conditionsPath)) die(`missing: ${conditionsPath}`);
-const conditions: ConditionsRecord = readJson(conditionsPath);
-const conditionNames = conditions.conditions.map((c) => c.name);
+	iterationDir = join(WORKSPACE_ROOT, skill, `iteration-${iteration}`);
+	if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
 
-const evalsPath = join(SKILLS_DIR, skill, "evals", "evals.json");
-const evalsConfig: EvalsConfig = validateEvalsConfig(readJson(evalsPath), evalsPath);
+	const conditionsPath = join(iterationDir, "conditions.json");
+	if (!existsSync(conditionsPath)) die(`missing: ${conditionsPath}`);
+	conditions = readJson(conditionsPath);
+	conditionNames = conditions.conditions.map((c) => c.name);
 
-if (mode === "emit-judge-tasks") {
-	emitJudgeTasks();
-} else {
-	finalize();
+	const evalsPath = join(SKILLS_DIR, skill, "evals", "evals.json");
+	evalsConfig = validateEvalsConfig(readJson(evalsPath), evalsPath);
+
+	if (parsed.mode === "emit-judge-tasks") {
+		emitJudgeTasks();
+	} else {
+		finalize();
+	}
 }
 
 type JudgeTask = {
@@ -89,6 +104,19 @@ type JudgeTask = {
 	response_path: string;
 	dispatch_prompt: string;
 };
+
+export function checkSkillInvokedFromTranscript(
+	invocations: ToolInvocation[],
+	stagedSlug: string,
+): boolean {
+	for (const inv of invocations) {
+		if (inv.name !== "Skill") continue;
+		if (!inv.args || typeof inv.args !== "object") continue;
+		const argSkill = (inv.args as { skill?: unknown }).skill;
+		if (typeof argSkill === "string" && argSkill === stagedSlug) return true;
+	}
+	return false;
+}
 
 function skillInvokedRubric(skillName: string): string {
 	return [
@@ -117,10 +145,14 @@ function emitJudgeTasks(): void {
 	let skipped = 0;
 	let unverifiableCount = 0;
 	let metaInjected = 0;
+	let metaCodeChecked = 0;
 
 	const conditionSkillPaths = new Map<string, string | null>();
-	for (const c of conditions.conditions)
+	const conditionStagedSlugs = new Map<string, string | null>();
+	for (const c of conditions.conditions) {
 		conditionSkillPaths.set(c.name, c.skill_path);
+		conditionStagedSlugs.set(c.name, c.staged_skill_slug ?? null);
+	}
 
 	for (const ev of evalsConfig.evals) {
 		const hasAssertions =
@@ -176,30 +208,50 @@ function emitJudgeTasks(): void {
 
 			const condSkillPath = conditionSkillPaths.get(cond);
 			if (condSkillPath) {
-				const rubric = skillInvokedRubric(evalsConfig.skill_name);
 				const responsePath = join(
 					judgeResponsesDir,
 					`${SKILL_INVOKED_META_ID}.json`,
 				);
-				const dispatchPrompt = buildJudgePrompt({
-					rubric,
-					runRecord,
-					outputsDir,
-					responsePath,
-				});
-				tasks.push({
-					eval_id: ev.id,
-					condition: cond,
-					assertion_id: SKILL_INVOKED_META_ID,
-					rubric,
-					model: null,
-					is_meta: true,
-					run_record_path: runRecordPath,
-					outputs_dir: outputsDir,
-					response_path: responsePath,
-					dispatch_prompt: dispatchPrompt,
-				});
-				metaInjected++;
+				const stagedSlug = conditionStagedSlugs.get(cond);
+				const transcriptFilled = runRecord.tool_invocations.length > 0;
+
+				if (stagedSlug && transcriptFilled) {
+					const invoked = checkSkillInvokedFromTranscript(
+						runRecord.tool_invocations,
+						stagedSlug,
+					);
+					const evidence = invoked
+						? `Skill tool invoked with skill='${stagedSlug}' in transcript.`
+						: `No Skill tool invocation with skill='${stagedSlug}' found across ${runRecord.tool_invocations.length} transcript invocation(s).`;
+					writeJson(responsePath, {
+						passed: invoked,
+						evidence,
+						confidence: 1.0,
+						grader: "transcript_check",
+					});
+					metaCodeChecked++;
+				} else {
+					const rubric = skillInvokedRubric(evalsConfig.skill_name);
+					const dispatchPrompt = buildJudgePrompt({
+						rubric,
+						runRecord,
+						outputsDir,
+						responsePath,
+					});
+					tasks.push({
+						eval_id: ev.id,
+						condition: cond,
+						assertion_id: SKILL_INVOKED_META_ID,
+						rubric,
+						model: null,
+						is_meta: true,
+						run_record_path: runRecordPath,
+						outputs_dir: outputsDir,
+						response_path: responsePath,
+						dispatch_prompt: dispatchPrompt,
+					});
+					metaInjected++;
+				}
 			}
 		}
 	}
@@ -215,8 +267,12 @@ function emitJudgeTasks(): void {
 
 	console.log(`Wrote ${tasksPath}`);
 	console.log(
-		`Judge tasks: ${tasks.length} (${metaInjected} skill-invocation meta-check${metaInjected === 1 ? "" : "s"})`,
+		`Judge tasks: ${tasks.length} (${metaInjected} skill-invocation meta-judge${metaInjected === 1 ? "" : "s"})`,
 	);
+	if (metaCodeChecked > 0)
+		console.log(
+			`Skill-invocation code-checked: ${metaCodeChecked} (transcript-based, no judge needed)`,
+		);
 	if (unverifiableCount > 0)
 		console.log(
 			`transcript_check assertions: ${unverifiableCount} (not dispatched; graded directly in finalize from run.json's tool_invocations).`,
@@ -374,6 +430,7 @@ function finalize(): void {
 		passed: boolean;
 		evidence: string;
 		confidence?: number;
+		grader?: "transcript_check" | "llm_judge";
 	};
 
 	const conditionSkillPaths = new Map<string, string | null>();
@@ -453,7 +510,7 @@ function finalize(): void {
 						passed,
 						evidence: response.evidence ?? "",
 						confidence: response.confidence ?? 0,
-						grader: "llm_judge",
+						grader: response.grader ?? "llm_judge",
 					});
 					totalMetaGraded++;
 					if (!passed) metaFailures++;

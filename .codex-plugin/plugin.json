@@ -1,6 +1,6 @@
 {
   "name": "superslow",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Superslow gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
   "author": {
     "name": "Max Haarhaus",
@@ -28,11 +28,7 @@
     "longDescription": "Use Superslow to supercharge your coding agent with rigorous test-driven development (TDD), systematic scientific debugging, strict verification loops, isolated git worktrees, and clean branch-finishing hygiene.",
     "developerName": "Max Haarhaus",
     "category": "Coding",
-    "capabilities": [
-      "Interactive",
-      "Read",
-      "Write"
-    ],
+    "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": [
       "I've got an idea for something I'd like to build.",
       "Let's add a feature to this project."
