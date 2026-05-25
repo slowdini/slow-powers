@@ -1,7 +1,7 @@
 {
   "name": "@slowdini/superslow-opencode",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Superslow — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
   "main": "./opencode/plugins/superpowers.js",
@@ -14,6 +14,12 @@
     "test": "bun test --pass-with-no-tests",
     "test:codex": "cd tests/codex && bash test-sync-to-codex-plugin.sh",
     "test:opencode": "cd tests/opencode && bash run-tests.sh",
+    "evals": "bun run tests/skill-evals/run.ts",
+    "evals:snapshot": "bun run tests/skill-evals/run.ts snapshot",
+    "evals:validate": "bun run tests/skill-evals/validate-all.ts",
+    "evals:fill-transcripts": "bun run tests/skill-evals/fill-transcripts.ts",
+    "evals:grade": "bun run tests/skill-evals/grade.ts",
+    "evals:aggregate": "bun run tests/skill-evals/aggregate.ts",
     "version": "node scripts/bump-version.js",
     "check": "biome check --write . && markdownlint-cli2 --fix '**/*.md' '!**/node_modules/**' '!**/.worktrees/**'"
   },

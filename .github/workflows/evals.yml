@@ -1,0 +1,56 @@
+name: Skill Evals
+
+# v1: schema validation + dry-run only. Actual eval execution stays
+# operator-driven (the runner dispatches subagents via the host harness, which
+# CI doesn't have). A v2 SDK-backed grader would let this run end-to-end.
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "skills/**/evals/**"
+      - "tests/skill-evals/**"
+      - "package.json"
+      - ".github/workflows/evals.yml"
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: "Skill name to dry-run (optional; defaults to all skills with evals.json)"
+        required: false
+        type: string
+
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate eval schemas and dry-run runner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Validate every skills/*/evals/evals.json
+        run: bun run evals:validate
+
+      - name: Dry-run runner for each skill with evals.json
+        run: |
+          set -euo pipefail
+          target="${{ github.event.inputs.skill }}"
+          if [ -n "$target" ]; then
+            echo "Dry-running specified skill: $target"
+            bun run evals -- --skill "$target" --mode new-skill --dry-run
+          else
+            shopt -s nullglob
+            for path in skills/*/evals/evals.json; do
+              skill=$(basename "$(dirname "$(dirname "$path")")")
+              echo "::group::Dry-run $skill"
+              bun run evals -- --skill "$skill" --mode new-skill --dry-run
+              echo "::endgroup::"
+            done
+          fi
