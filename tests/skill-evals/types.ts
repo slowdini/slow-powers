@@ -31,6 +31,7 @@ export type EvalsConfig = {
 export type ConditionEntry = {
 	name: string;
 	skill_path: string | null;
+	staged_skill_slug?: string | null;
 };
 
 export type ConditionsRecord = {

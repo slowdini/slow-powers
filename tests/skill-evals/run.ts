@@ -5,6 +5,7 @@ import {
 	mkdirSync,
 	readdirSync,
 	readFileSync,
+	rmSync,
 	statSync,
 	writeFileSync,
 } from "node:fs";
@@ -16,6 +17,31 @@ const REPO_ROOT = resolve(import.meta.dir, "../..");
 const SKILLS_DIR = join(REPO_ROOT, "skills");
 const WORKSPACE_ROOT = join(REPO_ROOT, "skills-workspace");
 
+export const STAGED_SKILL_PREFIX = "superslow-eval-";
+
+export function stageSkillForCC(opts: {
+	content: string;
+	iteration: number;
+	condition: string;
+	skillName: string;
+	repoRoot: string;
+}): string {
+	const slug = `${STAGED_SKILL_PREFIX}${opts.iteration}-${opts.condition}__${opts.skillName}`;
+	const skillDir = join(opts.repoRoot, ".claude", "skills", slug);
+	mkdirSync(skillDir, { recursive: true });
+	writeFileSync(join(skillDir, "SKILL.md"), opts.content);
+	return slug;
+}
+
+export function cleanupStagedSkills(repoRoot: string): void {
+	const skillsDir = join(repoRoot, ".claude", "skills");
+	if (!existsSync(skillsDir)) return;
+	for (const entry of readdirSync(skillsDir)) {
+		if (!entry.startsWith(STAGED_SKILL_PREFIX)) continue;
+		rmSync(join(skillsDir, entry), { recursive: true, force: true });
+	}
+}
+
 type Mode = "new-skill" | "revision";
 
 type Args = {
@@ -26,6 +52,7 @@ type Args = {
 	label?: string;
 	iteration?: number;
 	dryRun: boolean;
+	noStage: boolean;
 };
 
 function die(msg: string): never {
@@ -67,6 +94,7 @@ function parseArgs(argv: string[]): Args {
 		label: flag("label"),
 		iteration,
 		dryRun: has("dry-run"),
+		noStage: has("no-stage"),
 	};
 }
 
@@ -190,30 +218,60 @@ function commandRun(args: Args): void {
 	);
 	console.log(`  ${conditionA}: ${skillPathForA ?? "(no skill)"}`);
 	console.log(`  ${conditionB}: ${skillPathForB ?? "(no skill)"}`);
+	if (args.noStage)
+		console.log(
+			"  staging: disabled (--no-stage) — skills will be inlined into dispatch_prompt for harnesses without project-local skill discovery",
+		);
 
 	ensureDir(iterationDir);
 	cpSync(skillMd, join(iterationDir, "skill-snapshot.md"));
+
+	if (!args.noStage) cleanupStagedSkills(REPO_ROOT);
+
+	const stageFor = (
+		condName: string,
+		condSkillPath: string | null,
+	): string | null => {
+		if (!condSkillPath || args.noStage) return null;
+		return stageSkillForCC({
+			content: readFileSync(condSkillPath, "utf8"),
+			iteration,
+			condition: condName,
+			skillName: args.skill,
+			repoRoot: REPO_ROOT,
+		});
+	};
+
+	const conditionASlug = stageFor(conditionA, skillPathForA);
+	const conditionBSlug = stageFor(conditionB, skillPathForB);
 
 	const conditions: ConditionsRecord = {
 		mode: args.mode,
 		baseline: args.baseline,
 		conditions: [
-			{ name: conditionA, skill_path: skillPathForA },
-			{ name: conditionB, skill_path: skillPathForB },
+			{
+				name: conditionA,
+				skill_path: skillPathForA,
+				staged_skill_slug: conditionASlug,
+			},
+			{
+				name: conditionB,
+				skill_path: skillPathForB,
+				staged_skill_slug: conditionBSlug,
+			},
 		],
 		timestamp: new Date().toISOString(),
 	};
 	writeJson(join(iterationDir, "conditions.json"), conditions);
 
 	const tasks: DispatchTask[] = [];
-
 	for (const ev of config.evals) {
 		const evalDir = join(iterationDir, `eval-${ev.id}`);
 		ensureDir(evalDir);
 
-		for (const [condName, condSkillPath] of [
-			[conditionA, skillPathForA],
-			[conditionB, skillPathForB],
+		for (const [condName, condSkillPath, condSlug] of [
+			[conditionA, skillPathForA, conditionASlug],
+			[conditionB, skillPathForB, conditionBSlug],
 		] as const) {
 			const condDir = join(evalDir, condName);
 			const outputsDir = join(condDir, "outputs");
@@ -225,6 +283,7 @@ function commandRun(args: Args): void {
 					evalId: ev.id,
 					condition: condName,
 					skillPath: condSkillPath,
+					stagedSkillSlug: condSlug,
 					userPrompt: ev.prompt,
 					fixtures,
 					outputsDir,
@@ -276,6 +335,7 @@ type DispatchTask = {
 	eval_id: string;
 	condition: string;
 	skill_path: string | null;
+	staged_skill_slug: string | null;
 	user_prompt: string;
 	fixtures: string[];
 	outputs_dir: string;
@@ -309,20 +369,28 @@ function buildDispatchTask(opts: {
 	evalId: string;
 	condition: string;
 	skillPath: string | null;
+	stagedSkillSlug: string | null;
 	userPrompt: string;
 	fixtures: string[];
 	outputsDir: string;
 	condDir: string;
 }): DispatchTask {
-	const skillBlock = opts.skillPath
-		? [
-				"The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
-				"",
-				`<skill name="${basename(dirname(opts.skillPath))}">`,
-				readFileSync(opts.skillPath, "utf8").trim(),
-				"</skill>",
-			].join("\n")
-		: "No skill is loaded. Respond as you naturally would.";
+	let skillBlock: string;
+	if (opts.stagedSkillSlug) {
+		skillBlock =
+			"No skill content is inlined here. Use the harness's normal skill discovery — invoke any skill that applies to the user's request.";
+	} else if (opts.skillPath) {
+		skillBlock = [
+			"The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
+			"",
+			`<skill name="${basename(dirname(opts.skillPath))}">`,
+			readFileSync(opts.skillPath, "utf8").trim(),
+			"</skill>",
+		].join("\n");
+	} else {
+		skillBlock = "No skill is loaded. Respond as you naturally would.";
+	}
+
 	const fixturesBlock = opts.fixtures.length
 		? `Available fixture files:\n${opts.fixtures.map((f) => `  - ${f}`).join("\n")}`
 		: "Available fixture files: none";
@@ -349,6 +417,7 @@ function buildDispatchTask(opts: {
 		eval_id: opts.evalId,
 		condition: opts.condition,
 		skill_path: opts.skillPath,
+		staged_skill_slug: opts.stagedSkillSlug,
 		user_prompt: opts.userPrompt,
 		fixtures: opts.fixtures,
 		outputs_dir: opts.outputsDir,
@@ -415,6 +484,8 @@ function buildManifest(opts: {
 	return header + entries;
 }
 
-const args = parseArgs(Bun.argv.slice(2));
-if (args.command === "snapshot") commandSnapshot(args);
-else commandRun(args);
+if (import.meta.main) {
+	const args = parseArgs(Bun.argv.slice(2));
+	if (args.command === "snapshot") commandSnapshot(args);
+	else commandRun(args);
+}
