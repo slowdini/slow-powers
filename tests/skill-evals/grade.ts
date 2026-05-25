@@ -7,12 +7,13 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
-import type {
-	AssertionResult,
-	ConditionsRecord,
-	EvalsConfig,
-	GradingResult,
-	RunRecord,
+import {
+	type AssertionResult,
+	type ConditionsRecord,
+	type EvalsConfig,
+	type GradingResult,
+	type RunRecord,
+	SKILL_INVOKED_META_ID,
 } from "./types";
 import { validateEvalsConfig } from "./validate";
 
@@ -80,19 +81,48 @@ type JudgeTask = {
 	assertion_id: string;
 	rubric: string;
 	model: string | null;
+	is_meta: boolean;
 	run_record_path: string;
 	outputs_dir: string;
 	response_path: string;
 	dispatch_prompt: string;
 };
 
+function skillInvokedRubric(skillName: string): string {
+	return [
+		`The agent was given the **${skillName}** skill loaded directly into its operating guidelines (the full SKILL.md text appears inside the run record's \`prompt\` field). This meta-check asks whether there is evidence the agent actually applied the skill in this run — separate from whether the response was correct.`,
+		"",
+		"Evidence the skill WAS applied:",
+		"- The agent cites the skill by name or references specific named sections (e.g. \"Iron Law\", \"Red Flags\", \"Gate Function\", or any other distinctive heading from the skill).",
+		"- The agent's response uses distinctive vocabulary or phrasing taken from the skill content.",
+		"- The agent's behavior follows a specific procedural step prescribed by the skill in a way that mirrors the skill's phrasing — not just generic best practice.",
+		"- The agent explicitly acknowledges following the skill's guidance.",
+		"",
+		"Evidence the skill was NOT applied:",
+		"- The response uses only generic best-practice language unrelated to the skill's specific framing.",
+		"- No vocabulary, structure, or rules from the skill content appear anywhere in the response.",
+		"- The response would read identically with or without the skill loaded.",
+		"",
+		"Compare the agent's `final_message` against the skill content embedded in `prompt`. Look for stylistic and procedural fingerprints.",
+		"",
+		"PASS if there is observable evidence the skill influenced the response.",
+		"FAIL if there is no observable evidence — the response is indistinguishable from baseline behavior.",
+	].join("\n");
+}
+
 function emitJudgeTasks(): void {
 	const tasks: JudgeTask[] = [];
 	let skipped = 0;
 	let unverifiableCount = 0;
+	let metaInjected = 0;
+
+	const conditionSkillPaths = new Map<string, string | null>();
+	for (const c of conditions.conditions)
+		conditionSkillPaths.set(c.name, c.skill_path);
 
 	for (const ev of evalsConfig.evals) {
-		if (!ev.assertions || ev.assertions.length === 0) continue;
+		const hasAssertions =
+			ev.assertions && ev.assertions.length > 0;
 
 		for (const cond of conditionNames) {
 			const condDir = join(iterationDir, `eval-${ev.id}`, cond);
@@ -102,22 +132,55 @@ function emitJudgeTasks(): void {
 
 			if (!existsSync(runRecordPath)) {
 				console.warn(`warn: missing run.json for ${ev.id}/${cond} — skipping`);
-				skipped += ev.assertions.length;
+				if (hasAssertions && ev.assertions)
+					skipped += ev.assertions.length;
 				continue;
 			}
 
 			ensureDir(judgeResponsesDir);
 			const runRecord: RunRecord = readJson(runRecordPath);
 
-			for (const assertion of ev.assertions) {
-				if (assertion.type === "transcript_check") {
-					skipped++;
-					unverifiableCount++;
-					continue;
+			if (hasAssertions && ev.assertions) {
+				for (const assertion of ev.assertions) {
+					if (assertion.type === "transcript_check") {
+						skipped++;
+						unverifiableCount++;
+						continue;
+					}
+					const responsePath = join(
+						judgeResponsesDir,
+						`${assertion.id}.json`,
+					);
+					const dispatchPrompt = buildJudgePrompt({
+						rubric: assertion.rubric,
+						runRecord,
+						outputsDir,
+						responsePath,
+					});
+					tasks.push({
+						eval_id: ev.id,
+						condition: cond,
+						assertion_id: assertion.id,
+						rubric: assertion.rubric,
+						model: assertion.model ?? null,
+						is_meta: false,
+						run_record_path: runRecordPath,
+						outputs_dir: outputsDir,
+						response_path: responsePath,
+						dispatch_prompt: dispatchPrompt,
+					});
 				}
-				const responsePath = join(judgeResponsesDir, `${assertion.id}.json`);
+			}
+
+			const condSkillPath = conditionSkillPaths.get(cond);
+			if (condSkillPath) {
+				const rubric = skillInvokedRubric(evalsConfig.skill_name);
+				const responsePath = join(
+					judgeResponsesDir,
+					`${SKILL_INVOKED_META_ID}.json`,
+				);
 				const dispatchPrompt = buildJudgePrompt({
-					rubric: assertion.rubric,
+					rubric,
 					runRecord,
 					outputsDir,
 					responsePath,
@@ -125,14 +188,16 @@ function emitJudgeTasks(): void {
 				tasks.push({
 					eval_id: ev.id,
 					condition: cond,
-					assertion_id: assertion.id,
-					rubric: assertion.rubric,
-					model: assertion.model ?? null,
+					assertion_id: SKILL_INVOKED_META_ID,
+					rubric,
+					model: null,
+					is_meta: true,
 					run_record_path: runRecordPath,
 					outputs_dir: outputsDir,
 					response_path: responsePath,
 					dispatch_prompt: dispatchPrompt,
 				});
+				metaInjected++;
 			}
 		}
 	}
@@ -141,12 +206,15 @@ function emitJudgeTasks(): void {
 	writeJson(tasksPath, {
 		generated: new Date().toISOString(),
 		total_tasks: tasks.length,
+		meta_tasks_injected: metaInjected,
 		skipped_transcript_checks: unverifiableCount,
 		tasks,
 	});
 
 	console.log(`Wrote ${tasksPath}`);
-	console.log(`Judge tasks: ${tasks.length}`);
+	console.log(
+		`Judge tasks: ${tasks.length} (${metaInjected} skill-invocation meta-check${metaInjected === 1 ? "" : "s"})`,
+	);
 	if (unverifiableCount > 0)
 		console.log(
 			`Skipped transcript_check assertions: ${unverifiableCount} (will be marked unverifiable in finalize step)`,
@@ -231,11 +299,17 @@ function finalize(): void {
 		confidence?: number;
 	};
 
+	const conditionSkillPaths = new Map<string, string | null>();
+	for (const c of conditions.conditions)
+		conditionSkillPaths.set(c.name, c.skill_path);
+
 	let totalGraded = 0;
 	let totalUnverifiable = 0;
+	let totalMetaGraded = 0;
+	let metaFailures = 0;
 
 	for (const ev of evalsConfig.evals) {
-		if (!ev.assertions || ev.assertions.length === 0) continue;
+		const hasAssertions = ev.assertions && ev.assertions.length > 0;
 
 		for (const cond of conditionNames) {
 			const condDir = join(iterationDir, `eval-${ev.id}`, cond);
@@ -244,49 +318,90 @@ function finalize(): void {
 			const gradingPath = join(condDir, "grading.json");
 
 			const assertionResults: AssertionResult[] = [];
-			for (const assertion of ev.assertions) {
-				if (assertion.type === "transcript_check") {
+			if (hasAssertions && ev.assertions) {
+				for (const assertion of ev.assertions) {
+					if (assertion.type === "transcript_check") {
+						assertionResults.push({
+							id: assertion.id,
+							passed: false,
+							evidence:
+								"transcript_check skipped — agent-driven mode without transcript adapter",
+							confidence: 1.0,
+							grader: "transcript_check",
+						});
+						totalUnverifiable++;
+						continue;
+					}
+					const responsePath = join(
+						judgeResponsesDir,
+						`${assertion.id}.json`,
+					);
+					if (!existsSync(responsePath)) {
+						console.warn(
+							`warn: missing judge response: ${responsePath} (assertion will be FAIL)`,
+						);
+						assertionResults.push({
+							id: assertion.id,
+							passed: false,
+							evidence: `judge response missing at ${responsePath}`,
+							confidence: 0,
+							grader: "llm_judge",
+						});
+						continue;
+					}
+					const response: JudgeResponse = readJson(responsePath);
 					assertionResults.push({
 						id: assertion.id,
-						passed: false,
-						evidence:
-							"transcript_check skipped — agent-driven mode without transcript adapter",
-						confidence: 1.0,
-						grader: "transcript_check",
+						passed: !!response.passed,
+						evidence: response.evidence ?? "",
+						confidence: response.confidence ?? 0,
+						grader: "llm_judge",
 					});
-					totalUnverifiable++;
-					continue;
+					totalGraded++;
 				}
+			}
+
+			const metaResults: AssertionResult[] = [];
+			const condSkillPath = conditionSkillPaths.get(cond);
+			if (condSkillPath) {
 				const responsePath = join(
 					judgeResponsesDir,
-					`${assertion.id}.json`,
+					`${SKILL_INVOKED_META_ID}.json`,
 				);
-				if (!existsSync(responsePath)) {
+				if (existsSync(responsePath)) {
+					const response: JudgeResponse = readJson(responsePath);
+					const passed = !!response.passed;
+					metaResults.push({
+						id: SKILL_INVOKED_META_ID,
+						passed,
+						evidence: response.evidence ?? "",
+						confidence: response.confidence ?? 0,
+						grader: "llm_judge",
+					});
+					totalMetaGraded++;
+					if (!passed) metaFailures++;
+				} else {
 					console.warn(
-						`warn: missing judge response: ${responsePath} (assertion will be FAIL/unverifiable)`,
+						`warn: missing skill-invocation meta response: ${responsePath}`,
 					);
-					assertionResults.push({
-						id: assertion.id,
+					metaResults.push({
+						id: SKILL_INVOKED_META_ID,
 						passed: false,
-						evidence: `judge response missing at ${responsePath}`,
+						evidence: `meta judge response missing at ${responsePath}`,
 						confidence: 0,
 						grader: "llm_judge",
 					});
-					continue;
 				}
-				const response: JudgeResponse = readJson(responsePath);
-				assertionResults.push({
-					id: assertion.id,
-					passed: !!response.passed,
-					evidence: response.evidence ?? "",
-					confidence: response.confidence ?? 0,
-					grader: "llm_judge",
-				});
-				totalGraded++;
 			}
 
 			const passed = assertionResults.filter((r) => r.passed).length;
 			const total = assertionResults.length;
+			const metaPassed = metaResults.filter((r) => r.passed).length;
+			const skillInvoked =
+				metaResults.length === 0
+					? null
+					: metaResults.every((r) => r.passed);
+
 			const grading: GradingResult = {
 				assertion_results: assertionResults,
 				summary: {
@@ -296,16 +411,33 @@ function finalize(): void {
 					pass_rate: total === 0 ? 0 : passed / total,
 				},
 			};
+			if (metaResults.length > 0) {
+				grading.meta_results = metaResults;
+				grading.meta_summary = {
+					passed: metaPassed,
+					failed: metaResults.length - metaPassed,
+					total: metaResults.length,
+					skill_invoked: skillInvoked,
+				};
+			}
 			writeJson(gradingPath, grading);
+			const metaTag =
+				metaResults.length === 0
+					? ""
+					: ` [skill_invoked=${skillInvoked}]`;
 			console.log(
-				`Wrote ${gradingPath} (${passed}/${total} passed, rate ${(grading.summary.pass_rate * 100).toFixed(0)}%)`,
+				`Wrote ${gradingPath} (${passed}/${total} substantive, rate ${total === 0 ? "n/a" : `${(grading.summary.pass_rate * 100).toFixed(0)}%`})${metaTag}`,
 			);
 		}
 	}
 
 	console.log(
-		`\nFinalized: ${totalGraded} llm_judge assertions graded, ${totalUnverifiable} transcript_check skipped.`,
+		`\nFinalized: ${totalGraded} substantive llm_judge graded, ${totalMetaGraded} skill-invocation meta-check${totalMetaGraded === 1 ? "" : "s"} graded, ${totalUnverifiable} transcript_check skipped.`,
 	);
+	if (metaFailures > 0)
+		console.warn(
+			`\n⚠ ${metaFailures} run(s) failed the skill-invocation meta-check. Substantive results for those runs may be unreliable — the skill may not have actually influenced behavior.`,
+		);
 	console.log(
 		`\nNext: bun run evals:aggregate -- --skill ${skill} --iteration ${iteration}`,
 	);

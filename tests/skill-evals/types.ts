@@ -69,13 +69,22 @@ export type AssertionResult = {
 
 export type GradingResult = {
 	assertion_results: AssertionResult[];
+	meta_results?: AssertionResult[];
 	summary: {
 		passed: number;
 		failed: number;
 		total: number;
 		pass_rate: number;
 	};
+	meta_summary?: {
+		passed: number;
+		failed: number;
+		total: number;
+		skill_invoked: boolean | null;
+	};
 };
+
+export const SKILL_INVOKED_META_ID = "__skill_invoked";
 
 export type TimingRecord = {
 	total_tokens?: number | null;

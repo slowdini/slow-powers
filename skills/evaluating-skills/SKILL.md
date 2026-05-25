@@ -164,6 +164,18 @@ Soft criteria a model evaluates. Use for "did the response quote actual evidence
 - **Not too brittle.** "Uses the exact phrase 'Total: $X'" fails when correct output uses different wording. Reserve mechanical exactness for actually-mechanical things.
 - **Review the assertions while grading.** Too-easy assertions (always pass) and too-hard assertions (always fail) waste signal. Fix them before the next iteration.
 
+## Skill-invocation meta-check
+
+Every run with a skill loaded gets an automatic meta-assertion: **did the skill actually influence behavior, or would the response look identical without it?**
+
+The framework injects this check (reserved id `__skill_invoked`) into the judge task list for every condition whose `skill_path` is non-null. It does **not** count toward the substantive `pass_rate`; results land in `grading.json` under `meta_results` and `meta_summary`, and the benchmark surfaces an `invocation_rate` per condition.
+
+Why this matters: a run where the skill wasn't actually invoked is a non-data-point. If `with_skill` scores poorly but the meta-check shows the skill wasn't applied, that's not evidence the skill is bad — it's evidence the prompt didn't trigger the skill's applicability. Conversely, a clean invocation rate validates that substantive pass-rate deltas reflect skill effectiveness.
+
+The judge rubric looks for behavioral fingerprints of the skill — distinctive vocabulary, named sections, procedural steps that mirror the skill's phrasing — by comparing the agent's `final_message` against the SKILL.md content embedded in the run record. It does **not** require the agent to explicitly cite the skill (that would taint the eval). Skills with generic best-practice content may be hard to detect, which is itself a finding: a skill indistinguishable from baseline behavior may not be worth shipping.
+
+The aggregator emits a `validity_warnings` array when any with-skill condition has an invocation rate below 100%. Read those before interpreting the substantive delta.
+
 ## Grading
 
 For each `(eval × condition)`, produce `grading.json`:
