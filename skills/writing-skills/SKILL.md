@@ -7,17 +7,15 @@ description: Use when creating new skills, editing existing skills, or verifying
 
 ## Overview
 
-**Writing skills IS Test-Driven Development applied to process documentation.**
+**Writing a skill is two phases: drafting (this skill) and evaluation (`superslow:evaluating-skills`).** This skill covers drafting — naming, structure, vocabulary, anti-patterns, rationalization-proofing. Evaluation covers measuring whether the drafted skill actually shifts agent behavior on realistic prompts.
 
-**Personal skills live in agent-specific directories (`~/.claude/skills` for Claude Code, `~/.agents/skills/` for Codex)** 
+**Personal skills live in agent-specific directories (`~/.claude/skills` for Claude Code, `~/.agents/skills/` for Codex).**
 
-You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
+**Core principle:** If you didn't measure the skill against realistic prompts, you don't know if it teaches the right thing. Drafting feels productive; only evals tell you whether the words on the page change behavior.
 
-**Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
+**REQUIRED BACKGROUND:** You MUST understand `superslow:evaluating-skills` before shipping a skill. That skill defines the eval format, the with/without and old/new comparison protocols, and the iteration loop you'll use to validate this draft.
 
-**REQUIRED BACKGROUND:** You MUST understand superslow:test-driven-development before using this skill. That skill defines the fundamental RED-GREEN-REFACTOR cycle. This skill adapts TDD to documentation.
-
-**Official guidance:** For Anthropic's official skill authoring best practices, see anthropic-best-practices.md. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
+**Official guidance:** For Anthropic's official skill authoring best practices, see anthropic-best-practices.md. This document provides additional patterns and guidelines that complement the drafting techniques in this skill.
 
 ## Vocabulary
 
@@ -39,22 +37,9 @@ A **skill** is a reference guide for proven techniques, patterns, or tools. Skil
 
 **Skills are NOT:** Narratives about how you solved a problem once
 
-## TDD Mapping for Skills
+## How to validate a skill
 
-| TDD Concept | Skill Creation |
-|-------------|----------------|
-| **Test case** | Pressure scenario with subagent |
-| **Production code** | Skill document (SKILL.md) |
-| **Test fails (RED)** | Agent violates rule without skill (baseline) |
-| **Test passes (GREEN)** | Agent complies with skill present |
-| **Refactor** | Close loopholes while maintaining compliance |
-| **Write test first** | Run baseline scenario BEFORE writing skill |
-| **Watch it fail** | Document exact rationalizations agent uses |
-| **Minimal code** | Write skill addressing those specific violations |
-| **Watch it pass** | Verify agent now complies |
-| **Refactor cycle** | Find new rationalizations → plug → re-verify |
-
-The entire skill creation process follows RED-GREEN-REFACTOR.
+After drafting, validate with `superslow:evaluating-skills`. The eval format (test cases, with/without comparison, assertions, iteration loop) lives there and is the same regardless of skill type.
 
 ## When to Create a Skill
 
@@ -383,16 +368,16 @@ pptx/
 ```
 When: Reference material too large for inline
 
-## The Iron Law (Same as TDD)
+## The Iron Law
 
 ```
-NO SKILL WITHOUT A FAILING TEST FIRST
+NO SKILL SHIPPED WITHOUT PASSING EVALS
 ```
 
 This applies to NEW skills AND EDITS to existing skills.
 
-Write skill before testing? Delete it. Start over.
-Edit skill without testing? Same violation.
+Ship a draft without running it through an eval? Pull it. Run the eval.
+Land a language change without measuring the delta? Same violation.
 
 **No exceptions:**
 - Not for "simple additions"
@@ -402,7 +387,7 @@ Edit skill without testing? Same violation.
 - Don't "adapt" while running tests
 - Delete means delete
 
-**REQUIRED BACKGROUND:** The superslow:test-driven-development skill explains why this matters. Same principles apply to documentation.
+**REQUIRED BACKGROUND:** `superslow:evaluating-skills` defines the eval format, the with/without and old/new comparison protocols, and the iteration loop. It is the authoritative source on this rule; this section restates the law so it lands where you'd reach for it while drafting.
 
 ## Testing All Skill Types
 
@@ -542,34 +527,16 @@ Add to description: symptoms of when you're ABOUT to violate the rule:
 description: use when implementing any feature or bugfix, before writing implementation code
 ```
 
-## RED-GREEN-REFACTOR for Skills
+## Validating the draft
 
-Follow the TDD cycle:
+After drafting, hand off to `superslow:evaluating-skills` for the with/without comparison, assertion grading, and iteration loop.
 
-### RED: Write Failing Test (Baseline)
+For discipline-enforcing skills specifically, the eval `prompt` fields need to put the agent under realistic pressure — otherwise the agent recites the skill and "passes" without proving anything. See `superslow:evaluating-skills` and its `pressure-scenarios.md` for:
 
-Run pressure scenario with subagent WITHOUT the skill. Document exact behavior:
-- What choices did they make?
-- What rationalizations did they use (verbatim)?
-- Which pressures triggered violations?
-
-This is "watch the test fail" - you must see what agents naturally do before writing the skill.
-
-### GREEN: Write Minimal Skill
-
-Write skill that addresses those specific rationalizations. Don't add extra content for hypothetical cases.
-
-Run same scenarios WITH skill. Agent should now comply.
-
-### REFACTOR: Close Loopholes
-
-Agent found new rationalization? Add explicit counter. Re-test until bulletproof.
-
-**Testing methodology:** See @testing-skills-with-subagents.md for the complete testing methodology:
-- How to write pressure scenarios
-- Pressure types (time, sunk cost, authority, exhaustion)
-- Plugging holes systematically
-- Meta-testing techniques
+- The pressure-type taxonomy (time, sunk cost, authority, exhaustion, social, pragmatic)
+- How to write multi-pressure prompts with forced choice
+- Capturing rationalizations verbatim for the next iteration
+- Meta-testing when iteration isn't moving the needle
 
 ## Anti-Patterns
 
@@ -605,33 +572,33 @@ helper1, helper2, step3, pattern4
 
 Deploying untested skills = deploying untested code. It's a violation of quality standards.
 
-## Skill Creation Checklist (TDD Adapted)
+## Skill Creation Checklist
 
 **IMPORTANT: Use your persistent task tracker to create a task for EACH checklist item below.**
 
-**RED Phase - Write Failing Test:**
-- [ ] Create pressure scenarios (3+ combined pressures for discipline skills)
-- [ ] Run scenarios WITHOUT skill - document baseline behavior verbatim
-- [ ] Identify patterns in rationalizations/failures
+**Baseline — measure the starting point:**
+- [ ] Author `evals/evals.json` with 2–3 realistic prompts (see `superslow:evaluating-skills`)
+- [ ] For discipline-enforcing skills, write pressure prompts with 3+ combined pressures (see `pressure-scenarios.md` in that skill)
+- [ ] Run iteration-1 in `--mode new-skill` via `bun run evals` (or harness equivalent) — capture the without-skill baseline
 
-**GREEN Phase - Write Minimal Skill:**
+**Draft — write the skill:**
 - [ ] Name uses only letters, numbers, hyphens (no parentheses/special chars)
 - [ ] YAML frontmatter with required `name` and `description` fields (max 1024 chars; see [spec](https://agentskills.io/specification))
 - [ ] Description starts with "Use when..." and includes specific triggers/symptoms
 - [ ] Description written in third person
 - [ ] Keywords throughout for search (errors, symptoms, tools)
 - [ ] Clear overview with core principle
-- [ ] Address specific baseline failures identified in RED
+- [ ] Address specific baseline failures observed in iteration-1
 - [ ] Code inline OR link to separate file
 - [ ] One excellent example (not multi-language)
-- [ ] Run scenarios WITH skill - verify agents now comply
+- [ ] Re-run the eval — verify with-skill pass-rate is materially higher than without-skill
 
-**REFACTOR Phase - Close Loopholes:**
-- [ ] Identify NEW rationalizations from testing
+**Iterate — close loopholes:**
+- [ ] Identify NEW rationalizations from failed runs (captured verbatim in `feedback.json`)
 - [ ] Add explicit counters (if discipline skill)
-- [ ] Build rationalization table from all test iterations
+- [ ] Build rationalization table from all iterations
 - [ ] Create red flags list
-- [ ] Re-test until bulletproof
+- [ ] Re-run as `--mode revision --baseline <prior-snapshot>` until delta plateaus
 
 **Quality Checks:**
 - [ ] Small flowchart only if decision non-obvious
@@ -641,7 +608,8 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 - [ ] Supporting files only for tools or heavy reference
 
 **Deployment:**
-- [ ] Commit skill to git and push to your fork (if configured)
+- [ ] Commit skill + `evals/evals.json` to git and push to your fork (if configured)
+- [ ] Include before/after eval results in the PR description (per repo `CLAUDE.md`)
 - [ ] Consider contributing back via PR (if broadly useful)
 
 ## Discovery Workflow
@@ -658,10 +626,8 @@ How future Claude finds your skill:
 
 ## The Bottom Line
 
-**Creating skills IS TDD for process documentation.**
+**Drafting is half the job. Evaluation is the other half.**
 
-Same Iron Law: No skill without failing test first.
-Same cycle: RED (baseline) → GREEN (write skill) → REFACTOR (close loopholes).
-Same benefits: Better quality, fewer surprises, bulletproof results.
+A draft you didn't measure is a claim you didn't verify. Skills that look obviously good often produce no measurable delta — and skills that look modest sometimes shift behavior more than you expected. The only way to know is to run the eval.
 
-If you follow TDD for code, follow it for skills. It's the same discipline applied to documentation.
+After drafting with this skill, hand off to `superslow:evaluating-skills` for the with/without comparison and iteration loop. Ship only when the delta justifies it.
