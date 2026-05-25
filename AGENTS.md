@@ -17,6 +17,10 @@ This repo ships Superslow across five harnesses:
 - `opencode/` — OpenCode plugin (`@slowdini/superslow-opencode`)
 - `antigravity-extension.json` + `antigravity-instructions.md` — Antigravity CLI plugin (root-level)
 
+## Cross-Harness Compatibility
+
+Ensure all features work across supported harnesses, with at least a minimum level of compatibility. If a feature isn't supported in a harness, or has reduced or limited functionality, this should be clearly communicated. A feature MUST NOT break or degrade any harness functionality.
+
 ## Pull Request Requirements
 
 - One problem per PR. Bundled unrelated changes will be split or sent back.
@@ -36,6 +40,7 @@ If you modify skill content:
 - Run adversarial pressure testing across multiple sessions, not just the
   happy path.
 - Show before/after eval results in the PR description.
+- Ensure skills are cross-harness compatible: avoid harness-specific tool or feature names.
 
 ## Local development
 
