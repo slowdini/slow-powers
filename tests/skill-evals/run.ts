@@ -8,7 +8,7 @@ import {
 	statSync,
 	writeFileSync,
 } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
 import { validateEvalsConfig } from "./validate";
 
@@ -314,8 +314,14 @@ function buildDispatchTask(opts: {
 	condDir: string;
 }): DispatchTask {
 	const skillBlock = opts.skillPath
-		? `Reference skill (load and follow if applicable): ${opts.skillPath}`
-		: "No skill provided. Respond as you naturally would.";
+		? [
+				"The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
+				"",
+				`<skill name="${basename(dirname(opts.skillPath))}">`,
+				readFileSync(opts.skillPath, "utf8").trim(),
+				"</skill>",
+			].join("\n")
+		: "No skill is loaded. Respond as you naturally would.";
 	const fixturesBlock = opts.fixtures.length
 		? `Available fixture files:\n${opts.fixtures.map((f) => `  - ${f}`).join("\n")}`
 		: "Available fixture files: none";

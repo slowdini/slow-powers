@@ -1,0 +1,312 @@
+#!/usr/bin/env bun
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	readdirSync,
+	writeFileSync,
+} from "node:fs";
+import { join, resolve } from "node:path";
+import type {
+	AssertionResult,
+	ConditionsRecord,
+	EvalsConfig,
+	GradingResult,
+	RunRecord,
+} from "./types";
+import { validateEvalsConfig } from "./validate";
+
+const REPO_ROOT = resolve(import.meta.dir, "../..");
+const SKILLS_DIR = join(REPO_ROOT, "skills");
+const WORKSPACE_ROOT = join(REPO_ROOT, "skills-workspace");
+
+type Mode = "emit-judge-tasks" | "finalize";
+
+function die(msg: string): never {
+	console.error(`error: ${msg}`);
+	process.exit(1);
+}
+
+function parseArgs(argv: string[]) {
+	const flag = (name: string): string | undefined => {
+		const i = argv.indexOf(`--${name}`);
+		if (i === -1) return undefined;
+		return argv[i + 1];
+	};
+	const has = (name: string) => argv.includes(`--${name}`);
+	const skill = flag("skill");
+	const iteration = flag("iteration");
+	if (!skill) die("missing --skill");
+	if (!iteration) die("missing --iteration");
+
+	const mode: Mode = has("finalize") ? "finalize" : "emit-judge-tasks";
+	return { skill, iteration, mode };
+}
+
+function readJson<T>(path: string): T {
+	return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function writeJson(path: string, value: unknown) {
+	writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function ensureDir(path: string): void {
+	if (!existsSync(path)) mkdirSync(path, { recursive: true });
+}
+
+const { skill, iteration, mode } = parseArgs(Bun.argv.slice(2));
+
+const iterationDir = join(WORKSPACE_ROOT, skill, `iteration-${iteration}`);
+if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
+
+const conditionsPath = join(iterationDir, "conditions.json");
+if (!existsSync(conditionsPath)) die(`missing: ${conditionsPath}`);
+const conditions: ConditionsRecord = readJson(conditionsPath);
+const conditionNames = conditions.conditions.map((c) => c.name);
+
+const evalsPath = join(SKILLS_DIR, skill, "evals", "evals.json");
+const evalsConfig: EvalsConfig = validateEvalsConfig(readJson(evalsPath), evalsPath);
+
+if (mode === "emit-judge-tasks") {
+	emitJudgeTasks();
+} else {
+	finalize();
+}
+
+type JudgeTask = {
+	eval_id: string;
+	condition: string;
+	assertion_id: string;
+	rubric: string;
+	model: string | null;
+	run_record_path: string;
+	outputs_dir: string;
+	response_path: string;
+	dispatch_prompt: string;
+};
+
+function emitJudgeTasks(): void {
+	const tasks: JudgeTask[] = [];
+	let skipped = 0;
+	let unverifiableCount = 0;
+
+	for (const ev of evalsConfig.evals) {
+		if (!ev.assertions || ev.assertions.length === 0) continue;
+
+		for (const cond of conditionNames) {
+			const condDir = join(iterationDir, `eval-${ev.id}`, cond);
+			const runRecordPath = join(condDir, "run.json");
+			const outputsDir = join(condDir, "outputs");
+			const judgeResponsesDir = join(condDir, "judge-responses");
+
+			if (!existsSync(runRecordPath)) {
+				console.warn(`warn: missing run.json for ${ev.id}/${cond} — skipping`);
+				skipped += ev.assertions.length;
+				continue;
+			}
+
+			ensureDir(judgeResponsesDir);
+			const runRecord: RunRecord = readJson(runRecordPath);
+
+			for (const assertion of ev.assertions) {
+				if (assertion.type === "transcript_check") {
+					skipped++;
+					unverifiableCount++;
+					continue;
+				}
+				const responsePath = join(judgeResponsesDir, `${assertion.id}.json`);
+				const dispatchPrompt = buildJudgePrompt({
+					rubric: assertion.rubric,
+					runRecord,
+					outputsDir,
+					responsePath,
+				});
+				tasks.push({
+					eval_id: ev.id,
+					condition: cond,
+					assertion_id: assertion.id,
+					rubric: assertion.rubric,
+					model: assertion.model ?? null,
+					run_record_path: runRecordPath,
+					outputs_dir: outputsDir,
+					response_path: responsePath,
+					dispatch_prompt: dispatchPrompt,
+				});
+			}
+		}
+	}
+
+	const tasksPath = join(iterationDir, "judge-tasks.json");
+	writeJson(tasksPath, {
+		generated: new Date().toISOString(),
+		total_tasks: tasks.length,
+		skipped_transcript_checks: unverifiableCount,
+		tasks,
+	});
+
+	console.log(`Wrote ${tasksPath}`);
+	console.log(`Judge tasks: ${tasks.length}`);
+	if (unverifiableCount > 0)
+		console.log(
+			`Skipped transcript_check assertions: ${unverifiableCount} (will be marked unverifiable in finalize step)`,
+		);
+	if (skipped > unverifiableCount)
+		console.log(
+			`Skipped due to missing run records: ${skipped - unverifiableCount}`,
+		);
+	console.log(
+		"\nNext: dispatch each task as a judge subagent (use templates/judge-prompt.md guidance).",
+	);
+	console.log(
+		"     Write each judge's JSON response to the task's `response_path`.",
+	);
+	console.log(
+		`     Then run: bun run evals:grade -- --skill ${skill} --iteration ${iteration} --finalize`,
+	);
+}
+
+function buildJudgePrompt(opts: {
+	rubric: string;
+	runRecord: RunRecord;
+	outputsDir: string;
+	responsePath: string;
+}): string {
+	const outputsListing = existsSync(opts.outputsDir)
+		? listOutputs(opts.outputsDir)
+		: "(none)";
+
+	return [
+		"You are grading one assertion for a skill evaluation run. Be strict but fair.",
+		"",
+		"# Run record",
+		"",
+		"```json",
+		JSON.stringify(opts.runRecord, null, 2),
+		"```",
+		"",
+		"# Outputs directory contents",
+		"",
+		"```",
+		outputsListing,
+		"```",
+		"",
+		"# Assertion to grade",
+		"",
+		opts.rubric,
+		"",
+		"# Grading principles",
+		"",
+		"- PASS requires concrete evidence (a direct quote or specific reference from the run record's `final_message` or outputs). Don't infer behavior not present in the record.",
+		"- A correct response expressed in different words from what the assertion implies is still a PASS if the substance matches.",
+		"- If the assertion is unverifiable from the available material (e.g. requires the tool-invocation list and the run record has none), return `passed: false`, `evidence: 'assertion is unverifiable from available material'`, `confidence: 1.0`.",
+		"",
+		"# Task",
+		"",
+		`Write your verdict as a JSON file to: ${opts.responsePath}`,
+		"",
+		"The JSON must match this schema (exactly these keys, no extra prose in the file):",
+		"",
+		"```json",
+		'{ "passed": true|false, "evidence": "direct quote or reference", "confidence": 0.0-1.0 }',
+		"```",
+		"",
+		"After writing the file, your final user-facing reply should be one sentence summarising the verdict.",
+	].join("\n");
+}
+
+function listOutputs(dir: string): string {
+	const entries = readdirSync(dir, { withFileTypes: true })
+		.filter(
+			(e) => !e.name.startsWith(".") && e.name !== "node_modules",
+		)
+		.map((e) => (e.isDirectory() ? `${e.name}/` : e.name));
+	return entries.sort().join("\n") || "(empty)";
+}
+
+function finalize(): void {
+	type JudgeResponse = {
+		passed: boolean;
+		evidence: string;
+		confidence?: number;
+	};
+
+	let totalGraded = 0;
+	let totalUnverifiable = 0;
+
+	for (const ev of evalsConfig.evals) {
+		if (!ev.assertions || ev.assertions.length === 0) continue;
+
+		for (const cond of conditionNames) {
+			const condDir = join(iterationDir, `eval-${ev.id}`, cond);
+			if (!existsSync(condDir)) continue;
+			const judgeResponsesDir = join(condDir, "judge-responses");
+			const gradingPath = join(condDir, "grading.json");
+
+			const assertionResults: AssertionResult[] = [];
+			for (const assertion of ev.assertions) {
+				if (assertion.type === "transcript_check") {
+					assertionResults.push({
+						id: assertion.id,
+						passed: false,
+						evidence:
+							"transcript_check skipped — agent-driven mode without transcript adapter",
+						confidence: 1.0,
+						grader: "transcript_check",
+					});
+					totalUnverifiable++;
+					continue;
+				}
+				const responsePath = join(
+					judgeResponsesDir,
+					`${assertion.id}.json`,
+				);
+				if (!existsSync(responsePath)) {
+					console.warn(
+						`warn: missing judge response: ${responsePath} (assertion will be FAIL/unverifiable)`,
+					);
+					assertionResults.push({
+						id: assertion.id,
+						passed: false,
+						evidence: `judge response missing at ${responsePath}`,
+						confidence: 0,
+						grader: "llm_judge",
+					});
+					continue;
+				}
+				const response: JudgeResponse = readJson(responsePath);
+				assertionResults.push({
+					id: assertion.id,
+					passed: !!response.passed,
+					evidence: response.evidence ?? "",
+					confidence: response.confidence ?? 0,
+					grader: "llm_judge",
+				});
+				totalGraded++;
+			}
+
+			const passed = assertionResults.filter((r) => r.passed).length;
+			const total = assertionResults.length;
+			const grading: GradingResult = {
+				assertion_results: assertionResults,
+				summary: {
+					passed,
+					failed: total - passed,
+					total,
+					pass_rate: total === 0 ? 0 : passed / total,
+				},
+			};
+			writeJson(gradingPath, grading);
+			console.log(
+				`Wrote ${gradingPath} (${passed}/${total} passed, rate ${(grading.summary.pass_rate * 100).toFixed(0)}%)`,
+			);
+		}
+	}
+
+	console.log(
+		`\nFinalized: ${totalGraded} llm_judge assertions graded, ${totalUnverifiable} transcript_check skipped.`,
+	);
+	console.log(
+		`\nNext: bun run evals:aggregate -- --skill ${skill} --iteration ${iteration}`,
+	);
+}
