@@ -10,10 +10,6 @@ Superslow is a fork of [obra/superpowers](https://github.com/obra/superpowers)
 at v5.1.0. We preserve the overall workflow of superpowers, while fixing bugs
 and clarifying skill content.
 
-Upstream's full release history is archived at
-[`UPSTREAM-RELEASE-NOTES.md`](./UPSTREAM-RELEASE-NOTES.md). Superslow's own
-release notes live in [`CHANGELOG.md`](./CHANGELOG.md).
-
 ## Quickstart
 
 Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Copilot CLI](#copilot-cli) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode) · [Antigravity CLI](#antigravity-cli).
@@ -136,11 +132,6 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `antigravity-extension.json` + `antigravity-instructions.md` — Antigravity CLI plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
-
-## Contributing
-
-See [`CLAUDE.md`](./CLAUDE.md) for contributor guidelines. Issues live at
-<https://github.com/slowdini/superslow/issues>.
 
 ## Releasing
 
