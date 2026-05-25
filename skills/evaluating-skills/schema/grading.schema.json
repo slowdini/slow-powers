@@ -47,6 +47,38 @@
         "total": { "type": "integer", "minimum": 0 },
         "pass_rate": { "type": "number", "minimum": 0, "maximum": 1 }
       }
+    },
+    "meta_results": {
+      "type": "array",
+      "description": "Framework-injected meta-assertions (e.g. skill-invocation check). Reserved id prefix: __ (double underscore). Tracked separately from substantive assertion_results so they do not pollute the skill effectiveness pass_rate.",
+      "items": {
+        "type": "object",
+        "required": ["id", "passed", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "evidence": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "grader": {
+            "type": "string",
+            "enum": ["transcript_check", "llm_judge"]
+          }
+        }
+      }
+    },
+    "meta_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 0 },
+        "skill_invoked": {
+          "description": "True when the skill-invocation meta-check passed; false when the judge found no evidence the skill influenced behavior; null when no skill was loaded for this run.",
+          "type": ["boolean", "null"]
+        }
+      }
     }
   }
 }

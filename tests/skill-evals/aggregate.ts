@@ -78,10 +78,25 @@ const evalDirs = readdirSync(iterationDir).filter((d) =>
 );
 if (evalDirs.length === 0) die("no eval directories found");
 
-type Bucket = { passRates: Series; durations: Series; tokens: Series };
+type Bucket = {
+	passRates: Series;
+	durations: Series;
+	tokens: Series;
+	skillInvoked: boolean[];
+	hadSkillLoaded: boolean;
+};
 const byCondition: Record<string, Bucket> = {};
-for (const c of conditionNames)
-	byCondition[c] = { passRates: [], durations: [], tokens: [] };
+const conditionSkillPaths = new Map<string, string | null>();
+for (const c of conditions.conditions) {
+	conditionSkillPaths.set(c.name, c.skill_path);
+	byCondition[c.name] = {
+		passRates: [],
+		durations: [],
+		tokens: [],
+		skillInvoked: [],
+		hadSkillLoaded: !!c.skill_path,
+	};
+}
 
 let missingGradings = 0;
 for (const evalDir of evalDirs) {
@@ -98,6 +113,8 @@ for (const evalDir of evalDirs) {
 			readFileSync(gradingPath, "utf8"),
 		);
 		byCondition[cond].passRates.push(grading.summary.pass_rate);
+		if (grading.meta_summary?.skill_invoked != null)
+			byCondition[cond].skillInvoked.push(grading.meta_summary.skill_invoked);
 		if (existsSync(timingPath)) {
 			const timing: TimingRecord = JSON.parse(
 				readFileSync(timingPath, "utf8"),
@@ -110,21 +127,34 @@ for (const evalDir of evalDirs) {
 	}
 }
 
-const runSummary: Record<
-	string,
-	{
-		pass_rate: ReturnType<typeof stats>;
-		duration_ms: ReturnType<typeof stats>;
-		total_tokens: ReturnType<typeof stats>;
-	}
-> = {};
+type ConditionSummary = {
+	pass_rate: ReturnType<typeof stats>;
+	duration_ms: ReturnType<typeof stats>;
+	total_tokens: ReturnType<typeof stats>;
+	skill_invocation_rate?: number | null;
+	skill_invocation_n?: number;
+};
+
+const runSummary: Record<string, ConditionSummary> = {};
 for (const cond of conditionNames) {
 	const bucket = byCondition[cond];
-	runSummary[cond] = {
+	const summary: ConditionSummary = {
 		pass_rate: stats(bucket.passRates, 3),
 		duration_ms: stats(bucket.durations, 0),
 		total_tokens: stats(bucket.tokens, 0),
 	};
+	if (bucket.hadSkillLoaded) {
+		summary.skill_invocation_n = bucket.skillInvoked.length;
+		summary.skill_invocation_rate =
+			bucket.skillInvoked.length === 0
+				? null
+				: round(
+						bucket.skillInvoked.filter(Boolean).length /
+							bucket.skillInvoked.length,
+						3,
+					);
+	}
+	runSummary[cond] = summary;
 }
 
 const [a, b] = conditionNames;
@@ -144,12 +174,26 @@ const delta = {
 	),
 };
 
+const validityWarnings: string[] = [];
+for (const cond of conditionNames) {
+	const s = runSummary[cond];
+	if (
+		s.skill_invocation_rate != null &&
+		s.skill_invocation_rate < 1
+	) {
+		validityWarnings.push(
+			`condition '${cond}' had skill loaded but invocation rate ${(s.skill_invocation_rate * 100).toFixed(0)}% (${s.skill_invocation_n} runs checked) — substantive results may not reflect skill effectiveness.`,
+		);
+	}
+}
+
 const benchmark = {
 	generated: new Date().toISOString(),
 	mode: conditions.mode,
 	baseline: conditions.baseline,
 	conditions_compared: [a, b],
 	missing_gradings: missingGradings,
+	validity_warnings: validityWarnings,
 	run_summary: runSummary,
 	delta,
 };
@@ -161,3 +205,13 @@ if (missingGradings > 0)
 	console.warn(
 		`note: ${missingGradings} grading.json file(s) were missing — benchmark is incomplete.`,
 	);
+for (const warning of validityWarnings) console.warn(`⚠ ${warning}`);
+if (validityWarnings.length === 0) {
+	for (const cond of conditionNames) {
+		const s = runSummary[cond];
+		if (s.skill_invocation_rate === 1)
+			console.log(
+				`✓ ${cond}: skill invocation rate 100% (${s.skill_invocation_n} runs) — substantive results are valid.`,
+			);
+	}
+}
