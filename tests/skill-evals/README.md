@@ -66,8 +66,8 @@ bun run evals -- --skill <name> --mode new-skill --dry-run
 
 ## Layout
 
-- `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. Also handles the `snapshot` subcommand.
-- `grade.ts` — evaluates `transcript_check` assertions directly (regex against `tool_invocations`), emits judge-task files for `llm_judge` assertions, then finalizes by merging judge responses into per-run `grading.json`.
+- `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. On Claude Code (default), also stages each condition's snapshot at `<repoRoot>/.claude/skills/superslow-eval-<iteration>-<condition>__<skillName>/SKILL.md` so the subagent can discover and invoke it via the Skill tool; pass `--no-stage` to opt out and fall back to inlining the SKILL.md into the dispatch prompt. Also handles the `snapshot` subcommand.
+- `grade.ts` — evaluates `transcript_check` assertions directly (regex against `tool_invocations`), emits judge-task files for `llm_judge` assertions, then finalizes by merging judge responses into per-run `grading.json`. The `__skill_invoked` meta-check is code-based on Claude Code when the staged-skill slug is known and `tool_invocations` is populated (deterministic scan for a `Skill` tool call with matching slug); it falls back to an LLM judge looking for behavioral fingerprints when either signal is missing.
 - `aggregate.ts` — reads grading.json + timing.json from an iteration, writes `benchmark.json` with pass-rate / duration / token stats keyed by condition name.
 - `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a Claude Code subagent transcript by description, parses the transcript with the adapter, populates `tool_invocations` in `run.json`.
 - `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
@@ -80,7 +80,8 @@ The framework is a second pillar of testing alongside the existing `tests/codex/
 
 ## Caveats
 
-- v1 ships the Claude Code transcript adapter only. Other harnesses must populate `tool_invocations` manually or write their own adapter against `schema/run-record.schema.json`. Without an adapter, `transcript_check` assertions grade as `unverifiable`.
+- v1 ships the Claude Code transcript adapter only. Other harnesses must populate `tool_invocations` manually or write their own adapter against `schema/run-record.schema.json`. Without an adapter, `transcript_check` assertions grade as `unverifiable` and the `__skill_invoked` meta-check falls back to the LLM judge.
+- Skill staging writes to `<repoRoot>/.claude/skills/superslow-eval-*/`. The runner sweeps these directories at the start of each fresh run; a crashed run may leave stale entries that the next run will reap.
 - v1 grading dispatch is operator-driven (host agent dispatches judge subagents per the manifest). v2 will add an SDK-backed headless grader.
 - Single-run evals only in v1; the schema supports multi-run later.
 - Snapshot retention is manual — operator deletes `skills-workspace/<skill>/snapshots/<label>/` when no longer needed.
