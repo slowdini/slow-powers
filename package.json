@@ -1,7 +1,7 @@
 {
   "name": "@slowdini/superslow-opencode",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Superslow — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
   "main": "./opencode/plugins/superpowers.js",
