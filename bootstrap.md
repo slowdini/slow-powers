@@ -15,30 +15,14 @@ Superslow skills override default system behavior where they conflict, but user 
 
 ---
 
-## General Planning Guidelines
-
-If you're in planning mode or preparing to write an implementation plan, you MUST enrich your plans with these rules:
-
-1. **No Placeholders:**
-   * All planned tasks and file changes must be fully concrete.
-   * You are strictly FORBIDDEN from using placeholders (e.g., "TBD", "TODO", "implement error handling later"). Specify the exact implementation design.
-2. **Atomic Task Granularity:**
-   * Break your tasks down into highly granular, atomic actions that take 2-to-5 minutes to execute.
-3. **TDD-First Steps:**
-   * For every feature or bugfix, your task checklist MUST explicitly structure a Red-Green-Refactor sequence:
-     1. Write the failing test.
-     2. Run the test and verify it fails correctly.
-     3. Implement the minimal code to pass.
-     4. Run the test and verify it passes.
-
----
-
 ## Active Skills Directory
 
 When executing a task, check if any of these skills apply and load them immediately:
 
 * **`using-git-worktrees`**
   * *Trigger:* Use when starting any new feature development or bugfix to set up a safe, isolated worktree.
+* **`writing-plans`**
+  * *Trigger:* Use when in planning mode, or preparing to write or update an implementation plan.
 * **`test-driven-development`**
   * *Trigger:* Use whenever implementing code changes, refactoring, or bug fixes.
 * **`systematic-debugging`**
