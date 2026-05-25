@@ -79,21 +79,22 @@ The same workspace tree supports two ways of driving the loop. Pick based on whe
 **Agent-driven mode.** From inside a normal agent session, the agent itself drives the entire loop:
 
 1. The agent invokes the runner via Bash to build the workspace (same command as above).
-2. The agent reads the generated `dispatch.json` (machine-readable sibling of the manifest). Each task object has a ready-to-use `dispatch_prompt` plus exact `run_record_path` and `timing_path` to write to.
-3. For each task, the agent dispatches a fresh subagent using its host's primitive, passing the `dispatch_prompt` verbatim.
-4. When the subagent returns, the agent writes the portable run record to `run_record_path` and the timing record to `timing_path`. The agent may use a harness adapter to convert a native transcript, or populate the record from what the subagent surfaced.
-5. The agent runs the grader (Bash) and then dispatches judge subagents for any `llm_judge` assertions — same pattern: read a tasks file, dispatch, write results back to a path.
-6. The agent runs the aggregator.
+2. The agent reads the generated `dispatch.json` (machine-readable sibling of the manifest). Each task object has a ready-to-use `dispatch_prompt`, an `agent_description` (`<eval_id>:<condition>`) to pass through as the dispatch description, and exact `run_record_path` and `timing_path` to write to.
+3. For each task, the agent dispatches a fresh subagent using its host's primitive, passing `dispatch_prompt` verbatim and `agent_description` as the dispatch `description`. Passing the description correctly is what lets the transcript adapter correlate transcripts to runs in step 5.
+4. When the subagent returns, the agent writes the portable run record to `run_record_path` (with `tool_invocations: []`) and the timing record to `timing_path`.
+5. (Claude Code only) The agent runs `bun run evals:fill-transcripts` to populate `tool_invocations` from persisted subagent transcripts. Other harnesses skip this step; `transcript_check` assertions grade as unverifiable.
+6. The agent runs the grader (Bash) and then dispatches judge subagents for any `llm_judge` assertions — same pattern: read a tasks file, dispatch, write results back to a path.
+7. The agent runs the aggregator.
 
 Agent-driven mode is the common case because the framework is most useful from inside the harness where the skill is being iterated. Use it when you want a single in-session "run the eval and report the delta" flow.
 
 ### Transcript access
 
-`transcript_check` assertions match patterns against a run's `tool_invocations`. Filling that list well depends on what the harness exposes:
+`transcript_check` assertions match regex patterns against a run's `tool_invocations`. Filling that list depends on what the harness exposes:
 
-- **Claude Code (parent agent can access subagent transcripts via the filesystem):** use the adapter at `tests/skill-evals/adapters/claude-code-transcript.ts` after the subagent completes.
-- **Harnesses where the parent only sees the subagent's final message:** the agent records only the final message; `transcript_check` assertions will be skipped (graded as "unverifiable") and you rely on `llm_judge` assertions instead. This is an honest limitation, not a bug.
-- **Operator-driven mode on any harness:** the operator can use the adapter after the fact, since they have filesystem access to whatever transcript the harness persisted.
+- **Claude Code:** subagent transcripts are persisted to `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/agent-<id>.jsonl`, with a sibling `.meta.json` recording the dispatch description. The runner emits an `agent_description = "<eval_id>:<condition>"` field on each task; pass that string as the Agent tool's `description` when dispatching. After all dispatches complete, run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir <path>` to populate `tool_invocations` on every run record via the adapter at `tests/skill-evals/adapters/claude-code-transcript.ts`.
+- **Other harnesses (no transcript access):** the agent records only `final_message`; `tool_invocations` stays empty and `transcript_check` assertions grade as `unverifiable`. Lean on `llm_judge` for substantive checks. This is an honest limitation, not a bug.
+- **Operator-driven mode on Claude Code:** the operator can run `evals:fill-transcripts` after the fact, since they have filesystem access to the persisted transcripts.
 
 Design your assertions accordingly. For maximally portable evals, lean on `llm_judge` for the substantive checks and use `transcript_check` for cheap mechanical signals where the adapter is available.
 
