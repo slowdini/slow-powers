@@ -26,16 +26,22 @@ bun run evals -- --skill <name> --mode new-skill
 # 3. Open skills-workspace/<name>/iteration-1/dispatch-manifest.md and
 #    dispatch each entry as a fresh general-purpose subagent.
 
-# 4. For each completed run, write `run.json` (matching schema/run-record.schema.json)
-#    and `timing.json` into the condition directory.
+# 4. For each completed run, write `run.json` (matching schema/run-record.schema.json,
+#    with `tool_invocations: []` for now) and `timing.json` into the condition directory.
 
-# 5. Grade (added in step 5):
+# 5. (Claude Code only) Fill tool_invocations from subagent transcripts:
+bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
+  --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
+
+# 6. Grade:
 bun run evals:grade -- --skill <name> --iteration 1
+# (After judge subagents complete and their responses are written, finalize:)
+bun run evals:grade -- --skill <name> --iteration 1 --finalize
 
-# 6. Aggregate:
+# 7. Aggregate:
 bun run evals:aggregate -- --skill <name> --iteration 1
 
-# 7. Read skills-workspace/<name>/iteration-1/benchmark.json.
+# 8. Read skills-workspace/<name>/iteration-1/benchmark.json.
 ```
 
 ### Mode B — Evaluate a language change to an existing skill
@@ -61,15 +67,12 @@ bun run evals -- --skill <name> --mode new-skill --dry-run
 ## Layout
 
 - `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. Also handles the `snapshot` subcommand.
+- `grade.ts` — evaluates `transcript_check` assertions directly (regex against `tool_invocations`), emits judge-task files for `llm_judge` assertions, then finalizes by merging judge responses into per-run `grading.json`.
 - `aggregate.ts` — reads grading.json + timing.json from an iteration, writes `benchmark.json` with pass-rate / duration / token stats keyed by condition name.
+- `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a Claude Code subagent transcript by description, parses the transcript with the adapter, populates `tool_invocations` in `run.json`.
+- `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
 - `types.ts` — shared TypeScript types matching `skills/evaluating-skills/schema/*.json`.
 - `validate.ts` — minimal validator for `evals.json` against the JSON Schema rules.
-
-Coming in later steps:
-
-- `grade.ts` — runs transcript_check modules and dispatches llm_judge subagents; produces `grading.json` per run.
-- `transcript-checks/` — registered transcript-check modules (e.g., `ran-verification-command.ts`).
-- `adapters/claude-code-transcript.ts` — converts Claude Code transcript JSON into the portable run-record schema.
 
 ## Why this lives in `tests/`
 
@@ -77,7 +80,7 @@ The framework is a second pillar of testing alongside the existing `tests/codex/
 
 ## Caveats
 
-- v1 ships the Claude Code transcript adapter only. Other harnesses must produce `run.json` manually or write their own adapter.
+- v1 ships the Claude Code transcript adapter only. Other harnesses must populate `tool_invocations` manually or write their own adapter against `schema/run-record.schema.json`. Without an adapter, `transcript_check` assertions grade as `unverifiable`.
 - v1 grading dispatch is operator-driven (host agent dispatches judge subagents per the manifest). v2 will add an SDK-backed headless grader.
 - Single-run evals only in v1; the schema supports multi-run later.
 - Snapshot retention is manual — operator deletes `skills-workspace/<skill>/snapshots/<label>/` when no longer needed.

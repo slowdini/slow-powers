@@ -281,6 +281,7 @@ type DispatchTask = {
 	outputs_dir: string;
 	run_record_path: string;
 	timing_path: string;
+	agent_description: string;
 	dispatch_prompt: string;
 };
 
@@ -353,6 +354,7 @@ function buildDispatchTask(opts: {
 		outputs_dir: opts.outputsDir,
 		run_record_path: join(opts.condDir, "run.json"),
 		timing_path: join(opts.condDir, "timing.json"),
+		agent_description: `${opts.evalId}:${opts.condition}`,
 		dispatch_prompt: dispatchPrompt,
 	};
 }
@@ -378,12 +380,17 @@ function buildManifest(opts: {
 		"1. **CLI / manual mode** — Read each dispatch below. Hand each one to a fresh general-purpose subagent. When the subagent finishes, write `run.json` and `timing.json` to the paths shown.",
 		"2. **Agent-driven mode** — In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
 		"",
+		"**Transcript correlation (agent-driven mode):** Each task has an `agent_description` field of the form `<eval_id>:<condition>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string as the dispatch `description`. The transcript adapter uses it to correlate each subagent's persisted transcript back to the right `(eval, condition)` slot.",
+		"",
 		"After every dispatch:",
 		"",
-		"1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json`. For full tool-invocation capture, use the harness's transcript adapter (e.g., `tests/skill-evals/adapters/claude-code-transcript.ts`). For agent-driven mode without a transcript adapter, populate `final_message` and `tool_invocations` from whatever the dispatched subagent surfaces.",
+		"1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json`. Populate `final_message` from the subagent's reply and leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
 		"2. Capture `total_tokens` and `duration_ms` from the harness's task completion event into `timing.json`. These values may not be persisted anywhere else — save them immediately.",
 		"",
-		"Then run `bun run evals:grade --skill <name> --iteration <N>` (added in a later step).",
+		"After all dispatches:",
+		"",
+		"3. (Claude Code only, optional) Run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` to fill `tool_invocations` from each subagent's persisted transcript. Skipping this step leaves `transcript_check` assertions unverifiable.",
+		"4. Run `bun run evals:grade --skill <name> --iteration <N>` to grade.",
 		"",
 		"## Dispatches",
 		"",

@@ -9,11 +9,13 @@ import {
 import { join, resolve } from "node:path";
 import {
 	type AssertionResult,
+	type AssertionTranscriptCheck,
 	type ConditionsRecord,
 	type EvalsConfig,
 	type GradingResult,
 	type RunRecord,
 	SKILL_INVOKED_META_ID,
+	type ToolInvocation,
 } from "./types";
 import { validateEvalsConfig } from "./validate";
 
@@ -217,7 +219,7 @@ function emitJudgeTasks(): void {
 	);
 	if (unverifiableCount > 0)
 		console.log(
-			`Skipped transcript_check assertions: ${unverifiableCount} (will be marked unverifiable in finalize step)`,
+			`transcript_check assertions: ${unverifiableCount} (not dispatched; graded directly in finalize from run.json's tool_invocations).`,
 		);
 	if (skipped > unverifiableCount)
 		console.log(
@@ -283,6 +285,81 @@ function buildJudgePrompt(opts: {
 	].join("\n");
 }
 
+function describeInvocation(inv: ToolInvocation): string {
+	const args = inv.args === undefined ? "" : ` ${JSON.stringify(inv.args)}`;
+	return `${inv.name}${args}`;
+}
+
+function gradeTranscriptCheck(
+	assertion: AssertionTranscriptCheck,
+	invocations: ToolInvocation[],
+): AssertionResult {
+	if (invocations.length === 0) {
+		return {
+			id: assertion.id,
+			passed: false,
+			evidence:
+				"tool_invocations is empty — run record was not filled by a transcript adapter. Run `bun run evals:fill-transcripts` for Claude Code, or rely on `llm_judge` assertions for harnesses without an adapter.",
+			confidence: 1.0,
+			grader: "transcript_check",
+		};
+	}
+
+	if (assertion.check !== "tool_invocation_matches") {
+		return {
+			id: assertion.id,
+			passed: false,
+			evidence: `unsupported transcript_check kind: '${assertion.check}'`,
+			confidence: 1.0,
+			grader: "transcript_check",
+		};
+	}
+
+	const pattern = assertion.pattern;
+	if (!pattern) {
+		return {
+			id: assertion.id,
+			passed: false,
+			evidence: "transcript_check 'tool_invocation_matches' requires a `pattern` field",
+			confidence: 1.0,
+			grader: "transcript_check",
+		};
+	}
+
+	let re: RegExp;
+	try {
+		re = new RegExp(pattern);
+	} catch (err) {
+		return {
+			id: assertion.id,
+			passed: false,
+			evidence: `invalid regex in pattern '${pattern}': ${(err as Error).message}`,
+			confidence: 1.0,
+			grader: "transcript_check",
+		};
+	}
+
+	for (const inv of invocations) {
+		const target = describeInvocation(inv);
+		if (re.test(target))
+			return {
+				id: assertion.id,
+				passed: true,
+				evidence: `matched ordinal ${inv.ordinal}: ${target.slice(0, 200)}`,
+				confidence: 1.0,
+				grader: "transcript_check",
+			};
+	}
+
+	return {
+		id: assertion.id,
+		passed: false,
+		evidence: `no tool invocation matched /${pattern}/ across ${invocations.length} invocation(s)`,
+		confidence: 1.0,
+		grader: "transcript_check",
+	};
+}
+
 function listOutputs(dir: string): string {
 	const entries = readdirSync(dir, { withFileTypes: true })
 		.filter(
@@ -318,18 +395,18 @@ function finalize(): void {
 			const gradingPath = join(condDir, "grading.json");
 
 			const assertionResults: AssertionResult[] = [];
+			const runRecordPath = join(condDir, "run.json");
+			const runRecord: RunRecord | null = existsSync(runRecordPath)
+				? readJson<RunRecord>(runRecordPath)
+				: null;
 			if (hasAssertions && ev.assertions) {
 				for (const assertion of ev.assertions) {
 					if (assertion.type === "transcript_check") {
-						assertionResults.push({
-							id: assertion.id,
-							passed: false,
-							evidence:
-								"transcript_check skipped — agent-driven mode without transcript adapter",
-							confidence: 1.0,
-							grader: "transcript_check",
-						});
-						totalUnverifiable++;
+						const invocations = runRecord?.tool_invocations ?? [];
+						const result = gradeTranscriptCheck(assertion, invocations);
+						assertionResults.push(result);
+						if (invocations.length === 0) totalUnverifiable++;
+						else totalGraded++;
 						continue;
 					}
 					const responsePath = join(
@@ -432,7 +509,7 @@ function finalize(): void {
 	}
 
 	console.log(
-		`\nFinalized: ${totalGraded} substantive llm_judge graded, ${totalMetaGraded} skill-invocation meta-check${totalMetaGraded === 1 ? "" : "s"} graded, ${totalUnverifiable} transcript_check skipped.`,
+		`\nFinalized: ${totalGraded} substantive assertion${totalGraded === 1 ? "" : "s"} graded, ${totalMetaGraded} skill-invocation meta-check${totalMetaGraded === 1 ? "" : "s"} graded, ${totalUnverifiable} transcript_check unverifiable (empty tool_invocations).`,
 	);
 	if (metaFailures > 0)
 		console.warn(
