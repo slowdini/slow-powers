@@ -16,6 +16,7 @@
     "test:opencode": "cd tests/opencode && bash run-tests.sh",
     "evals": "bun run tests/skill-evals/run.ts",
     "evals:snapshot": "bun run tests/skill-evals/run.ts snapshot",
+    "evals:validate": "bun run tests/skill-evals/validate-all.ts",
     "evals:grade": "bun run tests/skill-evals/grade.ts",
     "evals:aggregate": "bun run tests/skill-evals/aggregate.ts",
     "version": "node scripts/bump-version.js",
