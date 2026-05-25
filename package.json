@@ -21,12 +21,11 @@
     "evals:grade": "bun run tests/skill-evals/grade.ts",
     "evals:aggregate": "bun run tests/skill-evals/aggregate.ts",
     "version": "node scripts/bump-version.js",
-    "check": "biome check --write . && markdownlint-cli2 --fix '**/*.md' '!**/node_modules/**' '!**/.worktrees/**'"
+    "check": "biome check --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.4",
-    "markdownlint-cli2": "^0.22.1"
+    "lint-staged": "^17.0.4"
   }
 }
