@@ -67,20 +67,15 @@ local plugin directory.
 curl -fsSL https://raw.githubusercontent.com/slowdini/superslow/main/.cursor-plugin/install.sh | sh
 ```
 
-Review the script before running if you prefer:
-<https://github.com/slowdini/superslow/blob/main/.cursor-plugin/install.sh>
-
-Restart Cursor after install.
-
 ### OpenCode
 
-Tell OpenCode:
+Add Superslow to the `plugin` array in your `opencode.json` (global or project-level):
 
+```json
+{
+  "plugin": ["github:slowdini/superslow#main"]
+}
 ```
-Fetch and follow instructions from https://raw.githubusercontent.com/slowdini/superslow/refs/heads/main/opencode/INSTALL.md
-```
-
-Detailed docs: [`opencode/INSTALL.md`](opencode/INSTALL.md).
 
 ### Antigravity CLI
 
