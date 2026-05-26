@@ -334,7 +334,9 @@ function commandRun(args: Args): void {
 	}
 
 	const bootstrapContent =
-		!args.noStage && args.harness === "claude-code" && existsSync(BOOTSTRAP_PATH)
+		!args.noStage &&
+		(args.harness === "claude-code" || args.harness === "antigravity") &&
+		existsSync(BOOTSTRAP_PATH)
 			? readFileSync(BOOTSTRAP_PATH, "utf8")
 			: null;
 
@@ -401,6 +403,7 @@ function commandRun(args: Args): void {
 					condDir,
 					harness: args.harness,
 					bootstrapContent,
+					skillName: args.skill,
 				}),
 			);
 		}
@@ -508,26 +511,65 @@ export function buildDispatchTask(opts: {
 	condDir: string;
 	harness: string;
 	bootstrapContent: string | null;
+	skillName: string;
 }): DispatchTask {
 	let skillBlock: string;
 	if (opts.harness === "antigravity") {
-		if (opts.skillPath) {
-			const skillName = basename(dirname(opts.skillPath));
-			const skillDesc = getSkillDescription(opts.skillPath);
+		if (opts.bootstrapContent) {
+			const siblingNames = readdirSync(SKILLS_DIR).filter((name) => {
+				if (name === opts.skillName) return false;
+				const srcDir = join(SKILLS_DIR, name);
+				if (!statSync(srcDir).isDirectory()) return false;
+				return existsSync(join(srcDir, "SKILL.md"));
+			});
+
+			const allSkillsToEmit: { name: string; path: string; desc: string }[] = [];
+
+			for (const name of siblingNames) {
+				const siblingPath = join(SKILLS_DIR, name, "SKILL.md");
+				const skillDesc = getSkillDescription(siblingPath);
+				allSkillsToEmit.push({ name, path: siblingPath, desc: skillDesc });
+			}
+
+			if (opts.skillPath) {
+				const skillDesc = getSkillDescription(opts.skillPath);
+				allSkillsToEmit.push({ name: opts.skillName, path: opts.skillPath, desc: skillDesc });
+			}
+
+			// Sort alphabetically by name
+			allSkillsToEmit.sort((a, b) => a.name.localeCompare(b.name));
+
+			const skillsLines = allSkillsToEmit.map(
+				(s) => `- ${s.name} (${s.path}): ${s.desc}`
+			);
+
 			skillBlock = [
 				"<skills>",
 				"Available skills:",
-				`- ${skillName} (${opts.skillPath}): ${skillDesc}`,
+				...skillsLines,
 				"</skills>",
 				"",
-				"If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding.",
+				"If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
 			].join("\n");
 		} else {
-			skillBlock = [
-				"<skills>",
-				"Available skills: none",
-				"</skills>",
-			].join("\n");
+			if (opts.skillPath) {
+				const skillName = basename(dirname(opts.skillPath));
+				const skillDesc = getSkillDescription(opts.skillPath);
+				skillBlock = [
+					"<skills>",
+					"Available skills:",
+					`- ${skillName} (${opts.skillPath}): ${skillDesc}`,
+					"</skills>",
+					"",
+					"If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
+				].join("\n");
+			} else {
+				skillBlock = [
+					"<skills>",
+					"Available skills: none",
+					"</skills>",
+				].join("\n");
+			}
 		}
 	} else {
 		if (opts.stagedSkillSlug) {
@@ -561,7 +603,7 @@ export function buildDispatchTask(opts: {
 		: "Available fixture files: none";
 
 	const sections: string[] = [];
-	if (opts.bootstrapContent && opts.harness !== "antigravity") {
+	if (opts.bootstrapContent) {
 		sections.push(
 			[
 				"<session-start-context>",

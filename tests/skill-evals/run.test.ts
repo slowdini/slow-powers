@@ -271,6 +271,7 @@ describe("buildDispatchTask bootstrap injection", () => {
 		fixtures: [] as string[],
 		outputsDir: "/tmp/out",
 		condDir: "/tmp/cond",
+		skillName: "foo",
 	};
 
 	test("prepends <session-start-context> for claude-code when bootstrapContent is provided", () => {
@@ -329,3 +330,82 @@ describe("buildDispatchTask bootstrap injection", () => {
 		expect(task.dispatch_prompt).toContain("No skill is loaded");
 	});
 });
+
+describe("buildDispatchTask antigravity parity", () => {
+	const baseOpts = {
+		evalId: "e1",
+		condition: "with_skill",
+		skillPath: "/Users/maxhaarhaus/personal/superslow/skills/writing-plans/SKILL.md",
+		stagedSkillSlug: null,
+		userPrompt: "do the thing",
+		fixtures: [] as string[],
+		outputsDir: "/tmp/out",
+		condDir: "/tmp/cond",
+		skillName: "writing-plans",
+	};
+
+	test("prepends <session-start-context> for antigravity when bootstrapContent is provided", () => {
+		const task = buildDispatchTask({
+			...baseOpts,
+			harness: "antigravity",
+			bootstrapContent: "BOOT-LOADED",
+		});
+		expect(task.dispatch_prompt.startsWith("<session-start-context>")).toBe(
+			true,
+		);
+		expect(task.dispatch_prompt).toContain("BOOT-LOADED");
+		expect(task.dispatch_prompt).toContain("</session-start-context>");
+	});
+
+	test("omits <session-start-context> when bootstrapContent is null for antigravity", () => {
+		const task = buildDispatchTask({
+			...baseOpts,
+			harness: "antigravity",
+			bootstrapContent: null,
+		});
+		expect(task.dispatch_prompt).not.toContain("<session-start-context>");
+	});
+
+	test("with-skill condition under realistic env for antigravity lists all skills alphabetically including paths and descriptions", () => {
+		const task = buildDispatchTask({
+			...baseOpts,
+			harness: "antigravity",
+			bootstrapContent: "BOOT-LOADED",
+		});
+		expect(task.dispatch_prompt).toContain("<skills>");
+		expect(task.dispatch_prompt).toContain("Available skills:");
+		expect(task.dispatch_prompt).toContain("- using-git-worktrees (");
+		expect(task.dispatch_prompt).toContain("- test-driven-development (");
+		expect(task.dispatch_prompt).toContain("- writing-plans (");
+		const idxTDD = task.dispatch_prompt.indexOf("- test-driven-development (");
+		const idxGit = task.dispatch_prompt.indexOf("- using-git-worktrees (");
+		const idxWP = task.dispatch_prompt.indexOf("- writing-plans (");
+		expect(idxTDD).toBeLessThan(idxGit);
+		expect(idxGit).toBeLessThan(idxWP);
+		expect(task.dispatch_prompt).toContain("If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.");
+	});
+
+	test("without-skill condition under realistic env for antigravity lists only sibling skills and excludes the skill under test", () => {
+		const task = buildDispatchTask({
+			...baseOpts,
+			skillPath: null,
+			harness: "antigravity",
+			bootstrapContent: "BOOT-LOADED",
+		});
+		expect(task.dispatch_prompt).toContain("<skills>");
+		expect(task.dispatch_prompt).toContain("Available skills:");
+		expect(task.dispatch_prompt).toContain("- test-driven-development (");
+		expect(task.dispatch_prompt).not.toContain("- writing-plans (");
+	});
+
+	test("without-skill condition without bootstrap (e.g. --no-stage) for antigravity keeps the legacy 'Available skills: none' wording", () => {
+		const task = buildDispatchTask({
+			...baseOpts,
+			skillPath: null,
+			harness: "antigravity",
+			bootstrapContent: null,
+		});
+		expect(task.dispatch_prompt).toContain("<skills>\nAvailable skills: none\n</skills>");
+	});
+});
+
