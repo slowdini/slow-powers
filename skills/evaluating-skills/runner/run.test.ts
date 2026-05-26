@@ -2,6 +2,7 @@ import {
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	readdirSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
@@ -272,6 +273,11 @@ describe("buildDispatchTask bootstrap injection", () => {
 		outputsDir: "/tmp/out",
 		condDir: "/tmp/cond",
 		skillName: "foo",
+		availableSkills: [] as {
+			name: string;
+			path: string;
+			description: string;
+		}[],
 	};
 
 	test("prepends <session-start-context> for claude-code when bootstrapContent is provided", () => {
@@ -287,13 +293,45 @@ describe("buildDispatchTask bootstrap injection", () => {
 		expect(task.dispatch_prompt).toContain("</session-start-context>");
 	});
 
-	test("omits <session-start-context> when bootstrapContent is null", () => {
+	test("omits <session-start-context> when bootstrapContent is null and nothing is staged", () => {
 		const task = buildDispatchTask({
 			...baseOpts,
 			harness: "claude-code",
 			bootstrapContent: null,
 		});
 		expect(task.dispatch_prompt).not.toContain("<session-start-context>");
+	});
+
+	test("emits <session-start-context> with a staged-skills inventory even when bootstrapContent is null", () => {
+		const task = buildDispatchTask({
+			...baseOpts,
+			harness: "claude-code",
+			bootstrapContent: null,
+			availableSkills: [
+				{ name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
+			],
+		});
+		expect(task.dispatch_prompt).toContain("<session-start-context>");
+		expect(task.dispatch_prompt).toContain("staged and discoverable");
+		expect(task.dispatch_prompt).toContain("* `foo`");
+		expect(task.dispatch_prompt).toContain("*Trigger:* the foo skill");
+		// No product framing should appear without a bootstrap file.
+		expect(task.dispatch_prompt).not.toContain("loaded at session start");
+	});
+
+	test("staged-skills inventory follows the verbatim bootstrap content when both are present", () => {
+		const task = buildDispatchTask({
+			...baseOpts,
+			harness: "claude-code",
+			bootstrapContent: "BOOT-LOADED",
+			availableSkills: [
+				{ name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
+			],
+		});
+		const bootIdx = task.dispatch_prompt.indexOf("BOOT-LOADED");
+		const invIdx = task.dispatch_prompt.indexOf("staged and discoverable");
+		expect(bootIdx).toBeGreaterThan(-1);
+		expect(invIdx).toBeGreaterThan(bootIdx);
 	});
 
 	test("references staged slug in skill block for claude-code", () => {
@@ -332,16 +370,33 @@ describe("buildDispatchTask bootstrap injection", () => {
 });
 
 describe("buildDispatchTask antigravity parity", () => {
+	const siblingTrio = [
+		{
+			name: "test-driven-development",
+			path: "/x/test-driven-development/SKILL.md",
+			description: "tdd skill",
+		},
+		{
+			name: "using-git-worktrees",
+			path: "/x/using-git-worktrees/SKILL.md",
+			description: "worktrees skill",
+		},
+	];
 	const baseOpts = {
 		evalId: "e1",
 		condition: "with_skill",
-		skillPath: "/Users/maxhaarhaus/personal/superslow/skills/writing-plans/SKILL.md",
+		skillPath: "/x/writing-plans/SKILL.md",
 		stagedSkillSlug: null,
 		userPrompt: "do the thing",
 		fixtures: [] as string[],
 		outputsDir: "/tmp/out",
 		condDir: "/tmp/cond",
 		skillName: "writing-plans",
+		availableSkills: [] as {
+			name: string;
+			path: string;
+			description: string;
+		}[],
 	};
 
 	test("prepends <session-start-context> for antigravity when bootstrapContent is provided", () => {
@@ -366,11 +421,19 @@ describe("buildDispatchTask antigravity parity", () => {
 		expect(task.dispatch_prompt).not.toContain("<session-start-context>");
 	});
 
-	test("with-skill condition under realistic env for antigravity lists all skills alphabetically including paths and descriptions", () => {
+	test("with-skill condition for antigravity lists all staged skills alphabetically including paths and descriptions", () => {
 		const task = buildDispatchTask({
 			...baseOpts,
 			harness: "antigravity",
 			bootstrapContent: "BOOT-LOADED",
+			availableSkills: [
+				...siblingTrio,
+				{
+					name: "writing-plans",
+					path: "/x/writing-plans/SKILL.md",
+					description: "plans skill",
+				},
+			],
 		});
 		expect(task.dispatch_prompt).toContain("<skills>");
 		expect(task.dispatch_prompt).toContain("Available skills:");
@@ -385,12 +448,13 @@ describe("buildDispatchTask antigravity parity", () => {
 		expect(task.dispatch_prompt).toContain("If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.");
 	});
 
-	test("without-skill condition under realistic env for antigravity lists only sibling skills and excludes the skill under test", () => {
+	test("without-skill condition for antigravity lists only sibling skills and excludes the skill under test", () => {
 		const task = buildDispatchTask({
 			...baseOpts,
 			skillPath: null,
 			harness: "antigravity",
 			bootstrapContent: "BOOT-LOADED",
+			availableSkills: siblingTrio,
 		});
 		expect(task.dispatch_prompt).toContain("<skills>");
 		expect(task.dispatch_prompt).toContain("Available skills:");
@@ -398,7 +462,7 @@ describe("buildDispatchTask antigravity parity", () => {
 		expect(task.dispatch_prompt).not.toContain("- writing-plans (");
 	});
 
-	test("without-skill condition without bootstrap (e.g. --no-stage) for antigravity keeps the legacy 'Available skills: none' wording", () => {
+	test("without any staged skills (e.g. --no-stage) for antigravity keeps the legacy 'Available skills: none' wording", () => {
 		const task = buildDispatchTask({
 			...baseOpts,
 			skillPath: null,
@@ -406,6 +470,129 @@ describe("buildDispatchTask antigravity parity", () => {
 			bootstrapContent: null,
 		});
 		expect(task.dispatch_prompt).toContain("<skills>\nAvailable skills: none\n</skills>");
+	});
+});
+
+describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
+	const RUN_TS = join(import.meta.dir, "run.ts");
+
+	function setup(name: string): { skillDir: string; cwd: string } {
+		const root = join(FIXTURE_ROOT, name);
+		const skillDir = join(root, "skill-dir");
+		const skillSub = join(skillDir, "mr-review");
+		mkdirSync(join(skillSub, "evals"), { recursive: true });
+		writeFileSync(
+			join(skillSub, "SKILL.md"),
+			"---\nname: mr-review\ndescription: review merge requests\n---\n\nbody\n",
+		);
+		writeFileSync(
+			join(skillSub, "evals", "evals.json"),
+			JSON.stringify({
+				skill_name: "mr-review",
+				evals: [
+					{ id: "e1", prompt: "review this MR", expected_output: "a review" },
+				],
+			}),
+		);
+		const cwd = join(root, "work");
+		mkdirSync(cwd, { recursive: true });
+		return { skillDir, cwd };
+	}
+
+	function runCli(args: string[], cwd: string) {
+		return Bun.spawnSync(["bun", "run", RUN_TS, ...args], {
+			cwd,
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+	}
+
+	test("stages only the skill-under-test and writes workspace under CWD", () => {
+		const { skillDir, cwd } = setup("usermode-basic");
+		const res = runCli(
+			["--skill-dir", skillDir, "--skill", "mr-review", "--mode", "new-skill", "--dry-run"],
+			cwd,
+		);
+		expect(res.exitCode).toBe(0);
+
+		const dispatchJson = join(
+			cwd,
+			"skills-workspace",
+			"mr-review",
+			"iteration-1",
+			"dispatch.json",
+		);
+		expect(existsSync(dispatchJson)).toBe(true);
+
+		const stagedSkillsDir = join(cwd, ".claude", "skills");
+		const entries = readdirSync(stagedSkillsDir).filter(
+			(e) => e !== STAGED_SIBLING_MANIFEST,
+		);
+		expect(entries).toEqual([
+			"superslow-eval-1-with_skill__mr-review",
+		]);
+	});
+
+	test("dispatch prompt lists only the skill-under-test, no other skills, and no product framing without --bootstrap", () => {
+		const { skillDir, cwd } = setup("usermode-prompt");
+		const res = runCli(
+			["--skill-dir", skillDir, "--skill", "mr-review", "--mode", "new-skill", "--dry-run"],
+			cwd,
+		);
+		expect(res.exitCode).toBe(0);
+
+		const dispatch = JSON.parse(
+			readFileSync(
+				join(cwd, "skills-workspace", "mr-review", "iteration-1", "dispatch.json"),
+				"utf8",
+			),
+		) as { tasks: Array<{ condition: string; dispatch_prompt: string }> };
+
+		const withSkill = dispatch.tasks.find((t) => t.condition === "with_skill");
+		expect(withSkill).toBeDefined();
+		const prompt = withSkill?.dispatch_prompt ?? "";
+		expect(prompt).toContain("<session-start-context>");
+		expect(prompt).toContain("* `mr-review`");
+		expect(prompt).not.toContain("test-driven-development");
+		expect(prompt).not.toContain("writing-skills");
+		// No product framing (EXTREMELY-IMPORTANT etc.) without a --bootstrap file.
+		expect(prompt).not.toContain("EXTREMELY-IMPORTANT");
+		expect(prompt).not.toContain("loaded at session start");
+	});
+
+	test("--bootstrap content is prepended verbatim before the staged-skills inventory", () => {
+		const { skillDir, cwd } = setup("usermode-bootstrap");
+		const bootstrapPath = join(cwd, "my-bootstrap.md");
+		writeFileSync(bootstrapPath, "MY CUSTOM EVAL FRAMING");
+		const res = runCli(
+			[
+				"--skill-dir",
+				skillDir,
+				"--skill",
+				"mr-review",
+				"--mode",
+				"new-skill",
+				"--bootstrap",
+				bootstrapPath,
+				"--dry-run",
+			],
+			cwd,
+		);
+		expect(res.exitCode).toBe(0);
+
+		const dispatch = JSON.parse(
+			readFileSync(
+				join(cwd, "skills-workspace", "mr-review", "iteration-1", "dispatch.json"),
+				"utf8",
+			),
+		) as { tasks: Array<{ condition: string; dispatch_prompt: string }> };
+		const prompt =
+			dispatch.tasks.find((t) => t.condition === "with_skill")
+				?.dispatch_prompt ?? "";
+		const bootIdx = prompt.indexOf("MY CUSTOM EVAL FRAMING");
+		const invIdx = prompt.indexOf("staged and discoverable");
+		expect(bootIdx).toBeGreaterThan(-1);
+		expect(invIdx).toBeGreaterThan(bootIdx);
 	});
 });
 

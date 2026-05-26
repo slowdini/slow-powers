@@ -65,7 +65,7 @@
         "type": { "const": "transcript_check" },
         "check": {
           "type": "string",
-          "description": "Name of a registered transcript-check module in tests/skill-evals/transcript-checks/."
+          "description": "Name of a transcript-check kind handled by the runner's grader (runner/grade.ts), e.g. tool_invocation_matches."
         },
         "pattern": {
           "type": "string",

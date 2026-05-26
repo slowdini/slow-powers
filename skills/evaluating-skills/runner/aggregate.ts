@@ -5,15 +5,13 @@ import {
 	readFileSync,
 	writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { detectRunContext } from "./context";
 import type {
 	ConditionsRecord,
 	GradingResult,
 	TimingRecord,
 } from "./types";
-
-const REPO_ROOT = resolve(import.meta.dir, "../..");
-const WORKSPACE_ROOT = join(REPO_ROOT, "skills-workspace");
 
 function die(msg: string): never {
 	console.error(`error: ${msg}`);
@@ -26,11 +24,9 @@ function parseArgs(argv: string[]) {
 		if (i === -1) return undefined;
 		return argv[i + 1];
 	};
-	const skill = flag("skill");
 	const iteration = flag("iteration");
-	if (!skill) die("missing --skill");
 	if (!iteration) die("missing --iteration");
-	return { skill, iteration };
+	return { iteration };
 }
 
 type Series = number[];
@@ -60,8 +56,14 @@ function stats(values: Series, dp: number) {
 	};
 }
 
-const { skill, iteration } = parseArgs(Bun.argv.slice(2));
-const iterationDir = join(WORKSPACE_ROOT, skill, `iteration-${iteration}`);
+const aggArgv = Bun.argv.slice(2);
+const { iteration } = parseArgs(aggArgv);
+const aggCtx = detectRunContext(aggArgv);
+const iterationDir = join(
+	aggCtx.workspaceRoot,
+	aggCtx.skillName,
+	`iteration-${iteration}`,
+);
 if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
 
 const conditionsPath = join(iterationDir, "conditions.json");

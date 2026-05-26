@@ -1,12 +1,10 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { detectRunContext } from "./context";
 import * as claudeAdapter from "./adapters/claude-code-transcript";
 import * as antigravityAdapter from "./adapters/antigravity-transcript";
 import type { ConditionsRecord, RunRecord } from "./types";
-
-const REPO_ROOT = resolve(import.meta.dir, "../..");
-const WORKSPACE_ROOT = join(REPO_ROOT, "skills-workspace");
 
 function die(msg: string): never {
 	console.error(`error: ${msg}`);
@@ -20,23 +18,22 @@ function parseArgs(argv: string[]) {
 		return argv[i + 1];
 	};
 	const has = (name: string) => argv.includes(`--${name}`);
-	const skill = flag("skill");
 	const iteration = flag("iteration");
 	const subagentsDir = flag("subagents-dir");
 	const harness = flag("harness");
 	const overwrite = has("overwrite");
-	if (!skill) die("missing --skill");
 	if (!iteration) die("missing --iteration");
 	if (!subagentsDir)
 		die(
 			"missing --subagents-dir (e.g. ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/ or ~/.gemini/antigravity-cli/brain/)",
 		);
-	return { skill, iteration, subagentsDir, harness, overwrite };
+	return { iteration, subagentsDir, harness, overwrite };
 }
 
-const { skill, iteration, subagentsDir, harness, overwrite } = parseArgs(
-	Bun.argv.slice(2),
-);
+const fillArgv = Bun.argv.slice(2);
+const { iteration, subagentsDir, harness, overwrite } = parseArgs(fillArgv);
+const fillCtx = detectRunContext(fillArgv);
+const skill = fillCtx.skillName;
 
 if (!existsSync(subagentsDir))
 	die(`subagents-dir not found: ${subagentsDir}`);
@@ -67,7 +64,11 @@ if (harness === "antigravity") {
 
 console.log(`Using harness transcript adapter: ${selectedHarness}`);
 
-const iterationDir = join(WORKSPACE_ROOT, skill, `iteration-${iteration}`);
+const iterationDir = join(
+	fillCtx.workspaceRoot,
+	skill,
+	`iteration-${iteration}`,
+);
 if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
 
 const conditionsPath = join(iterationDir, "conditions.json");

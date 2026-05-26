@@ -3,8 +3,18 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { validateEvalsConfig } from "./validate";
 
-const REPO_ROOT = resolve(import.meta.dir, "../..");
-const SKILLS_DIR = join(REPO_ROOT, "skills");
+function flag(argv: string[], name: string): string | undefined {
+	const i = argv.indexOf(`--${name}`);
+	if (i === -1) return undefined;
+	return argv[i + 1];
+}
+
+const skillDirRaw = flag(Bun.argv.slice(2), "skill-dir");
+if (!skillDirRaw) {
+	console.error("missing required flag --skill-dir <path>");
+	process.exit(1);
+}
+const SKILLS_DIR = resolve(skillDirRaw);
 
 if (!existsSync(SKILLS_DIR)) {
 	console.error(`skills dir not found: ${SKILLS_DIR}`);

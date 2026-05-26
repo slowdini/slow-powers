@@ -31,6 +31,32 @@ Mode B workflow:
 
 A negative or zero delta is a signal to revert the change — the new language did not improve behavior.
 
+## Running an eval on a skill
+
+The eval runner ships with this skill (under `runner/`), so you can evaluate any skill — including your own personal skills — not just the ones in this repo. The detailed steps depend on your harness:
+
+- **Claude Code:** follow `harness-details/claude.md` end-to-end (resolving the bundled runner, dispatching subagents via the Task tool, locating transcripts, grading).
+- **Other harnesses:** there's no detailed guide yet. The portable run-record schema (`schema/run-record.schema.json`) and the runner contract below still apply; you'll need to (a) locate the installed superslow plugin on disk, (b) dispatch subagents with your harness's primitive, and (c) supply a transcript adapter under `runner/adapters/` against the portable format if you want `transcript_check` assertions to grade. Otherwise author `run.json` and `timing.json` by hand per the schemas in `schema/`.
+
+### The runner contract (all harnesses)
+
+The runner takes two required flags:
+
+- `--skill-dir <path>` — a directory containing one or more skill folders. **This directory is the eval's test environment.** Every skill in it is staged for the subagent: the skill-under-test under a unique slug, every *other* skill under its natural name.
+- `--skill <name>` — which subdirectory of `--skill-dir` to evaluate.
+
+Optional flags: `--bootstrap <path>` (see *Bootstrap content* below), `--workspace-dir <path>` (defaults to `<cwd>/skills-workspace`), `--mode new-skill|revision`, `--baseline <label>`, `--harness`, `--no-stage`, `--dry-run`.
+
+Each iteration lands under `<workspace-dir>/<skill>/iteration-N/` with the same tree described in *Workspace layout* below, plus a machine-readable `dispatch.json` and a human-readable `dispatch-manifest.md`. The end product is `benchmark.json`: read its `run_summary`, `delta`, and `validity_warnings`.
+
+#### What gets staged
+
+The runner stages every skill it finds under `--skill-dir`. The skill-under-test goes under a unique slug for the `__skill_invoked` meta-check; sibling skills stage under their natural names so cross-references resolve. **If your `--skill-dir` contains only your one skill, the eval runs in isolation** — references like "REQUIRED SUB-SKILL: `superslow:test-driven-development`" won't resolve, and your assertions must not depend on a sibling skill firing. To include other skills as siblings, copy or symlink them into `--skill-dir` before running.
+
+#### Bootstrap content
+
+Every dispatch prompt includes a `<session-start-context>` header listing the skills staged for this eval (auto-built by the runner). If you also want product-specific framing prepended — instruction priority rules, planning guidelines, anything you'd put in a SessionStart hook — author a Markdown file and pass it via `--bootstrap <path>`. The runner emits the file verbatim before the staged-skills list. Omit `--bootstrap` and the dispatch carries only the staged-skills list, nothing else.
+
 ## Designing test cases
 
 A test case has three parts:
@@ -68,7 +94,7 @@ When a subagent completes, capture:
 - The final user-facing message
 - The tool invocations (best effort — see "Transcript access" below)
 
-Convert these into a portable **run record** (`run.json`) using `schema/run-record.schema.json`. Each harness has its own adapter — Claude Code's lives in the runner repo at `tests/skill-evals/adapters/`; other harnesses write their own or fill the record manually.
+Convert these into a portable **run record** (`run.json`) using `schema/run-record.schema.json`. Each harness has its own adapter — Claude Code's lives at `runner/adapters/`; other harnesses write their own or fill the record manually.
 
 ### Two modes of operation
 
@@ -92,8 +118,8 @@ Agent-driven mode is the common case because the framework is most useful from i
 
 `transcript_check` assertions match regex patterns against a run's `tool_invocations`. Filling that list depends on what the harness exposes:
 
-- **Claude Code:** subagent transcripts are persisted to `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/agent-<id>.jsonl`, with a sibling `.meta.json` recording the dispatch description. The runner emits an `agent_description = "<eval_id>:<condition>"` field on each task; pass that string as the Agent tool's `description` when dispatching. After all dispatches complete, run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir <path>` to populate `tool_invocations` on every run record via the adapter at `tests/skill-evals/adapters/claude-code-transcript.ts`.
-- **Antigravity CLI:** subagent transcripts are persisted directly under `<appDataDir>/brain/<conversation-id>/.system_generated/logs/transcript.jsonl`. When dispatching the subagent, pass the `agent_description` (`<eval_id>:<condition>`) as the `Role` parameter of the `invoke_subagent` tool. After all dispatches complete, run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir ~/.gemini/antigravity-cli/brain/` to dynamically populate `tool_invocations` on every run record via the adapter at `tests/skill-evals/adapters/antigravity-transcript.ts` (auto-detected, or pass `--harness antigravity`).
+- **Claude Code:** subagent transcripts are persisted to `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/agent-<id>.jsonl`, with a sibling `.meta.json` recording the dispatch description. The runner emits an `agent_description = "<eval_id>:<condition>"` field on each task; pass that string as the Agent tool's `description` when dispatching. After all dispatches complete, run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir <path>` to populate `tool_invocations` on every run record via the adapter at `runner/adapters/claude-code-transcript.ts`.
+- **Antigravity CLI:** subagent transcripts are persisted directly under `<appDataDir>/brain/<conversation-id>/.system_generated/logs/transcript.jsonl`. When dispatching the subagent, pass the `agent_description` (`<eval_id>:<condition>`) as the `Role` parameter of the `invoke_subagent` tool. After all dispatches complete, run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir ~/.gemini/antigravity-cli/brain/` to dynamically populate `tool_invocations` on every run record via the adapter at `runner/adapters/antigravity-transcript.ts` (auto-detected, or pass `--harness antigravity`).
 - **Other harnesses (no transcript access):** the agent records only `final_message`; `tool_invocations` stays empty and `transcript_check` assertions grade as `unverifiable`. Lean on `llm_judge` for substantive checks. This is an honest limitation, not a bug.
 - **Operator-driven mode on Claude Code and Antigravity:** the operator can run `evals:fill-transcripts` after the fact, since they have filesystem access to the persisted transcripts.
 
@@ -298,6 +324,8 @@ If you can't measure the change, you don't know if it's an improvement. Tuning s
 - `templates/revise-skill-prompt.md` — scaffold for the iteration step
 - `examples/verification-before-completion-evals.json` — committed real example
 - `pressure-scenarios.md` — pressure-scenario taxonomy for authoring prompts that stress discipline-enforcing skills
+- `runner/` — the Bun eval runner (orchestrator, grader, aggregator, transcript adapters) that executes the methodology; ships with the skill so users can run evals on their own skills
+- `harness-details/claude.md` — Claude Code-specific step-by-step for running an eval (resolving the runner, dispatching subagents, grading)
 
 ## See also
 
