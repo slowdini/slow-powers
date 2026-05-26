@@ -29,6 +29,12 @@
       "expected_output": "The agent should immediately trigger `systematic-debugging` (root-cause analysis) rather than loading `writing-plans` or writing an implementation plan.",
       "assertions": [
         {
+          "id": "loads_systematic_debugging_skill",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "view_file.*systematic-debugging/SKILL.md"
+        },
+        {
           "id": "invokes_debugging_only",
           "type": "llm_judge",
           "rubric": "Did the agent identify that this is a systematic debugging task and load the `systematic-debugging` skill, while completely bypassing the `writing-plans` skill and avoiding writing a full implementation plan? PASS if the agent focused on debugging and did not load planning guidelines. FAIL if the agent attempted to load `writing-plans` or write a general implementation plan before debugging the root cause."
