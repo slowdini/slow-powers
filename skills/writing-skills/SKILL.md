@@ -1,25 +1,21 @@
 ---
 name: writing-skills
-description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
+description: Use when creating new skills or editing existing skills. Drafting only; see superslow:evaluating-skills for measuring whether the draft works.
 ---
 
 # Writing Skills
 
 ## Overview
 
-**Writing a skill is two phases: drafting (this skill) and evaluation (`superslow:evaluating-skills`).** This skill covers drafting — naming, structure, vocabulary, anti-patterns, rationalization-proofing. Evaluation covers measuring whether the drafted skill actually shifts agent behavior on realistic prompts.
+Skill development has two phases: **drafting** (this skill) and **evaluation** (`superslow:evaluating-skills`). Drafting covers naming, structure, vocabulary, anti-patterns, and rationalization-proofing. Evaluation covers measuring whether the words on the page actually shift agent behavior under realistic prompts.
 
-**Personal skills live in agent-specific directories (`~/.claude/skills` for Claude Code, `~/.agents/skills/` for Codex).**
+A draft you didn't measure is a claim you didn't verify. The rule that `superslow:evaluating-skills` enforces — no skill shipped without passing evals — applies equally to new skills and to edits of existing skills. After drafting, hand off to that skill for the with/without comparison and iteration loop.
 
-**Core principle:** If you didn't measure the skill against realistic prompts, you don't know if it teaches the right thing. Drafting feels productive; only evals tell you whether the words on the page change behavior.
-
-**REQUIRED BACKGROUND:** You MUST understand `superslow:evaluating-skills` before shipping a skill. That skill defines the eval format, the with/without and old/new comparison protocols, and the iteration loop you'll use to validate this draft.
-
-**Official guidance:** For Anthropic's official skill authoring best practices, see anthropic-best-practices.md. This document provides additional patterns and guidelines that complement the drafting techniques in this skill.
+**Personal skills** live in your harness's user-skills directory. The path differs per harness; consult the harness's docs.
 
 ## Vocabulary
 
-Skills describe capabilities, not platform tool names. When you write a skill, use these terms. This is the canonical source — when a new load-bearing term is coined, add it here.
+Skills describe capabilities, not platform tool names. When you write a skill, use these terms. This table is the canonical source — when a new load-bearing term is coined, add it here.
 
 | Term | Means | Don't say |
 |------|-------|-----------|
@@ -29,79 +25,35 @@ Skills describe capabilities, not platform tool names. When you write a skill, u
 | **Capability** | A described action ("search file contents") | A platform tool name ("Grep") |
 | **Load-bearing property** | A property a capability must have for the workflow to work | (no shorter form) |
 
-## What is a Skill?
+## What is a skill?
 
-A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future Claude instances find and apply effective approaches.
+A skill is a reference guide for proven techniques, patterns, or tools. Skills help future agents find and apply effective approaches.
 
-**Skills are:** Reusable techniques, patterns, tools, reference guides
+**Skills are:** reusable techniques, patterns, tools, reference guides.
+**Skills are not:** narratives about how you solved a problem once.
 
-**Skills are NOT:** Narratives about how you solved a problem once
+**Create a skill when:**
+- The technique wasn't intuitively obvious
+- You'd reference it again across projects
+- The pattern applies broadly (not project-specific)
 
-## How to validate a skill
-
-After drafting, validate with `superslow:evaluating-skills`. The eval format (test cases, with/without comparison, assertions, iteration loop) lives there and is the same regardless of skill type.
-
-## When to Create a Skill
-
-**Create when:**
-- Technique wasn't intuitively obvious to you
-- You'd reference this again across projects
-- Pattern applies broadly (not project-specific)
-- Others would benefit
-
-**Don't create for:**
+**Don't create one for:**
 - One-off solutions
 - Standard practices well-documented elsewhere
-- Project-specific conventions (put in CLAUDE.md)
-- Mechanical constraints (if it's enforceable with regex/validation, automate it—save documentation for judgment calls)
+- Project-specific conventions (put those in CLAUDE.md / AGENTS.md)
+- Mechanical constraints — if a regex or validation can enforce it, automate it instead
 
-## Skill Types
+## Skill types
 
-### Technique
-Concrete method with steps to follow (condition-based-waiting, root-cause-tracing)
+- **Technique** — concrete method with steps to follow (condition-based-waiting, root-cause-tracing)
+- **Pattern** — way of thinking about problems (flatten-with-flags, test-invariants)
+- **Reference** — API docs, syntax guides, tool documentation
 
-### Pattern
-Way of thinking about problems (flatten-with-flags, test-invariants)
-
-### Reference
-API docs, syntax guides, tool documentation (office docs)
-
-## Directory Structure
-
-
-```
-skills/
-  skill-name/
-    SKILL.md              # Main reference (required)
-    supporting-file.*     # Only if needed
-```
-
-**Flat namespace** - all skills in one searchable namespace
-
-**Separate files for:**
-1. **Heavy reference** (100+ lines) - API docs, comprehensive syntax
-2. **Reusable tools** - Scripts, utilities, templates
-
-**Keep inline:**
-- Principles and concepts
-- Code patterns (< 50 lines)
-- Everything else
-
-## SKILL.md Structure
-
-**Frontmatter (YAML):**
-- Two required fields: `name` and `description` (see [agentskills.io/specification](https://agentskills.io/specification) for all supported fields)
-- Max 1024 characters total
-- `name`: Use letters, numbers, and hyphens only (no parentheses, special chars)
-- `description`: Third-person, describes ONLY when to use (NOT what it does)
-  - Start with "Use when..." to focus on triggering conditions
-  - Include specific symptoms, situations, and contexts
-  - **NEVER summarize the skill's process or workflow** (see CSO section for why)
-  - Keep under 500 characters if possible
+## SKILL.md structure
 
 ```markdown
 ---
-name: Skill-Name-With-Hyphens
+name: skill-name-with-hyphens
 description: Use when [specific triggering conditions and symptoms]
 ---
 
@@ -110,405 +62,181 @@ description: Use when [specific triggering conditions and symptoms]
 ## Overview
 What is this? Core principle in 1-2 sentences.
 
-## When to Use
-[Small inline flowchart IF decision non-obvious]
+## When to use
+Bullet list with symptoms and use cases. When NOT to use.
 
-Bullet list with SYMPTOMS and use cases
-When NOT to use
+## Core pattern (techniques/patterns)
+Before/after comparison.
 
-## Core Pattern (for techniques/patterns)
-Before/after code comparison
-
-## Quick Reference
-Table or bullets for scanning common operations
+## Quick reference
+Table or bullets for scanning common operations.
 
 ## Implementation
-Inline code for simple patterns
-Link to file for heavy reference or reusable tools
+Inline code for simple patterns; link to a file for heavy reference.
 
-## Common Mistakes
-What goes wrong + fixes
-
-## Real-World Impact (optional)
-Concrete results
+## Common mistakes
+What goes wrong + fixes.
 ```
 
+**Frontmatter rules:**
+- Two required fields: `name` and `description`. Max 1024 characters total. See [agentskills.io/specification](https://agentskills.io/specification) for the full schema.
+- `name`: letters, numbers, hyphens only — no parentheses or special chars.
+- `description`: third person; describes ONLY when to use. See the next section for why "what it does" is the wrong content for this field.
 
-## Claude Search Optimization (CSO)
+## Skill discovery
 
-**Critical for discovery:** Future Claude needs to FIND your skill
+The description field is how agents (and the harness's skill mechanism) decide whether to load your skill. Make it answer one question: *should I read this skill right now?*
 
-### 1. Rich Description Field
+### Description = WHEN, not WHAT
 
-**Purpose:** Claude reads description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
+Do not summarize the skill's workflow in the description. Testing has repeatedly shown that when the description summarizes the process, agents follow the description instead of reading the full skill. A description saying "code review between tasks" caused an agent to do ONE review even though the skill body clearly described TWO reviews. Changing the description to just "Use when executing implementation plans with independent tasks" — no workflow summary — produced the correct two-stage behavior.
 
-**Format:** Start with "Use when..." to focus on triggering conditions
-
-**CRITICAL: Description = When to Use, NOT What the Skill Does**
-
-The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
-
-**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused Claude to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
-
-When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), Claude correctly read the flowchart and followed the two-stage review process.
-
-**The trap:** Descriptions that summarize workflow create a shortcut Claude will take. The skill body becomes documentation Claude skips.
+The trap is that workflow summaries create a shortcut the agent will take. The skill body becomes documentation the agent skips.
 
 ```yaml
-# ❌ BAD: Summarizes workflow - Claude may follow this instead of reading skill
-description: Use when executing plans - dispatches subagent per task with code review between tasks
+# ❌ Summarizes workflow — agent may follow this instead of reading the skill
+description: Use when executing plans — dispatches subagent per task with code review between tasks
 
-# ❌ BAD: Too much process detail
-description: Use for TDD - write test first, watch it fail, write minimal code, refactor
-
-# ✅ GOOD: Just triggering conditions, no workflow summary
+# ✅ Triggering conditions only
 description: Use when executing implementation plans with independent tasks in the current session
-
-# ✅ GOOD: Triggering conditions only
-description: Use when implementing any feature or bugfix, before writing implementation code
 ```
 
-**Content:**
-- Use concrete triggers, symptoms, and situations that signal this skill applies
-- Describe the *problem* (race conditions, inconsistent behavior) not *language-specific symptoms* (setTimeout, sleep)
-- Keep triggers technology-agnostic unless the skill itself is technology-specific
-- If skill is technology-specific, make that explicit in the trigger
-- Write in third person (injected into system prompt)
-- **NEVER summarize the skill's process or workflow**
+Other description rules:
+- Start with "Use when..." to focus on triggering conditions.
+- Write in third person — descriptions are injected into the system prompt.
+- Describe the *problem* (race conditions, timing dependencies) not *language-specific symptoms* (setTimeout, sleep) unless the skill is technology-specific.
 
-```yaml
-# ❌ BAD: Too abstract, vague, doesn't include when to use
-description: For async testing
+### Keyword coverage
 
-# ❌ BAD: First person
-description: I can help you with async tests when they're flaky
+Use words an agent would actually search for: error messages ("Hook timed out", "ENOTEMPTY"), symptoms ("flaky", "hanging", "pollution"), synonyms ("timeout / hang / freeze"), and real tool names where the skill is technology-specific.
 
-# ❌ BAD: Mentions technology but skill isn't specific to it
-description: Use when tests use setTimeout/sleep and are flaky
+### Naming
 
-# ✅ GOOD: Starts with "Use when", describes problem, no workflow
-description: Use when tests have race conditions, timing dependencies, or pass/fail inconsistently
+Active voice, verb-first. Gerunds (-ing) work well for processes.
 
-# ✅ GOOD: Technology-specific skill with explicit trigger
-description: Use when using React Router and handling authentication redirects
-```
+- ✅ `creating-skills`, `condition-based-waiting`, `root-cause-tracing`
+- ❌ `skill-creation`, `async-test-helpers`, `debugging-techniques`
 
-### 2. Keyword Coverage
+Name by what you DO or the core insight, not the surface category.
 
-Use words Claude would search for:
-- Error messages: "Hook timed out", "ENOTEMPTY", "race condition"
-- Symptoms: "flaky", "hanging", "zombie", "pollution"
-- Synonyms: "timeout/hang/freeze", "cleanup/teardown/afterEach"
-- Tools: Actual commands, library names, file types
+### Token efficiency
 
-### 3. Descriptive Naming
+Once a skill is loaded, every token in it competes with conversation history. For frequently-loaded skills, aim for under 200 words total; for other skills, keep the body lean and offload heavy reference to separate files.
 
-**Use active voice, verb-first:**
-- ✅ `creating-skills` not `skill-creation`
-- ✅ `condition-based-waiting` not `async-test-helpers`
+Techniques:
+- **Move details to tool help.** "Run `<tool> --help` for filter flags" beats listing every flag.
+- **Use cross-references.** Don't repeat what another skill says — link to it.
+- **Compress examples.** One good before/after pair is enough; cut the surrounding prose.
 
-### 4. Token Efficiency (Critical)
+### Cross-referencing other skills
 
-**Problem:** getting-started and frequently-referenced skills load into EVERY conversation. Every token counts.
+Use the skill's qualified name with an explicit requirement marker:
 
-**Target word counts:**
-- getting-started workflows: <150 words each
-- Frequently-loaded skills: <200 words total
-- Other skills: <500 words (still be concise)
+- ✅ `**REQUIRED SUB-SKILL:** Use superslow:test-driven-development`
+- ✅ `**REQUIRED BACKGROUND:** You must understand superslow:systematic-debugging`
+- ❌ `See skills/testing/test-driven-development` — unclear if required, harness-specific path
+- ❌ `@skills/testing/test-driven-development/SKILL.md` — force-loads, burns context
 
-**Techniques:**
+The `@` prefix force-loads the file on session start, consuming context before you need it.
 
-**Move details to tool help:**
-```bash
-# ❌ BAD: Document all flags in SKILL.md
-search-conversations supports --text, --both, --after DATE, --before DATE, --limit N
+## Flowchart usage
 
-# ✅ GOOD: Reference --help
-search-conversations supports multiple modes and filters. Run --help for details.
-```
+Use a small inline flowchart **only** when:
+- The decision is non-obvious
+- There's a process loop where you might stop too early
+- It's an "A vs B" branch where the wrong choice has consequences
 
-**Use cross-references:**
-```markdown
-# ❌ BAD: Repeat workflow details
-When searching, dispatch subagent with template...
-[20 lines of repeated instructions]
+Don't use flowcharts for:
+- Reference material — use tables or lists
+- Code examples — use markdown code blocks
+- Linear instructions — use numbered lists
+- Labels without semantic meaning (`step1`, `helper2`)
 
-# ✅ GOOD: Reference other skill
-Always use subagents (50-100x context savings). REQUIRED: Use [other-skill-name] for workflow.
-```
+See `graphviz-conventions.dot` for the style rules used across this skill set.
 
-**Compress examples:**
-```markdown
-# ❌ BAD: Verbose example (42 words)
-your human partner: "How did we handle authentication errors in React Router before?"
-You: I'll search past conversations for React Router authentication patterns.
-[Dispatch subagent with search query: "React Router authentication error handling 401"]
+To preview a skill's flowcharts as SVG, run `./scripts/render-graphs.js ../some-skill` from the `writing-skills/` directory (or pass `--combine` to merge all diagrams into one). Requires graphviz.
 
-# ✅ GOOD: Minimal example (20 words)
-Partner: "How did we handle auth errors in React Router?"
-You: Searching...
-[Dispatch subagent → synthesis]
-```
+## Code examples
 
-**Eliminate redundancy:**
-- Don't repeat what's in cross-referenced skills
-- Don't explain what's obvious from command
-- Don't include multiple examples of same pattern
+**One excellent example beats many mediocre ones.**
 
-**Verification:**
-```bash
-wc -w skills/path/SKILL.md
-# getting-started workflows: aim for <150 each
-# Other frequently-loaded: aim for <200 total
-```
+Choose the most relevant language for the skill's domain — testing techniques tend to land best in TypeScript/JavaScript, system debugging in shell or Python, data processing in Python.
 
-**Name by what you DO or core insight:**
-- ✅ `condition-based-waiting` > `async-test-helpers`
-- ✅ `using-skills` not `skill-usage`
-- ✅ `flatten-with-flags` > `data-structure-refactoring`
-- ✅ `root-cause-tracing` > `debugging-techniques`
-
-**Gerunds (-ing) work well for processes:**
-- `creating-skills`, `testing-skills`, `debugging-with-logs`
-- Active, describes the action you're taking
-
-### 4. Cross-Referencing Other Skills
-
-**When writing documentation that references other skills:**
-
-Use skill name only, with explicit requirement markers:
-- ✅ Good: `**REQUIRED SUB-SKILL:** Use superslow:test-driven-development`
-- ✅ Good: `**REQUIRED BACKGROUND:** You MUST understand superslow:systematic-debugging`
-- ❌ Bad: `See skills/testing/test-driven-development` (unclear if required)
-- ❌ Bad: `@skills/testing/test-driven-development/SKILL.md` (force-loads, burns context)
-
-**Why no @ links:** `@` syntax force-loads files immediately, consuming 200k+ context before you need them.
-
-## Flowchart Usage
-
-```dot
-digraph when_flowchart {
-    "Need to show information?" [shape=diamond];
-    "Decision where I might go wrong?" [shape=diamond];
-    "Use markdown" [shape=box];
-    "Small inline flowchart" [shape=box];
-
-    "Need to show information?" -> "Decision where I might go wrong?" [label="yes"];
-    "Decision where I might go wrong?" -> "Small inline flowchart" [label="yes"];
-    "Decision where I might go wrong?" -> "Use markdown" [label="no"];
-}
-```
-
-**Use flowcharts ONLY for:**
-- Non-obvious decision points
-- Process loops where you might stop too early
-- "When to use A vs B" decisions
-
-**Never use flowcharts for:**
-- Reference material → Tables, lists
-- Code examples → Markdown blocks
-- Linear instructions → Numbered lists
-- Labels without semantic meaning (step1, helper2)
-
-See @graphviz-conventions.dot for graphviz style rules.
-
-**Visualizing for your human partner:** Use `render-graphs.js` in this directory to render a skill's flowcharts to SVG:
-```bash
-./render-graphs.js ../some-skill           # Each diagram separately
-./render-graphs.js ../some-skill --combine # All diagrams in one SVG
-```
-
-## Code Examples
-
-**One excellent example beats many mediocre ones**
-
-Choose most relevant language:
-- Testing techniques → TypeScript/JavaScript
-- System debugging → Shell/Python
-- Data processing → Python
-
-**Good example:**
+A good example is:
 - Complete and runnable
-- Well-commented explaining WHY
-- From real scenario
-- Shows pattern clearly
-- Ready to adapt (not generic template)
+- Well-commented on the WHY, not the WHAT
+- From a real scenario
+- Ready to adapt, not a fill-in-the-blank template
 
-**Don't:**
-- Implement in 5+ languages
-- Create fill-in-the-blank templates
-- Write contrived examples
+Don't implement the same example in five languages. Agents are good at porting — one excellent example is enough.
 
-You're good at porting - one great example is enough.
+## File organization
 
-## File Organization
-
-### Self-Contained Skill
-```
-defense-in-depth/
-  SKILL.md    # Everything inline
-```
-When: All content fits, no heavy reference needed
-
-### Skill with Reusable Tool
-```
-condition-based-waiting/
-  SKILL.md    # Overview + patterns
-  example.ts  # Working helpers to adapt
-```
-When: Tool is reusable code, not just narrative
-
-### Skill with Heavy Reference
-```
-pptx/
-  SKILL.md       # Overview + workflows
-  pptxgenjs.md   # 600 lines API reference
-  ooxml.md       # 500 lines XML structure
-  scripts/       # Executable tools
-```
-When: Reference material too large for inline
-
-## The Iron Law
+Keep most skills self-contained in a single SKILL.md. Add supporting files only when one of these is true:
 
 ```
-NO SKILL SHIPPED WITHOUT PASSING EVALS
+self-contained/        # SKILL.md only — everything fits inline
+  SKILL.md
+
+with-reusable-tool/    # SKILL.md + working code to adapt
+  SKILL.md
+  example.ts
+
+with-heavy-reference/  # SKILL.md + bulky reference docs
+  SKILL.md
+  api-reference.md     # 500+ lines of API docs
+  scripts/             # executable utilities
 ```
 
-This applies to NEW skills AND EDITS to existing skills.
+Separate files are warranted for:
+1. Heavy reference (100+ lines) — API docs, comprehensive syntax tables
+2. Reusable executable tools — scripts that adapt across projects
 
-Ship a draft without running it through an eval? Pull it. Run the eval.
-Land a language change without measuring the delta? Same violation.
+Otherwise keep content inline. Principles, concepts, code patterns under ~50 lines — all inline.
 
-**No exceptions:**
-- Not for "simple additions"
-- Not for "just adding a section"
-- Not for "documentation updates"
-- Don't keep untested changes as "reference"
-- Don't "adapt" while running tests
-- Delete means delete
+## Rationalization-proofing for discipline skills
 
-**REQUIRED BACKGROUND:** `superslow:evaluating-skills` defines the eval format, the with/without and old/new comparison protocols, and the iteration loop. It is the authoritative source on this rule; this section restates the law so it lands where you'd reach for it while drafting.
+Skills that enforce discipline (TDD, verification-before-completion, designing-before-coding) need to survive pressure. Agents are smart and find loopholes when under time, sunk-cost, or authority pressure. Drafting an enforceable rule is different from drafting a guideline.
 
-## Testing All Skill Types
+The research backs this up: persuasion techniques more than double LLM compliance rates under pressure. See `persuasion-principles.md` (in this skill) for the seven principles, when each applies, and citations (Cialdini, 2021; Meincke et al., 2025).
 
-Different skill types need different test approaches:
+### Close every loophole explicitly
 
-### Discipline-Enforcing Skills (rules/requirements)
-
-**Examples:** TDD, verification-before-completion, designing-before-coding
-
-**Test with:**
-- Academic questions: Do they understand the rules?
-- Pressure scenarios: Do they comply under stress?
-- Multiple pressures combined: time + sunk cost + exhaustion
-- Identify rationalizations and add explicit counters
-
-**Success criteria:** Agent follows rule under maximum pressure
-
-### Technique Skills (how-to guides)
-
-**Examples:** condition-based-waiting, root-cause-tracing, defensive-programming
-
-**Test with:**
-- Application scenarios: Can they apply the technique correctly?
-- Variation scenarios: Do they handle edge cases?
-- Missing information tests: Do instructions have gaps?
-
-**Success criteria:** Agent successfully applies technique to new scenario
-
-### Pattern Skills (mental models)
-
-**Examples:** reducing-complexity, information-hiding concepts
-
-**Test with:**
-- Recognition scenarios: Do they recognize when pattern applies?
-- Application scenarios: Can they use the mental model?
-- Counter-examples: Do they know when NOT to apply?
-
-**Success criteria:** Agent correctly identifies when/how to apply pattern
-
-### Reference Skills (documentation/APIs)
-
-**Examples:** API documentation, command references, library guides
-
-**Test with:**
-- Retrieval scenarios: Can they find the right information?
-- Application scenarios: Can they use what they found correctly?
-- Gap testing: Are common use cases covered?
-
-**Success criteria:** Agent finds and correctly applies reference information
-
-## Common Rationalizations for Skipping Testing
-
-| Excuse | Reality |
-|--------|---------|
-| "Skill is obviously clear" | Clear to you ≠ clear to other agents. Test it. |
-| "It's just a reference" | References can have gaps, unclear sections. Test retrieval. |
-| "Testing is overkill" | Untested skills have issues. Always. 15 min testing saves hours. |
-| "I'll test if problems emerge" | Problems = agents can't use skill. Test BEFORE deploying. |
-| "Too tedious to test" | Testing is less tedious than debugging bad skill in production. |
-| "I'm confident it's good" | Overconfidence guarantees issues. Test anyway. |
-| "Academic review is enough" | Reading ≠ using. Test application scenarios. |
-| "No time to test" | Deploying untested skill wastes more time fixing it later. |
-
-**All of these mean: Test before deploying. No exceptions.**
-
-## Bulletproofing Skills Against Rationalization
-
-Skills that enforce discipline (like TDD) need to resist rationalization. Agents are smart and will find loopholes when under pressure.
-
-**Psychology note:** Understanding WHY persuasion techniques work helps you apply them systematically. See persuasion-principles.md for research foundation (Cialdini, 2021; Meincke et al., 2025) on authority, commitment, scarcity, social proof, and unity principles.
-
-### Close Every Loophole Explicitly
-
-Don't just state the rule - forbid specific workarounds:
-
-<Bad>
-```markdown
-Write code before test? Delete it.
-```
-</Bad>
-
-<Good>
-```markdown
-Write code before test? Delete it. Start over.
-
-**No exceptions:**
-- Don't keep it as "reference"
-- Don't "adapt" it while writing tests
-- Don't look at it
-- Delete means delete
-```
-</Good>
-
-### Address "Spirit vs Letter" Arguments
-
-Add foundational principle early:
+State the rule, then forbid the specific workarounds you can predict. The agent will reach for the ambiguity under pressure — rule it out by name.
 
 ```markdown
-**Violating the letter of the rules is violating the spirit of the rules.**
+❌ Write code before test? Delete it.
+
+✅ Write code before test? Delete it. Start over.
+
+   No exceptions:
+   - Don't keep it as "reference"
+   - Don't "adapt" it while writing tests
+   - Delete means delete.
 ```
 
-This cuts off entire class of "I'm following the spirit" rationalizations.
+### Address "spirit vs letter" arguments
 
-### Build Rationalization Table
+State the foundational principle early, before the agent reaches for it:
 
-Capture rationalizations from baseline testing (see Testing section below). Every excuse agents make goes in the table:
+> **Violating the letter of the rules is violating the spirit of the rules.**
+
+This single sentence cuts off an entire class of "I'm following the spirit" rationalizations.
+
+### Build a rationalization table and a red-flags list
+
+These tables and lists come *from* the eval iteration loop — they're not something you can write up front. The eval surfaces the specific excuses an agent reaches for when the rule fails under pressure. Capture them verbatim and bake them back into the skill:
 
 ```markdown
 | Excuse | Reality |
 |--------|---------|
 | "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
 | "I'll test after" | Tests passing immediately prove nothing. |
-| "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
+| "Tests after achieve the same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
 ```
 
-### Create Red Flags List
-
-Make it easy for agents to self-check when rationalizing:
-
 ```markdown
-## Red Flags - STOP and Start Over
+## Red flags — STOP and start over
 
 - Code before test
 - "I already manually tested it"
@@ -516,118 +244,61 @@ Make it easy for agents to self-check when rationalizing:
 - "It's about spirit not ritual"
 - "This is different because..."
 
-**All of these mean: Delete code. Start over with TDD.**
+All of these mean: delete code. Start over with TDD.
 ```
 
-### Update CSO for Violation Symptoms
+See `superslow:evaluating-skills` and its `pressure-scenarios.md` for the pressure-type taxonomy and how to write prompts that actually stress the rule (rather than letting the agent recite the skill and "pass" without proving anything).
 
-Add to description: symptoms of when you're ABOUT to violate the rule:
+## Anti-patterns
 
-```yaml
-description: use when implementing any feature or bugfix, before writing implementation code
+### ❌ Narrative example
+> "In session 2025-10-03, we found empty projectDir caused..."
+
+Too specific to a moment in time. Not reusable.
+
+### ❌ Multi-language dilution
+`example-js.js`, `example-py.py`, `example-go.go`
+
+Mediocre quality across all of them, maintenance burden on every change.
+
+### ❌ Code in flowcharts
 ```
-
-## Validating the draft
-
-After drafting, hand off to `superslow:evaluating-skills` for the with/without comparison, assertion grading, and iteration loop.
-
-For discipline-enforcing skills specifically, the eval `prompt` fields need to put the agent under realistic pressure — otherwise the agent recites the skill and "passes" without proving anything. See `superslow:evaluating-skills` and its `pressure-scenarios.md` for:
-
-- The pressure-type taxonomy (time, sunk cost, authority, exhaustion, social, pragmatic)
-- How to write multi-pressure prompts with forced choice
-- Capturing rationalizations verbatim for the next iteration
-- Meta-testing when iteration isn't moving the needle
-
-## Anti-Patterns
-
-### ❌ Narrative Example
-"In session 2025-10-03, we found empty projectDir caused..."
-**Why bad:** Too specific, not reusable
-
-### ❌ Multi-Language Dilution
-example-js.js, example-py.py, example-go.go
-**Why bad:** Mediocre quality, maintenance burden
-
-### ❌ Code in Flowcharts
-```dot
 step1 [label="import fs"];
 step2 [label="read file"];
 ```
-**Why bad:** Can't copy-paste, hard to read
 
-### ❌ Generic Labels
-helper1, helper2, step3, pattern4
-**Why bad:** Labels should have semantic meaning
+Can't copy-paste; hard to read. Use markdown code blocks instead.
 
-## STOP: Before Moving to Next Skill
+### ❌ Generic labels
+`helper1`, `helper2`, `step3`, `pattern4`
 
-**After writing ANY skill, you MUST STOP and complete the deployment process.**
+Labels should carry semantic meaning.
 
-**Do NOT:**
-- Create multiple skills in batch without testing each
-- Move to next skill before current one is verified
-- Skip testing because "batching is more efficient"
+## Skill creation checklist
 
-**The deployment checklist below is MANDATORY for EACH skill.**
+Use your persistent task tracker — one task per item.
 
-Deploying untested skills = deploying untested code. It's a violation of quality standards.
+**Draft:**
+- [ ] Name uses only letters, numbers, hyphens
+- [ ] YAML frontmatter has `name` and `description` (under 1024 chars total)
+- [ ] Description starts with "Use when..." and includes triggers / symptoms
+- [ ] Description is third person and contains NO workflow summary
+- [ ] Body keeps to one excellent example per concept, not many mediocre ones
+- [ ] Heavy reference and reusable tools live in separate files; principles stay inline
+- [ ] Cross-references use `superslow:<skill-name>`, not file paths or `@` imports
 
-## Skill Creation Checklist
+**Validate** (handoff to `superslow:evaluating-skills`):
+- [ ] Author `evals/evals.json` with 2–3 realistic prompts
+- [ ] For discipline-enforcing skills, write pressure prompts with multiple combined pressures (see `pressure-scenarios.md` in that skill)
+- [ ] Run the eval. Iterate until the with-skill pass rate is materially higher than the without-skill baseline.
 
-**IMPORTANT: Use your persistent task tracker to create a task for EACH checklist item below.**
+**Deploy:**
+- [ ] Commit the skill and its `evals/evals.json` together
+- [ ] Include before/after eval results in the PR description (per repo CLAUDE.md)
 
-**Baseline — measure the starting point:**
-- [ ] Author `evals/evals.json` with 2–3 realistic prompts (see `superslow:evaluating-skills`)
-- [ ] For discipline-enforcing skills, write pressure prompts with 3+ combined pressures (see `pressure-scenarios.md` in that skill)
-- [ ] Run iteration-1 in `--mode new-skill` via `bun run evals` (or harness equivalent) — capture the without-skill baseline
+## Further reading
 
-**Draft — write the skill:**
-- [ ] Name uses only letters, numbers, hyphens (no parentheses/special chars)
-- [ ] YAML frontmatter with required `name` and `description` fields (max 1024 chars; see [spec](https://agentskills.io/specification))
-- [ ] Description starts with "Use when..." and includes specific triggers/symptoms
-- [ ] Description written in third person
-- [ ] Keywords throughout for search (errors, symptoms, tools)
-- [ ] Clear overview with core principle
-- [ ] Address specific baseline failures observed in iteration-1
-- [ ] Code inline OR link to separate file
-- [ ] One excellent example (not multi-language)
-- [ ] Re-run the eval — verify with-skill pass-rate is materially higher than without-skill
-
-**Iterate — close loopholes:**
-- [ ] Identify NEW rationalizations from failed runs (captured verbatim in `feedback.json`)
-- [ ] Add explicit counters (if discipline skill)
-- [ ] Build rationalization table from all iterations
-- [ ] Create red flags list
-- [ ] Re-run as `--mode revision --baseline <prior-snapshot>` until delta plateaus
-
-**Quality Checks:**
-- [ ] Small flowchart only if decision non-obvious
-- [ ] Quick reference table
-- [ ] Common mistakes section
-- [ ] No narrative storytelling
-- [ ] Supporting files only for tools or heavy reference
-
-**Deployment:**
-- [ ] Commit skill + `evals/evals.json` to git and push to your fork (if configured)
-- [ ] Include before/after eval results in the PR description (per repo `CLAUDE.md`)
-- [ ] Consider contributing back via PR (if broadly useful)
-
-## Discovery Workflow
-
-How future Claude finds your skill:
-
-1. **Encounters problem** ("tests are flaky")
-3. **Finds SKILL** (description matches)
-4. **Scans overview** (is this relevant?)
-5. **Reads patterns** (quick reference table)
-6. **Loads example** (only when implementing)
-
-**Optimize for this flow** - put searchable terms early and often.
-
-## The Bottom Line
-
-**Drafting is half the job. Evaluation is the other half.**
-
-A draft you didn't measure is a claim you didn't verify. Skills that look obviously good often produce no measurable delta — and skills that look modest sometimes shift behavior more than you expected. The only way to know is to run the eval.
-
-After drafting with this skill, hand off to `superslow:evaluating-skills` for the with/without comparison and iteration loop. Ship only when the delta justifies it.
+- `superslow:evaluating-skills` — phase 2: measuring whether the draft works
+- `persuasion-principles.md` (in this skill) — research foundation for discipline-enforcing language
+- `graphviz-conventions.dot` (in this skill) — flowchart style rules
+- [agentskills.io/skill-creation/best-practices](https://agentskills.io/skill-creation/best-practices) — harness-agnostic best-practices reference; read when you want more depth than this skill provides

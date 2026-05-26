@@ -77,6 +77,15 @@ Tips for writing good prompts:
 
 **Don't write assertions yet.** You don't know what "good" looks like until you see what the first run produces.
 
+### Testing by skill type
+
+What "stresses the skill" depends on what kind of skill it is. The four types from `superslow:writing-skills` each need a different style of prompt:
+
+- **Discipline-enforcing skills** (TDD, verification-before-completion). Test with pressure — academic prompts ("explain how TDD works") will pass without measuring anything useful. Combine multiple pressures (time + sunk cost + authority + exhaustion) and force a choice. See `pressure-scenarios.md` for the taxonomy. Success = the rule holds under maximum pressure.
+- **Technique skills** (condition-based-waiting, root-cause-tracing). Test application: hand the agent a new scenario where the technique applies and check it gets used correctly. Include at least one edge-case variation. Success = the technique transfers to a situation the skill didn't explicitly describe.
+- **Pattern skills** (flatten-with-flags, information-hiding). Test recognition: include prompts where the pattern applies and prompts where it doesn't. Success = the agent applies the pattern when warranted and refrains when it isn't.
+- **Reference skills** (API docs, syntax guides). Test retrieval: ask questions whose answers are in the reference, including a few that hit gaps you suspect. Success = the agent finds the right section and uses it correctly.
+
 ## Running evals
 
 For each test case, dispatch fresh general-purpose subagents — one per condition. Each subagent receives:
