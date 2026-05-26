@@ -6,7 +6,7 @@ import {
 	readdirSync,
 	writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import {
 	type AssertionResult,
 	type AssertionTranscriptCheck,
@@ -107,13 +107,34 @@ type JudgeTask = {
 
 export function checkSkillInvokedFromTranscript(
 	invocations: ToolInvocation[],
-	stagedSlug: string,
+	stagedSlug: string | null,
+	skillPath: string | null,
 ): boolean {
 	for (const inv of invocations) {
-		if (inv.name !== "Skill") continue;
-		if (!inv.args || typeof inv.args !== "object") continue;
-		const argSkill = (inv.args as { skill?: unknown }).skill;
-		if (typeof argSkill === "string" && argSkill === stagedSlug) return true;
+		// 1. Claude Code Skill tool check
+		if (stagedSlug && inv.name === "Skill") {
+			if (!inv.args || typeof inv.args !== "object") continue;
+			const argSkill = (inv.args as { skill?: unknown }).skill;
+			if (typeof argSkill === "string" && argSkill === stagedSlug) return true;
+		}
+
+		// 2. Antigravity view_file skill check
+		if (skillPath && (inv.name === "view_file" || inv.name === "default_api:view_file")) {
+			if (!inv.args || typeof inv.args !== "object") continue;
+			const args = inv.args as { IsSkillFile?: unknown; AbsolutePath?: unknown };
+			const isSkillFile = args.IsSkillFile === true || args.IsSkillFile === "true";
+			if (!isSkillFile) continue;
+			const absPath = args.AbsolutePath;
+			if (typeof absPath === "string") {
+				const skillName = basename(dirname(skillPath)); // e.g. "writing-plans"
+				if (absPath.includes(skillName) && absPath.endsWith("SKILL.md")) {
+					return true;
+				}
+				if (absPath.endsWith("skill-snapshot.md")) {
+					return true;
+				}
+			}
+		}
 	}
 	return false;
 }
@@ -212,17 +233,18 @@ function emitJudgeTasks(): void {
 					judgeResponsesDir,
 					`${SKILL_INVOKED_META_ID}.json`,
 				);
-				const stagedSlug = conditionStagedSlugs.get(cond);
+				const stagedSlug = conditionStagedSlugs.get(cond) ?? null;
 				const transcriptFilled = runRecord.tool_invocations.length > 0;
 
-				if (stagedSlug && transcriptFilled) {
+				if ((stagedSlug || condSkillPath) && transcriptFilled) {
 					const invoked = checkSkillInvokedFromTranscript(
 						runRecord.tool_invocations,
 						stagedSlug,
+						condSkillPath,
 					);
 					const evidence = invoked
-						? `Skill tool invoked with skill='${stagedSlug}' in transcript.`
-						: `No Skill tool invocation with skill='${stagedSlug}' found across ${runRecord.tool_invocations.length} transcript invocation(s).`;
+						? `Skill invocation verified from transcript.`
+						: `No skill invocation found in transcript across ${runRecord.tool_invocations.length} transcript invocation(s).`;
 					writeJson(responsePath, {
 						passed: invoked,
 						evidence,

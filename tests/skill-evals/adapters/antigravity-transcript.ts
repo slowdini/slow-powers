@@ -222,5 +222,15 @@ export function findByDescription(
 	const matches = entries.filter((e) => e.meta.description === description);
 	if (matches.length === 0) return null;
 	if (matches.length === 1) return matches[0];
-	return matches[matches.length - 1];
+	
+	matches.sort((a, b) => {
+		try {
+			const timeA = statSync(a.jsonlPath).mtimeMs;
+			const timeB = statSync(b.jsonlPath).mtimeMs;
+			return timeB - timeA;
+		} catch {
+			return 0;
+		}
+	});
+	return matches[0];
 }

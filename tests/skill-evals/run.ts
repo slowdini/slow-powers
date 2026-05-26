@@ -53,6 +53,7 @@ type Args = {
 	iteration?: number;
 	dryRun: boolean;
 	noStage: boolean;
+	harness: string;
 };
 
 function die(msg: string): never {
@@ -86,6 +87,11 @@ function parseArgs(argv: string[]): Args {
 	if (iteration !== undefined && !Number.isInteger(iteration))
 		die(`--iteration must be an integer, got ${iterationFlag}`);
 
+	const harness = flag("harness") || "claude-code";
+	if (harness !== "claude-code" && harness !== "antigravity") {
+		die(`unknown --harness: ${harness}. Supported: claude-code, antigravity`);
+	}
+
 	return {
 		command,
 		skill,
@@ -95,6 +101,7 @@ function parseArgs(argv: string[]): Args {
 		iteration,
 		dryRun: has("dry-run"),
 		noStage: has("no-stage"),
+		harness,
 	};
 }
 
@@ -261,6 +268,7 @@ function commandRun(args: Args): void {
 			},
 		],
 		timestamp: new Date().toISOString(),
+		harness: args.harness,
 	};
 	writeJson(join(iterationDir, "conditions.json"), conditions);
 
@@ -288,6 +296,7 @@ function commandRun(args: Args): void {
 					fixtures,
 					outputsDir,
 					condDir,
+					harness: args.harness,
 				}),
 			);
 		}
@@ -313,6 +322,7 @@ function commandRun(args: Args): void {
 		mode: args.mode,
 		baseline: args.baseline ?? null,
 		conditions: conditions.conditions,
+		harness: args.harness,
 		tasks,
 	});
 
@@ -365,6 +375,24 @@ function copyFixtures(
 	return copied;
 }
 
+function getSkillDescription(skillPath: string): string {
+	try {
+		const content = readFileSync(skillPath, "utf8");
+		const match = content.match(/description:\s*([^\n\r]+)/);
+		if (match) {
+			let desc = match[1].trim();
+			if (
+				(desc.startsWith('"') && desc.endsWith('"')) ||
+				(desc.startsWith("'") && desc.endsWith("'"))
+			) {
+				desc = desc.slice(1, -1).trim();
+			}
+			return desc;
+		}
+	} catch {}
+	return "No description available.";
+}
+
 function buildDispatchTask(opts: {
 	evalId: string;
 	condition: string;
@@ -374,21 +402,43 @@ function buildDispatchTask(opts: {
 	fixtures: string[];
 	outputsDir: string;
 	condDir: string;
+	harness: string;
 }): DispatchTask {
 	let skillBlock: string;
-	if (opts.stagedSkillSlug) {
-		skillBlock =
-			"No skill content is inlined here. Use the harness's normal skill discovery — invoke any skill that applies to the user's request.";
-	} else if (opts.skillPath) {
-		skillBlock = [
-			"The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
-			"",
-			`<skill name="${basename(dirname(opts.skillPath))}">`,
-			readFileSync(opts.skillPath, "utf8").trim(),
-			"</skill>",
-		].join("\n");
+	if (opts.harness === "antigravity") {
+		if (opts.skillPath) {
+			const skillName = basename(dirname(opts.skillPath));
+			const skillDesc = getSkillDescription(opts.skillPath);
+			skillBlock = [
+				"<skills>",
+				"Available skills:",
+				`- ${skillName} (${opts.skillPath}): ${skillDesc}`,
+				"</skills>",
+				"",
+				"If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding.",
+			].join("\n");
+		} else {
+			skillBlock = [
+				"<skills>",
+				"Available skills: none",
+				"</skills>",
+			].join("\n");
+		}
 	} else {
-		skillBlock = "No skill is loaded. Respond as you naturally would.";
+		if (opts.stagedSkillSlug) {
+			skillBlock =
+				"No skill content is inlined here. Use the harness's normal skill discovery — invoke any skill that applies to the user's request.";
+		} else if (opts.skillPath) {
+			skillBlock = [
+				"The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
+				"",
+				`<skill name="${basename(dirname(opts.skillPath))}">`,
+				readFileSync(opts.skillPath, "utf8").trim(),
+				"</skill>",
+			].join("\n");
+		} else {
+			skillBlock = "No skill is loaded. Respond as you naturally would.";
+		}
 	}
 
 	const fixturesBlock = opts.fixtures.length
