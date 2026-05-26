@@ -1,6 +1,6 @@
 ---
 name: evaluating-skills
-description: Use when testing whether a new skill improves agent behavior, or when validating a change to an existing skill's language. Defines test-case format, the with/without and old/new comparison protocols, the snapshot/revision mode, grading, and the iteration loop. Harness-agnostic.
+description: Use when testing whether a new skill improves agent behavior, or when validating a change to an existing skill's language.
 ---
 
 # Evaluating Skills

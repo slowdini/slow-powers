@@ -1,6 +1,6 @@
 ---
 name: verification-before-completion
-description: Use before claiming any task is complete, fixed, or passing. Enforces running actual verification commands and reporting the output.
+description: Use before claiming any task is complete, fixed, or passing.
 ---
 
 # Verification Before Completion
@@ -8,6 +8,8 @@ description: Use before claiming any task is complete, fixed, or passing. Enforc
 Claiming work is complete without verification is an assumption, not a fact. Always verify before presenting success.
 
 > **THE IRON LAW:** NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE.
+
+> **Violating the letter of the rules is violating the spirit of the rules.**
 
 ---
 
@@ -36,11 +38,28 @@ Before claiming any task is finished, making a success claim, or declaring a bug
 
 ---
 
-## Red Flags - STOP and Verify
+## Common Rationalizations
 
-* Using speculative language like *"should work now"*, *"probably fixed"*, or *"seems correct."*
-* Stating a task is complete before running the test or build commands.
-* Relying on partial or scoped test runs instead of verifying the full suite.
-* Claiming success because "the code was updated successfully" without verifying execution.
+> **Note:** The rationalizations below are prospective — they represent likely excuses an agent might produce under pressure, but they have not yet been validated through actual eval runs. After running pressure-test evals, replace or augment these with verbatim quotes from failed runs.
 
-**If you catch yourself making a claim without running the verification command: STOP. Run the command, analyze the output, and present the evidence.**
+| Excuse | Reality |
+|--------|---------|
+| "I already manually tested it" | Manual testing is not reproducible verification. |
+| "The change is too small to need verification" | Small changes break things all the time. |
+| "I ran the tests earlier and they passed" | Earlier means a different codebase state. |
+| "It's obvious this is correct" | Obvious bugs are the most embarrassing. |
+| "I'll verify after committing" | Verification after the claim is too late. |
+| "The build should be fine" | "Should" is not evidence. |
+
+---
+
+## Red Flags — STOP and Verify
+
+> **Note:** The red flags below are prospective — they represent likely warning signs, but they have not yet been validated through actual eval runs.
+
+- "Should work now" / "probably fixed" / "seems correct"
+- Claiming completion before running verification
+- Relying on partial or scoped test runs
+- "The code was updated successfully" without execution evidence
+
+All of these mean: STOP. Run the command, analyze the output, and present the evidence.

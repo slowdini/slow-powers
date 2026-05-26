@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: Use when encountering any bug, test failure, build error, or unexpected behavior. Enforces finding the root cause before attempting any fixes.
+description: Use when encountering any bug, test failure, build error, or unexpected behavior.
 ---
 
 # Systematic Debugging
@@ -8,6 +8,8 @@ description: Use when encountering any bug, test failure, build error, or unexpe
 Avoid "guess-and-check" coding. Always identify the root cause before making changes.
 
 > **THE IRON LAW:** NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST.
+
+> **Violating the letter of the rules is violating the spirit of the rules.**
 
 ---
 
@@ -54,10 +56,29 @@ Before changing any code:
 
 ---
 
-## Red Flags - STOP and Reset
+## Common Rationalizations
 
-* Attempting to write a fix before reproducing the bug or reading the full stack trace.
-* Thinking "let's just try changing X to see if it works."
-* Stacking multiple speculative fixes on top of each other.
-* Claiming a bug is fixed without running the verification test suite.
-* Each "fix" you implement only shifts the bug to a new location.
+> **Note:** The rationalizations below are prospective — they represent likely excuses an agent might produce under pressure, but they have not yet been validated through actual eval runs. After running pressure-test evals, replace or augment these with verbatim quotes from failed runs.
+
+| Excuse | Reality |
+|--------|---------|
+| "This is an emergency, we don't have time" | 5 minutes of investigation beats 5 hours of chasing symptoms. |
+| "I can see the symptom fix is obvious" | Obvious symptom fixes hide the real root cause. |
+| "We tried three things, just add one more" | Shotgun fixes create new bugs. Stop and re-analyze. |
+| "The senior engineer says this is the fix" | Authority is not evidence. Verify the hypothesis. |
+| "We need to ship now, investigate later" | "Later" investigations never happen on shipped code. |
+| "This case is different because..." | It is not different. The process applies. |
+
+---
+
+## Red Flags — STOP and Reset
+
+> **Note:** The red flags below are prospective — they represent likely warning signs, but they have not yet been validated through actual eval runs.
+
+- Writing a fix before reproducing the bug or reading the full stack trace
+- "Let's just try changing X to see if it works"
+- Stacking multiple speculative fixes on top of each other
+- Claiming a bug is fixed without running the verification test suite
+- Each "fix" only shifts the bug to a new location
+
+All of these mean: STOP. Revert changes. Return to Phase 1.

@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: Use when implementing any feature, refactoring, or writing a bugfix. Enforces the Red-Green-Refactor test-first cycle.
+description: Use when implementing any feature, refactoring, or writing a bugfix.
 ---
 
 # Test-Driven Development (TDD)
@@ -10,6 +10,8 @@ Write the test first. Watch it fail. Write minimal code to pass. Refactor.
 > **THE IRON LAW:** NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.
 
 Write production code before the test? Delete it. Start over. Do not keep it for "reference" or "adapt" it. Delete means delete.
+
+> **Violating the letter of the rules is violating the spirit of the rules.**
 
 ---
 
@@ -63,12 +65,29 @@ test('retry works', async () => {
 
 ---
 
-## Red Flags - STOP and Reset
+## Common Rationalizations
 
-* Writing implementation code before writing the test.
-* Writing the test after implementation "just to verify it works."
-* A test passes immediately on the first run (means it isn't testing new behavior).
-* Relying on manual ad-hoc testing instead of writing automated verification.
-* Thinking "deleting this un-tested code is wasteful" (Sunk Cost Fallacy).
+> **Note:** The rationalizations below are prospective — they represent likely excuses an agent might produce under pressure, but they have not yet been validated through actual eval runs. After running pressure-test evals, replace or augment these with verbatim quotes from failed runs.
 
-**If you hit a Red Flag: Delete the un-tested code. Start over with TDD.**
+| Excuse | Reality |
+|--------|---------|
+| "This is too simple to test" | Simple code breaks. Test takes 30 seconds. |
+| "I'll test after to verify it works" | Tests passing immediately prove nothing. |
+| "I already know what the code should look like" | Knowing the answer doesn't mean the requirement is specified. |
+| "Testing this would be trivial" | Trivial tests are cheap; skipping them costs later. |
+| "I'll add tests later, I promise" | Later never comes. The codebase drifts. |
+| "The spirit of TDD is what matters, not the letter" | **Violating the letter is violating the spirit.** |
+
+---
+
+## Red Flags — STOP and start over
+
+> **Note:** The red flags below are prospective — they represent likely warning signs, but they have not yet been validated through actual eval runs.
+
+- Code before test
+- "I already manually tested it"
+- "Tests after achieve the same purpose"
+- "It's about spirit not ritual"
+- "This is different because..."
+
+All of these mean: delete code. Start over with TDD.
