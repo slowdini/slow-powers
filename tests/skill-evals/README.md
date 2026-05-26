@@ -29,9 +29,13 @@ bun run evals -- --skill <name> --mode new-skill
 # 4. For each completed run, write `run.json` (matching schema/run-record.schema.json,
 #    with `tool_invocations: []` for now) and `timing.json` into the condition directory.
 
-# 5. (Claude Code only) Fill tool_invocations from subagent transcripts:
+# 5. Fill tool_invocations from subagent transcripts:
+#    On Claude Code:
 bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
+#    On Antigravity CLI (auto-detected, or pass --harness antigravity):
+bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
+  --subagents-dir ~/.gemini/antigravity-cli/brain/
 
 # 6. Grade:
 bun run evals:grade -- --skill <name> --iteration 1
@@ -69,8 +73,9 @@ bun run evals -- --skill <name> --mode new-skill --dry-run
 - `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. On Claude Code (default), also stages each condition's snapshot at `<repoRoot>/.claude/skills/superslow-eval-<iteration>-<condition>__<skillName>/SKILL.md` so the subagent can discover and invoke it via the Skill tool; pass `--no-stage` to opt out and fall back to inlining the SKILL.md into the dispatch prompt. Also handles the `snapshot` subcommand.
 - `grade.ts` — evaluates `transcript_check` assertions directly (regex against `tool_invocations`), emits judge-task files for `llm_judge` assertions, then finalizes by merging judge responses into per-run `grading.json`. The `__skill_invoked` meta-check is code-based on Claude Code when the staged-skill slug is known and `tool_invocations` is populated (deterministic scan for a `Skill` tool call with matching slug); it falls back to an LLM judge looking for behavioral fingerprints when either signal is missing.
 - `aggregate.ts` — reads grading.json + timing.json from an iteration, writes `benchmark.json` with pass-rate / duration / token stats keyed by condition name.
-- `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a Claude Code subagent transcript by description, parses the transcript with the adapter, populates `tool_invocations` in `run.json`.
+- `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a subagent transcript by description, parses the transcript with the appropriate adapter, populates `tool_invocations` in `run.json`.
 - `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
+- `adapters/antigravity-transcript.ts` — reads an Antigravity subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
 - `types.ts` — shared TypeScript types matching `skills/evaluating-skills/schema/*.json`.
 - `validate.ts` — minimal validator for `evals.json` against the JSON Schema rules.
 
@@ -80,7 +85,7 @@ The framework is a second pillar of testing alongside the existing `tests/codex/
 
 ## Caveats
 
-- v1 ships the Claude Code transcript adapter only. Other harnesses must populate `tool_invocations` manually or write their own adapter against `schema/run-record.schema.json`. Without an adapter, `transcript_check` assertions grade as `unverifiable` and the `__skill_invoked` meta-check falls back to the LLM judge.
+- v1.1 ships both Claude Code and Antigravity transcript adapters. Other harnesses must populate `tool_invocations` manually or write their own adapter against `schema/run-record.schema.json`. Without an adapter, `transcript_check` assertions grade as `unverifiable` and the `__skill_invoked` meta-check falls back to the LLM judge.
 - Skill staging writes to `<repoRoot>/.claude/skills/superslow-eval-*/`. The runner sweeps these directories at the start of each fresh run; a crashed run may leave stale entries that the next run will reap.
 - v1 grading dispatch is operator-driven (host agent dispatches judge subagents per the manifest). v2 will add an SDK-backed headless grader.
 - Single-run evals only in v1; the schema supports multi-run later.

@@ -1,10 +1,8 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import {
-	findByDescription,
-	parseTranscript,
-} from "./adapters/claude-code-transcript";
+import * as claudeAdapter from "./adapters/claude-code-transcript";
+import * as antigravityAdapter from "./adapters/antigravity-transcript";
 import type { ConditionsRecord, RunRecord } from "./types";
 
 const REPO_ROOT = resolve(import.meta.dir, "../..");
@@ -25,22 +23,49 @@ function parseArgs(argv: string[]) {
 	const skill = flag("skill");
 	const iteration = flag("iteration");
 	const subagentsDir = flag("subagents-dir");
+	const harness = flag("harness");
 	const overwrite = has("overwrite");
 	if (!skill) die("missing --skill");
 	if (!iteration) die("missing --iteration");
 	if (!subagentsDir)
 		die(
-			"missing --subagents-dir (e.g. ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/)",
+			"missing --subagents-dir (e.g. ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/ or ~/.gemini/antigravity-cli/brain/)",
 		);
-	return { skill, iteration, subagentsDir, overwrite };
+	return { skill, iteration, subagentsDir, harness, overwrite };
 }
 
-const { skill, iteration, subagentsDir, overwrite } = parseArgs(
+const { skill, iteration, subagentsDir, harness, overwrite } = parseArgs(
 	Bun.argv.slice(2),
 );
 
 if (!existsSync(subagentsDir))
 	die(`subagents-dir not found: ${subagentsDir}`);
+
+let adapter: typeof claudeAdapter | typeof antigravityAdapter = claudeAdapter;
+let selectedHarness = "claude-code";
+
+if (harness === "antigravity") {
+	adapter = antigravityAdapter;
+	selectedHarness = "antigravity";
+} else if (harness === "claude-code") {
+	adapter = claudeAdapter;
+	selectedHarness = "claude-code";
+} else {
+	// Auto-detect
+	if (
+		subagentsDir.includes("antigravity-cli") ||
+		subagentsDir.includes("brain") ||
+		existsSync(join(subagentsDir, "..", "conversations"))
+	) {
+		adapter = antigravityAdapter;
+		selectedHarness = "antigravity (auto-detected)";
+	} else {
+		adapter = claudeAdapter;
+		selectedHarness = "claude-code (auto-detected)";
+	}
+}
+
+console.log(`Using harness transcript adapter: ${selectedHarness}`);
 
 const iterationDir = join(WORKSPACE_ROOT, skill, `iteration-${iteration}`);
 if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
@@ -76,7 +101,7 @@ for (const evalDir of evalDirs) {
 		}
 
 		const description = `${evalId}:${cond}`;
-		const subagent = findByDescription(subagentsDir, description);
+		const subagent = adapter.findByDescription(subagentsDir, description);
 		if (!subagent) {
 			console.warn(
 				`miss ${evalId}/${cond}: no subagent transcript with description='${description}'`,
@@ -85,7 +110,7 @@ for (const evalDir of evalDirs) {
 			continue;
 		}
 
-		const invocations = parseTranscript(subagent.jsonlPath);
+		const invocations = adapter.parseTranscript(subagent.jsonlPath);
 		run.tool_invocations = invocations;
 		writeFileSync(runPath, `${JSON.stringify(run, null, 2)}\n`);
 		console.log(
