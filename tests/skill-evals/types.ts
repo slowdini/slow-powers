@@ -39,6 +39,7 @@ export type ConditionsRecord = {
 	baseline?: string;
 	conditions: ConditionEntry[];
 	timestamp: string;
+	harness?: string;
 };
 
 export type ToolInvocation = {
