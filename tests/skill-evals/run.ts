@@ -3,12 +3,14 @@ import {
 	cpSync,
 	existsSync,
 	mkdirSync,
+	mkdtempSync,
 	readdirSync,
 	readFileSync,
 	rmSync,
 	statSync,
 	writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
 import { validateEvalsConfig } from "./validate";
@@ -16,8 +18,10 @@ import { validateEvalsConfig } from "./validate";
 const REPO_ROOT = resolve(import.meta.dir, "../..");
 const SKILLS_DIR = join(REPO_ROOT, "skills");
 const WORKSPACE_ROOT = join(REPO_ROOT, "skills-workspace");
+const BOOTSTRAP_PATH = join(REPO_ROOT, "bootstrap.md");
 
 export const STAGED_SKILL_PREFIX = "superslow-eval-";
+export const STAGED_SIBLING_MANIFEST = ".superslow-eval-manifest.json";
 
 export function stageSkillForCC(opts: {
 	content: string;
@@ -33,13 +37,99 @@ export function stageSkillForCC(opts: {
 	return slug;
 }
 
+type SiblingManifest = {
+	created_at: string;
+	staged_under_test: string;
+	created_entries: Array<{
+		name: string;
+		preexisting: boolean;
+		backup_path?: string;
+	}>;
+};
+
+export function stageSiblingSkills(opts: {
+	skillUnderTest: string;
+	skillsSourceDir: string;
+	repoRoot: string;
+}): SiblingManifest {
+	const skillsDir = join(opts.repoRoot, ".claude", "skills");
+	mkdirSync(skillsDir, { recursive: true });
+
+	const siblings = readdirSync(opts.skillsSourceDir).filter((name) => {
+		if (name === opts.skillUnderTest) return false;
+		const srcDir = join(opts.skillsSourceDir, name);
+		if (!statSync(srcDir).isDirectory()) return false;
+		return existsSync(join(srcDir, "SKILL.md"));
+	});
+
+	const manifest: SiblingManifest = {
+		created_at: new Date().toISOString(),
+		staged_under_test: opts.skillUnderTest,
+		created_entries: [],
+	};
+
+	for (const name of siblings) {
+		const srcDir = join(opts.skillsSourceDir, name);
+		const dstDir = join(skillsDir, name);
+		const evalsSubdir = join(srcDir, "evals");
+
+		const entry: SiblingManifest["created_entries"][number] = {
+			name,
+			preexisting: false,
+		};
+
+		if (existsSync(dstDir)) {
+			entry.preexisting = true;
+			const backupRoot = mkdtempSync(
+				join(tmpdir(), "superslow-eval-backup-"),
+			);
+			entry.backup_path = join(backupRoot, name);
+			cpSync(dstDir, entry.backup_path, { recursive: true });
+			rmSync(dstDir, { recursive: true, force: true });
+		}
+
+		cpSync(srcDir, dstDir, {
+			recursive: true,
+			filter: (src) => src !== evalsSubdir && !src.startsWith(`${evalsSubdir}/`),
+		});
+
+		manifest.created_entries.push(entry);
+	}
+
+	writeFileSync(
+		join(skillsDir, STAGED_SIBLING_MANIFEST),
+		`${JSON.stringify(manifest, null, 2)}\n`,
+	);
+	return manifest;
+}
+
 export function cleanupStagedSkills(repoRoot: string): void {
 	const skillsDir = join(repoRoot, ".claude", "skills");
 	if (!existsSync(skillsDir)) return;
+
 	for (const entry of readdirSync(skillsDir)) {
 		if (!entry.startsWith(STAGED_SKILL_PREFIX)) continue;
 		rmSync(join(skillsDir, entry), { recursive: true, force: true });
 	}
+
+	const manifestPath = join(skillsDir, STAGED_SIBLING_MANIFEST);
+	if (!existsSync(manifestPath)) return;
+	let manifest: SiblingManifest;
+	try {
+		manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+	} catch {
+		rmSync(manifestPath, { force: true });
+		return;
+	}
+	for (const e of manifest.created_entries) {
+		const target = join(skillsDir, e.name);
+		rmSync(target, { recursive: true, force: true });
+		if (e.preexisting && e.backup_path && existsSync(e.backup_path)) {
+			cpSync(e.backup_path, target, { recursive: true });
+			rmSync(dirname(e.backup_path), { recursive: true, force: true });
+		}
+	}
+	rmSync(manifestPath, { force: true });
 }
 
 type Mode = "new-skill" | "revision";
@@ -235,6 +325,19 @@ function commandRun(args: Args): void {
 
 	if (!args.noStage) cleanupStagedSkills(REPO_ROOT);
 
+	if (!args.noStage && args.harness === "claude-code") {
+		stageSiblingSkills({
+			skillUnderTest: args.skill,
+			skillsSourceDir: SKILLS_DIR,
+			repoRoot: REPO_ROOT,
+		});
+	}
+
+	const bootstrapContent =
+		!args.noStage && args.harness === "claude-code" && existsSync(BOOTSTRAP_PATH)
+			? readFileSync(BOOTSTRAP_PATH, "utf8")
+			: null;
+
 	const stageFor = (
 		condName: string,
 		condSkillPath: string | null,
@@ -297,6 +400,7 @@ function commandRun(args: Args): void {
 					outputsDir,
 					condDir,
 					harness: args.harness,
+					bootstrapContent,
 				}),
 			);
 		}
@@ -393,7 +497,7 @@ function getSkillDescription(skillPath: string): string {
 	return "No description available.";
 }
 
-function buildDispatchTask(opts: {
+export function buildDispatchTask(opts: {
 	evalId: string;
 	condition: string;
 	skillPath: string | null;
@@ -403,6 +507,7 @@ function buildDispatchTask(opts: {
 	outputsDir: string;
 	condDir: string;
 	harness: string;
+	bootstrapContent: string | null;
 }): DispatchTask {
 	let skillBlock: string;
 	if (opts.harness === "antigravity") {
@@ -426,8 +531,12 @@ function buildDispatchTask(opts: {
 		}
 	} else {
 		if (opts.stagedSkillSlug) {
-			skillBlock =
-				"No skill content is inlined here. Use the harness's normal skill discovery — invoke any skill that applies to the user's request.";
+			skillBlock = [
+				"Your environment has the superslow plugin loaded. All superslow skills are",
+				"discoverable via the Skill tool. The skill currently under evaluation is",
+				`staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
+				"than the natural name if the skill applies to the user's request.",
+			].join("\n");
 		} else if (opts.skillPath) {
 			skillBlock = [
 				"The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
@@ -435,6 +544,12 @@ function buildDispatchTask(opts: {
 				`<skill name="${basename(dirname(opts.skillPath))}">`,
 				readFileSync(opts.skillPath, "utf8").trim(),
 				"</skill>",
+			].join("\n");
+		} else if (opts.bootstrapContent) {
+			skillBlock = [
+				"The skill currently under evaluation is NOT available in this environment.",
+				"Other superslow skills remain discoverable via the Skill tool; apply any",
+				"that fit the user's request.",
 			].join("\n");
 		} else {
 			skillBlock = "No skill is loaded. Respond as you naturally would.";
@@ -445,23 +560,39 @@ function buildDispatchTask(opts: {
 		? `Available fixture files:\n${opts.fixtures.map((f) => `  - ${f}`).join("\n")}`
 		: "Available fixture files: none";
 
-	const dispatchPrompt = [
-		"You are executing a single test case for a skill evaluation framework.",
-		"Treat this as a real user request — do NOT optimize behavior for the eval.",
-		"",
-		skillBlock,
-		"",
-		fixturesBlock,
-		`Output directory: ${opts.outputsDir}`,
-		"",
-		"Instructions:",
-		"- Write any files you produce into the output directory.",
-		`- After completing the task, write your final user-facing response to ${opts.outputsDir}/final-message.md.`,
-		"- Do not write outside the output directory.",
-		"",
-		"User request:",
-		opts.userPrompt,
-	].join("\n");
+	const sections: string[] = [];
+	if (opts.bootstrapContent && opts.harness !== "antigravity") {
+		sections.push(
+			[
+				"<session-start-context>",
+				"The following guidelines were loaded at session start by the superslow plugin",
+				"(equivalent to the SessionStart hook firing in a real user's environment):",
+				"",
+				opts.bootstrapContent.trim(),
+				"</session-start-context>",
+				"",
+			].join("\n"),
+		);
+	}
+	sections.push(
+		[
+			"You are executing a single test case for a skill evaluation framework.",
+			"Treat this as a real user request — do NOT optimize behavior for the eval.",
+			"",
+			skillBlock,
+			"",
+			fixturesBlock,
+			`Output directory: ${opts.outputsDir}`,
+			"",
+			"Instructions:",
+			"- Write any files you produce into the output directory.",
+			`- After completing the task, write your final user-facing response to ${opts.outputsDir}/final-message.md.`,
+			"- Do not write outside the output directory.",
+			"",
+			"User request:",
+			opts.userPrompt,
+		].join("\n"),
+	);
 
 	return {
 		eval_id: opts.evalId,
@@ -474,7 +605,7 @@ function buildDispatchTask(opts: {
 		run_record_path: join(opts.condDir, "run.json"),
 		timing_path: join(opts.condDir, "timing.json"),
 		agent_description: `${opts.evalId}:${opts.condition}`,
-		dispatch_prompt: dispatchPrompt,
+		dispatch_prompt: sections.join(""),
 	};
 }
 
