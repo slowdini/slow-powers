@@ -3,8 +3,8 @@
   "evals": [
     {
       "id": "concrete-todo-app-plan",
-      "prompt": "Let's build a todo app, using react",
-      "expected_output": "The agent should implicitly enter planning mode, recognize the need for an implementation plan, and write a highly granular, concrete plan with no placeholders (TBD, TODO) that explicitly directs the implementation phase to load and follow `superslow:test-driven-development`.",
+      "prompt": "Write me an implementation plan for a React todo app. I want to review the steps before any code gets written.",
+      "expected_output": "The agent should load `writing-plans` and produce a highly granular, concrete implementation plan with no placeholders (TBD, TODO). Tasks should be 2–5 minutes each, structured for Red-Green-Refactor, and explicitly direct the implementation phase to load and follow `superslow:test-driven-development`.",
       "assertions": [
         {
           "id": "no_placeholders",
