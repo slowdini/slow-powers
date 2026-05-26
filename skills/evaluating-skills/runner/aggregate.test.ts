@@ -1,0 +1,98 @@
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+
+const FIXTURE_ROOT = join(tmpdir(), `superslow-aggregate-test-${process.pid}`);
+const AGGREGATE_TS = join(import.meta.dir, "aggregate.ts");
+
+beforeAll(() => {
+	mkdirSync(FIXTURE_ROOT, { recursive: true });
+});
+
+afterAll(() => {
+	rmSync(FIXTURE_ROOT, { recursive: true, force: true });
+});
+
+function writeJson(path: string, value: unknown) {
+	writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+describe("aggregate.ts user-mode (--skill-dir, isolated CWD)", () => {
+	test("computes benchmark.json from a hand-built graded workspace under CWD", () => {
+		const root = join(FIXTURE_ROOT, "agg-basic");
+		// Skill dir + skill-under-test (detectRunContext validates SKILL.md exists)
+		const skillDir = join(root, "skill-dir");
+		const skillSub = join(skillDir, "mr-review");
+		mkdirSync(skillSub, { recursive: true });
+		writeFileSync(
+			join(skillSub, "SKILL.md"),
+			"---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+		);
+
+		// Working dir that holds the workspace (mirrors stageRoot/workspaceRoot = CWD)
+		const cwd = join(root, "work");
+		const iterationDir = join(
+			cwd,
+			"skills-workspace",
+			"mr-review",
+			"iteration-1",
+		);
+		mkdirSync(iterationDir, { recursive: true });
+		writeJson(join(iterationDir, "conditions.json"), {
+			mode: "new-skill",
+			conditions: [
+				{ name: "with_skill", skill_path: join(skillSub, "SKILL.md") },
+				{ name: "without_skill", skill_path: null },
+			],
+			timestamp: new Date().toISOString(),
+			harness: "claude-code",
+		});
+
+		const mkCond = (
+			cond: string,
+			passRate: number,
+			tokens: number,
+		) => {
+			const condDir = join(iterationDir, "eval-e1", cond);
+			mkdirSync(condDir, { recursive: true });
+			writeJson(join(condDir, "grading.json"), {
+				assertion_results: [],
+				summary: { passed: 1, failed: 0, total: 1, pass_rate: passRate },
+			});
+			writeJson(join(condDir, "timing.json"), {
+				total_tokens: tokens,
+				duration_ms: 1000,
+			});
+		};
+		mkCond("with_skill", 1, 5000);
+		mkCond("without_skill", 0, 3000);
+
+		const res = Bun.spawnSync(
+			[
+				"bun",
+				"run",
+				AGGREGATE_TS,
+				"--skill-dir",
+				skillDir,
+				"--skill",
+				"mr-review",
+				"--iteration",
+				"1",
+			],
+			{ cwd, stdout: "pipe", stderr: "pipe" },
+		);
+		expect(res.exitCode).toBe(0);
+
+		const benchmarkPath = join(iterationDir, "benchmark.json");
+		expect(existsSync(benchmarkPath)).toBe(true);
+		const benchmark = JSON.parse(readFileSync(benchmarkPath, "utf8")) as {
+			delta: { pass_rate: number; total_tokens: number };
+			run_summary: Record<string, { pass_rate: { mean: number } }>;
+		};
+		expect(benchmark.run_summary.with_skill.pass_rate.mean).toBe(1);
+		expect(benchmark.run_summary.without_skill.pass_rate.mean).toBe(0);
+		expect(benchmark.delta.pass_rate).toBe(1);
+		expect(benchmark.delta.total_tokens).toBe(2000);
+	});
+});

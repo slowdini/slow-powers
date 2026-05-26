@@ -11,14 +11,10 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join } from "node:path";
+import { type RunContext, detectRunContext } from "./context";
 import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
 import { validateEvalsConfig } from "./validate";
-
-const REPO_ROOT = resolve(import.meta.dir, "../..");
-const SKILLS_DIR = join(REPO_ROOT, "skills");
-const WORKSPACE_ROOT = join(REPO_ROOT, "skills-workspace");
-const BOOTSTRAP_PATH = join(REPO_ROOT, "bootstrap.md");
 
 export const STAGED_SKILL_PREFIX = "superslow-eval-";
 export const STAGED_SIBLING_MANIFEST = ".superslow-eval-manifest.json";
@@ -136,14 +132,12 @@ type Mode = "new-skill" | "revision";
 
 type Args = {
 	command: "run" | "snapshot";
-	skill: string;
 	mode?: Mode;
 	baseline?: string;
 	label?: string;
 	iteration?: number;
 	dryRun: boolean;
 	noStage: boolean;
-	harness: string;
 };
 
 function die(msg: string): never {
@@ -168,30 +162,20 @@ function parseArgs(argv: string[]): Args {
 
 	const has = (name: string) => argv.includes(`--${name}`);
 
-	const skill = flag("skill");
-	if (!skill) die("missing required flag --skill");
-
 	const iterationFlag = flag("iteration");
 	const iteration =
 		iterationFlag !== undefined ? Number(iterationFlag) : undefined;
 	if (iteration !== undefined && !Number.isInteger(iteration))
 		die(`--iteration must be an integer, got ${iterationFlag}`);
 
-	const harness = flag("harness") || "claude-code";
-	if (harness !== "claude-code" && harness !== "antigravity") {
-		die(`unknown --harness: ${harness}. Supported: claude-code, antigravity`);
-	}
-
 	return {
 		command,
-		skill,
 		mode: flag("mode") as Mode | undefined,
 		baseline: flag("baseline"),
 		label: flag("label"),
 		iteration,
 		dryRun: has("dry-run"),
 		noStage: has("no-stage"),
-		harness,
 	};
 }
 
@@ -229,13 +213,18 @@ function conditionNamesFor(mode: Mode): [string, string] {
 		: ["old_skill", "new_skill"];
 }
 
-function commandSnapshot(args: Args): void {
+function commandSnapshot(args: Args, ctx: RunContext): void {
 	if (!args.label) die("snapshot requires --label <name>");
-	const skillDir = join(SKILLS_DIR, args.skill);
+	const skillDir = ctx.skillSubdir;
 	const skillMd = join(skillDir, "SKILL.md");
 	if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
 
-	const destDir = join(WORKSPACE_ROOT, args.skill, "snapshots", args.label);
+	const destDir = join(
+		ctx.workspaceRoot,
+		ctx.skillName,
+		"snapshots",
+		args.label,
+	);
 	if (existsSync(destDir))
 		die(
 			`snapshot already exists: ${destDir}\n` +
@@ -252,17 +241,17 @@ function commandSnapshot(args: Args): void {
 		else cpSync(src, dst);
 	}
 
-	console.log(`Snapshotted ${args.skill} → ${destDir}`);
+	console.log(`Snapshotted ${ctx.skillName} → ${destDir}`);
 }
 
-function commandRun(args: Args): void {
+function commandRun(args: Args, ctx: RunContext): void {
 	if (!args.mode) die("--mode required: new-skill | revision");
 	if (args.mode !== "new-skill" && args.mode !== "revision")
 		die(`unknown --mode: ${args.mode}`);
 	if (args.mode === "revision" && !args.baseline)
 		die("revision mode requires --baseline <label>");
 
-	const skillDir = join(SKILLS_DIR, args.skill);
+	const skillDir = ctx.skillSubdir;
 	const skillMd = join(skillDir, "SKILL.md");
 	if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
 
@@ -273,12 +262,12 @@ function commandRun(args: Args): void {
 		readJson(evalsPath),
 		evalsPath,
 	);
-	if (config.skill_name !== args.skill)
-		die(
-			`evals.json skill_name (${config.skill_name}) does not match --skill (${args.skill})`,
+	if (config.skill_name !== ctx.skillName)
+		console.warn(
+			`warning: evals.json skill_name (${config.skill_name}) does not match the skill folder (${ctx.skillName}). Proceeding with ${ctx.skillName}.`,
 		);
 
-	const workspaceSkillDir = join(WORKSPACE_ROOT, args.skill);
+	const workspaceSkillDir = join(ctx.workspaceRoot, ctx.skillName);
 	const iteration = nextIteration(workspaceSkillDir, args.iteration);
 	const iterationDir = join(workspaceSkillDir, `iteration-${iteration}`);
 
@@ -304,14 +293,14 @@ function commandRun(args: Args): void {
 		if (!existsSync(baselineSkill))
 			die(
 				`baseline snapshot not found: ${baselineSkill}\n` +
-					`  Run: bun run evals:snapshot --skill ${args.skill} --label ${args.baseline} (before editing)`,
+					`  Run: bun run evals:snapshot --skill ${ctx.skillName} --skill-dir ${ctx.skillDir} --label ${args.baseline} (before editing)`,
 			);
 		skillPathForA = baselineSkill;
 		skillPathForB = skillMd;
 	}
 
 	console.log(
-		`Preparing ${args.skill} iteration-${iteration} (${args.mode})`,
+		`Preparing ${ctx.skillName} iteration-${iteration} (${args.mode})`,
 	);
 	console.log(`  ${conditionA}: ${skillPathForA ?? "(no skill)"}`);
 	console.log(`  ${conditionB}: ${skillPathForB ?? "(no skill)"}`);
@@ -323,22 +312,27 @@ function commandRun(args: Args): void {
 	ensureDir(iterationDir);
 	cpSync(skillMd, join(iterationDir, "skill-snapshot.md"));
 
-	if (!args.noStage) cleanupStagedSkills(REPO_ROOT);
+	if (!args.noStage) cleanupStagedSkills(ctx.stageRoot);
 
-	if (!args.noStage && args.harness === "claude-code") {
+	if (!args.noStage && ctx.harness === "claude-code") {
 		stageSiblingSkills({
-			skillUnderTest: args.skill,
-			skillsSourceDir: SKILLS_DIR,
-			repoRoot: REPO_ROOT,
+			skillUnderTest: ctx.skillName,
+			skillsSourceDir: ctx.skillDir,
+			repoRoot: ctx.stageRoot,
 		});
 	}
 
 	const bootstrapContent =
-		!args.noStage &&
-		(args.harness === "claude-code" || args.harness === "antigravity") &&
-		existsSync(BOOTSTRAP_PATH)
-			? readFileSync(BOOTSTRAP_PATH, "utf8")
-			: null;
+		ctx.bootstrapPath !== null ? readFileSync(ctx.bootstrapPath, "utf8") : null;
+
+	// Sibling skill metadata, shared across conditions. Empty when --no-stage
+	// (nothing is staged, so nothing is discoverable to list).
+	const siblingSkills: AvailableSkill[] = args.noStage
+		? []
+		: ctx.siblingSkillNames.map((name) => {
+				const p = join(ctx.skillDir, name, "SKILL.md");
+				return { name, path: p, description: getSkillDescription(p) };
+			});
 
 	const stageFor = (
 		condName: string,
@@ -349,8 +343,8 @@ function commandRun(args: Args): void {
 			content: readFileSync(condSkillPath, "utf8"),
 			iteration,
 			condition: condName,
-			skillName: args.skill,
-			repoRoot: REPO_ROOT,
+			skillName: ctx.skillName,
+			repoRoot: ctx.stageRoot,
 		});
 	};
 
@@ -373,9 +367,24 @@ function commandRun(args: Args): void {
 			},
 		],
 		timestamp: new Date().toISOString(),
-		harness: args.harness,
+		harness: ctx.harness,
 	};
 	writeJson(join(iterationDir, "conditions.json"), conditions);
+
+	// availableSkills for a condition = siblings + the skill-under-test when
+	// that condition loads it. Empty when nothing was staged.
+	const availableSkillsFor = (condSkillPath: string | null): AvailableSkill[] => {
+		if (args.noStage) return [];
+		const skills = [...siblingSkills];
+		if (condSkillPath) {
+			skills.push({
+				name: ctx.skillName,
+				path: condSkillPath,
+				description: getSkillDescription(condSkillPath),
+			});
+		}
+		return skills;
+	};
 
 	const tasks: DispatchTask[] = [];
 	for (const ev of config.evals) {
@@ -401,9 +410,10 @@ function commandRun(args: Args): void {
 					fixtures,
 					outputsDir,
 					condDir,
-					harness: args.harness,
+					harness: ctx.harness,
 					bootstrapContent,
-					skillName: args.skill,
+					skillName: ctx.skillName,
+					availableSkills: availableSkillsFor(condSkillPath),
 				}),
 			);
 		}
@@ -413,7 +423,7 @@ function commandRun(args: Args): void {
 	writeFileSync(
 		manifestPath,
 		buildManifest({
-			skillName: args.skill,
+			skillName: ctx.skillName,
 			mode: args.mode,
 			baseline: args.baseline,
 			iteration,
@@ -423,13 +433,13 @@ function commandRun(args: Args): void {
 
 	const dispatchJsonPath = join(iterationDir, "dispatch.json");
 	writeJson(dispatchJsonPath, {
-		skill_name: args.skill,
+		skill_name: ctx.skillName,
 		iteration,
 		iteration_dir: iterationDir,
 		mode: args.mode,
 		baseline: args.baseline ?? null,
 		conditions: conditions.conditions,
-		harness: args.harness,
+		harness: ctx.harness,
 		tasks,
 	});
 
@@ -460,6 +470,12 @@ type DispatchTask = {
 	timing_path: string;
 	agent_description: string;
 	dispatch_prompt: string;
+};
+
+export type AvailableSkill = {
+	name: string;
+	path: string;
+	description: string;
 };
 
 function copyFixtures(
@@ -512,37 +528,18 @@ export function buildDispatchTask(opts: {
 	harness: string;
 	bootstrapContent: string | null;
 	skillName: string;
+	availableSkills: AvailableSkill[];
 }): DispatchTask {
+	const stagedSkills = [...opts.availableSkills].sort((a, b) =>
+		a.name.localeCompare(b.name),
+	);
+
 	let skillBlock: string;
 	if (opts.harness === "antigravity") {
-		if (opts.bootstrapContent) {
-			const siblingNames = readdirSync(SKILLS_DIR).filter((name) => {
-				if (name === opts.skillName) return false;
-				const srcDir = join(SKILLS_DIR, name);
-				if (!statSync(srcDir).isDirectory()) return false;
-				return existsSync(join(srcDir, "SKILL.md"));
-			});
-
-			const allSkillsToEmit: { name: string; path: string; desc: string }[] = [];
-
-			for (const name of siblingNames) {
-				const siblingPath = join(SKILLS_DIR, name, "SKILL.md");
-				const skillDesc = getSkillDescription(siblingPath);
-				allSkillsToEmit.push({ name, path: siblingPath, desc: skillDesc });
-			}
-
-			if (opts.skillPath) {
-				const skillDesc = getSkillDescription(opts.skillPath);
-				allSkillsToEmit.push({ name: opts.skillName, path: opts.skillPath, desc: skillDesc });
-			}
-
-			// Sort alphabetically by name
-			allSkillsToEmit.sort((a, b) => a.name.localeCompare(b.name));
-
-			const skillsLines = allSkillsToEmit.map(
-				(s) => `- ${s.name} (${s.path}): ${s.desc}`
+		if (stagedSkills.length > 0) {
+			const skillsLines = stagedSkills.map(
+				(s) => `- ${s.name} (${s.path}): ${s.description}`,
 			);
-
 			skillBlock = [
 				"<skills>",
 				"Available skills:",
@@ -552,24 +549,9 @@ export function buildDispatchTask(opts: {
 				"If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
 			].join("\n");
 		} else {
-			if (opts.skillPath) {
-				const skillName = basename(dirname(opts.skillPath));
-				const skillDesc = getSkillDescription(opts.skillPath);
-				skillBlock = [
-					"<skills>",
-					"Available skills:",
-					`- ${skillName} (${opts.skillPath}): ${skillDesc}`,
-					"</skills>",
-					"",
-					"If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
-				].join("\n");
-			} else {
-				skillBlock = [
-					"<skills>",
-					"Available skills: none",
-					"</skills>",
-				].join("\n");
-			}
+			skillBlock = ["<skills>", "Available skills: none", "</skills>"].join(
+				"\n",
+			);
 		}
 	} else {
 		if (opts.stagedSkillSlug) {
@@ -587,10 +569,10 @@ export function buildDispatchTask(opts: {
 				readFileSync(opts.skillPath, "utf8").trim(),
 				"</skill>",
 			].join("\n");
-		} else if (opts.bootstrapContent) {
+		} else if (stagedSkills.length > 0 || opts.bootstrapContent) {
 			skillBlock = [
 				"The skill currently under evaluation is NOT available in this environment.",
-				"Other superslow skills remain discoverable via the Skill tool; apply any",
+				"Other staged skills remain discoverable via the Skill tool; apply any",
 				"that fit the user's request.",
 			].join("\n");
 		} else {
@@ -602,15 +584,42 @@ export function buildDispatchTask(opts: {
 		? `Available fixture files:\n${opts.fixtures.map((f) => `  - ${f}`).join("\n")}`
 		: "Available fixture files: none";
 
-	const sections: string[] = [];
+	// The session-start context carries two kinds of content:
+	//   1. The verbatim --bootstrap file (product-specific framing), if supplied.
+	//   2. An auto-built inventory of the skills staged for this eval. On
+	//      Claude Code this is the only place the staged skills are listed; on
+	//      Antigravity the <skills> block in the body already serves that role,
+	//      so the inventory is omitted here to avoid a redundant second list.
+	const startContextParts: string[] = [];
 	if (opts.bootstrapContent) {
-		sections.push(
+		startContextParts.push(
 			[
-				"<session-start-context>",
 				"The following guidelines were loaded at session start by the superslow plugin",
 				"(equivalent to the SessionStart hook firing in a real user's environment):",
 				"",
 				opts.bootstrapContent.trim(),
+			].join("\n"),
+		);
+	}
+	if (opts.harness !== "antigravity" && stagedSkills.length > 0) {
+		const inventoryLines = stagedSkills.map(
+			(s) => `* \`${s.name}\`\n  * *Trigger:* ${s.description}`,
+		);
+		startContextParts.push(
+			[
+				"The following skills are staged and discoverable in this eval environment:",
+				"",
+				...inventoryLines,
+			].join("\n"),
+		);
+	}
+
+	const sections: string[] = [];
+	if (startContextParts.length > 0) {
+		sections.push(
+			[
+				"<session-start-context>",
+				startContextParts.join("\n\n"),
 				"</session-start-context>",
 				"",
 			].join("\n"),
@@ -708,7 +717,14 @@ function buildManifest(opts: {
 }
 
 if (import.meta.main) {
-	const args = parseArgs(Bun.argv.slice(2));
-	if (args.command === "snapshot") commandSnapshot(args);
-	else commandRun(args);
+	const argv = Bun.argv.slice(2);
+	const args = parseArgs(argv);
+	let ctx: RunContext;
+	try {
+		ctx = detectRunContext(argv);
+	} catch (err) {
+		die(err instanceof Error ? err.message : String(err));
+	}
+	if (args.command === "snapshot") commandSnapshot(args, ctx);
+	else commandRun(args, ctx);
 }

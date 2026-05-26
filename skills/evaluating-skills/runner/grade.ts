@@ -6,7 +6,8 @@ import {
 	readdirSync,
 	writeFileSync,
 } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join } from "node:path";
+import { detectRunContext } from "./context";
 import {
 	type AssertionResult,
 	type AssertionTranscriptCheck,
@@ -18,10 +19,6 @@ import {
 	type ToolInvocation,
 } from "./types";
 import { validateEvalsConfig } from "./validate";
-
-const REPO_ROOT = resolve(import.meta.dir, "../..");
-const SKILLS_DIR = join(REPO_ROOT, "skills");
-const WORKSPACE_ROOT = join(REPO_ROOT, "skills-workspace");
 
 type Mode = "emit-judge-tasks" | "finalize";
 
@@ -37,13 +34,11 @@ function parseArgs(argv: string[]) {
 		return argv[i + 1];
 	};
 	const has = (name: string) => argv.includes(`--${name}`);
-	const skill = flag("skill");
 	const iteration = flag("iteration");
-	if (!skill) die("missing --skill");
 	if (!iteration) die("missing --iteration");
 
 	const mode: Mode = has("finalize") ? "finalize" : "emit-judge-tasks";
-	return { skill, iteration, mode };
+	return { iteration, mode };
 }
 
 function readJson<T>(path: string): T {
@@ -70,11 +65,18 @@ let conditionNames: string[] = [];
 let evalsConfig: EvalsConfig = { skill_name: "", evals: [] };
 
 if (import.meta.main) {
-	const parsed = parseArgs(Bun.argv.slice(2));
-	skill = parsed.skill;
+	const argv = Bun.argv.slice(2);
+	const parsed = parseArgs(argv);
+	let ctx: ReturnType<typeof detectRunContext>;
+	try {
+		ctx = detectRunContext(argv);
+	} catch (err) {
+		die(err instanceof Error ? err.message : String(err));
+	}
+	skill = ctx.skillName;
 	iteration = parsed.iteration;
 
-	iterationDir = join(WORKSPACE_ROOT, skill, `iteration-${iteration}`);
+	iterationDir = join(ctx.workspaceRoot, skill, `iteration-${iteration}`);
 	if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
 
 	const conditionsPath = join(iterationDir, "conditions.json");
@@ -82,7 +84,7 @@ if (import.meta.main) {
 	conditions = readJson(conditionsPath);
 	conditionNames = conditions.conditions.map((c) => c.name);
 
-	const evalsPath = join(SKILLS_DIR, skill, "evals", "evals.json");
+	const evalsPath = join(ctx.skillSubdir, "evals", "evals.json");
 	evalsConfig = validateEvalsConfig(readJson(evalsPath), evalsPath);
 
 	if (parsed.mode === "emit-judge-tasks") {
