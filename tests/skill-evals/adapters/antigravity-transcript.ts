@@ -45,7 +45,12 @@ function parseArgValue(val: unknown): unknown {
 			try {
 				return parseArgValue(JSON.parse(cleanedStr));
 			} catch {
-				return cleanedStr;
+				try {
+					const fixedStr = cleanedStr.replace(/\\"/g, '"');
+					return parseArgValue(JSON.parse(fixedStr));
+				} catch {
+					return cleanedStr;
+				}
 			}
 		}
 		return cleanedStr;
@@ -110,12 +115,20 @@ export function listSubagents(subagentsDir: string): SubagentEntry[] {
 		}
 		if (!stat.isDirectory()) continue;
 
-		const jsonlPath = join(
+		let jsonlPath = join(
 			dirPath,
 			".system_generated",
 			"logs",
-			"transcript.jsonl",
+			"transcript_full.jsonl",
 		);
+		if (!existsSync(jsonlPath)) {
+			jsonlPath = join(
+				dirPath,
+				".system_generated",
+				"logs",
+				"transcript.jsonl",
+			);
+		}
 		if (!existsSync(jsonlPath)) continue;
 
 		try {
@@ -147,9 +160,13 @@ export function listSubagents(subagentsDir: string): SubagentEntry[] {
 						if (nextPending) {
 							const content = record.content || "";
 							const uuidRegex =
-								/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
-							const uuids = content.match(uuidRegex);
-							if (uuids) {
+								/(?:conversationId|conversationID)(?:"|'|\s)*:\s*(?:"|')?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+							const uuids: string[] = [];
+							let match;
+							while ((match = uuidRegex.exec(content)) !== null) {
+								uuids.push(match[1]);
+							}
+							if (uuids.length > 0) {
 								for (
 									let k = 0;
 									k < Math.min(nextPending.subagents.length, uuids.length);
@@ -179,7 +196,10 @@ export function listSubagents(subagentsDir: string): SubagentEntry[] {
 			".system_generated",
 			"logs",
 		);
-		const jsonlPath = join(subagentLogsDir, "transcript.jsonl");
+		let jsonlPath = join(subagentLogsDir, "transcript_full.jsonl");
+		if (!existsSync(jsonlPath)) {
+			jsonlPath = join(subagentLogsDir, "transcript.jsonl");
+		}
 		if (existsSync(jsonlPath)) {
 			out.push({
 				jsonlPath,
