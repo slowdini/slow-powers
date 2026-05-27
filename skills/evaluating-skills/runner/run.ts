@@ -509,6 +509,36 @@ function getSkillDescription(skillPath: string): string {
   return "No description available.";
 }
 
+/**
+ * Removes the skill-under-test's "Active Skills Directory" entry from bootstrap
+ * content so a skill-absent condition (e.g. `without_skill`) carries no
+ * reference to it. Targets the markdown list-item block: a top-level `*`/`-`
+ * bullet whose backticked name equals `skillName`, plus its indented
+ * continuation lines (the `*Trigger:*` sub-bullet). Sibling entries and the
+ * heading are left intact. The eval bootstrap names skills only in that
+ * directory, so this is the sole reference vector to scrub.
+ */
+export function redactSkillFromBootstrap(
+  content: string,
+  skillName: string,
+): string {
+  const out: string[] = [];
+  let skipping = false;
+  for (const line of content.split("\n")) {
+    if (skipping) {
+      // Indented continuation lines belong to the entry being dropped.
+      if (/^\s+\S/.test(line)) continue;
+      skipping = false;
+    }
+    if (/^[*-]\s/.test(line) && line.includes(`\`${skillName}\``)) {
+      skipping = true;
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
 export function buildDispatchTask(opts: {
   evalId: string;
   condition: string;
@@ -583,14 +613,24 @@ export function buildDispatchTask(opts: {
   //      Claude Code this is the only place the staged skills are listed; on
   //      Antigravity the <skills> block in the body already serves that role,
   //      so the inventory is omitted here to avoid a redundant second list.
+  // A condition that does not load the skill-under-test (the new-skill
+  // `without_skill` arm, under staging or --no-stage) must carry zero reference
+  // to it — including in the verbatim bootstrap, which otherwise lists it in its
+  // Active Skills Directory and leaks the skill into the control arm.
+  const skillAbsent = !opts.skillPath && !opts.stagedSkillSlug;
+  const effectiveBootstrap =
+    opts.bootstrapContent && skillAbsent
+      ? redactSkillFromBootstrap(opts.bootstrapContent, opts.skillName)
+      : opts.bootstrapContent;
+
   const startContextParts: string[] = [];
-  if (opts.bootstrapContent) {
+  if (effectiveBootstrap) {
     startContextParts.push(
       [
         "The following guidelines were loaded at session start by the superslow plugin",
         "(equivalent to the SessionStart hook firing in a real user's environment):",
         "",
-        opts.bootstrapContent.trim(),
+        effectiveBootstrap.trim(),
       ].join("\n"),
     );
   }
