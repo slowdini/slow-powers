@@ -129,6 +129,8 @@ For the **`without_skill` / baseline condition** in this realistic environment, 
 - **Antigravity.** Fully supported. Surfaces skills via `view_file` on absolute paths and emits a `<skills>` block listing all staged SKILL.md files sorted alphabetically. `--bootstrap` content is wrapped in a `<session-start-context>` block and prepended to the dispatch prompt.
 - **General fallback.** Harnesses without project-local discovery should keep using `--no-stage`; the inline `<skill>` block in the dispatch prompt is the only skill the subagent sees. Bootstrap is omitted in this mode because its references to other skills would mislead the agent.
 
+The committed per-skill baselines (`skills/<skill>/evals/baseline/`) plus the `transcript_check` assertions in the baseline eval suite give other harnesses a concrete target to reproduce: a harness whose adapter populates `tool_invocations` faithfully should be able to re-run a skill's eval and land close to the committed `benchmark.json` delta. See `harness-parity-check.md` — the transcript adapter is a parity target, and evals are not production functionality, so a harness can aim high here without risking user-facing behavior.
+
 **Operational notes.** Do not run two `run.ts` invocations concurrently against the same CWD — they race on `<stageRoot>/.claude/skills/` and the manifest.
 
 ## Why this lives in the skill
