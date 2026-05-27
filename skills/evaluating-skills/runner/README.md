@@ -62,6 +62,10 @@ bun run evals:grade -- --skill <name> --iteration 1 --finalize
 bun run evals:aggregate -- --skill <name> --iteration 1
 
 # 7. Read skills-workspace/<name>/iteration-1/benchmark.json.
+
+# 8. (Optional) Promote this run's benchmark + judge rationales into the
+#    skill's version-controlled evals/baseline/ directory:
+bun run evals:promote-baseline -- --skill <name> --iteration 1
 ```
 
 ### Mode B — Evaluate a language change to an existing skill
@@ -94,6 +98,7 @@ If you have the superslow plugin installed and a personal skill, you do **not** 
 - `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. On Claude Code (default), also stages each condition's snapshot at `<stageRoot>/.claude/skills/superslow-eval-<iteration>-<condition>__<skillName>/SKILL.md` so the subagent can discover and invoke it via the Skill tool, stages every *other* skill found in `--skill-dir` at its natural name so cross-references resolve, and builds the `<session-start-context>` block (see *Environment parity* below). Pass `--no-stage` to opt out and fall back to inlining the SKILL.md into the dispatch prompt. Also handles the `snapshot` subcommand.
 - `grade.ts` — evaluates `transcript_check` assertions directly (regex against `tool_invocations`), emits judge-task files for `llm_judge` assertions, then finalizes by merging judge responses into per-run `grading.json`. The `__skill_invoked` meta-check is code-based on Claude Code when the staged-skill slug is known and `tool_invocations` is populated (deterministic scan for a `Skill` tool call with matching slug); it falls back to an LLM judge looking for behavioral fingerprints when either signal is missing.
 - `aggregate.ts` — reads grading.json + timing.json from an iteration, writes `benchmark.json` with pass-rate / duration / token stats keyed by condition name.
+- `promote-baseline.ts` — copies the durable subset of an iteration (`benchmark.json` + each run's `grading.json` + a `BASELINE.md` provenance file) into the skill's version-controlled `evals/baseline/`. Flags: `--skill-dir`/`--skill` (as everywhere), `--iteration <N>` (required), `--label <tag>` (optional, recorded in provenance). Everything else in the workspace stays gitignored.
 - `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a subagent transcript by description, parses the transcript with the appropriate adapter, populates `tool_invocations` in `run.json`.
 - `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
 - `adapters/antigravity-transcript.ts` — reads an Antigravity subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
