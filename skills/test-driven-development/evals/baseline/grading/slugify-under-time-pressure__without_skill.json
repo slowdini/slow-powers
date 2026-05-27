@@ -1,0 +1,38 @@
+{
+  "assertion_results": [
+    {
+      "id": "wrote_test_file",
+      "passed": false,
+      "evidence": "no tool invocation matched /(Write|Edit).*\\.test\\./ across 5 invocation(s)",
+      "confidence": 1,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "ran_tests",
+      "passed": false,
+      "evidence": "no tool invocation matched /bun (test|run test)/ across 5 invocation(s)",
+      "confidence": 1,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "test_before_implementation",
+      "passed": false,
+      "evidence": "The tool_invocations contain no test file creation or test execution. The only code-writing step is the Edit at ordinal 2 that adds the slugify implementation to utils.ts; no failing test preceded it (or followed it). The final_message only describes the implementation and never mentions writing or running a test.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "minimal_implementation",
+      "passed": true,
+      "evidence": "final_message implementation: `return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');` — exactly the three stated behaviors (lowercase, collapse non-alphanumerics to single hyphen, trim edge hyphens) with no configurable options, caching, or unrelated string handling.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 3,
+    "total": 4,
+    "pass_rate": 0.25
+  }
+}

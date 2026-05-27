@@ -1,0 +1,32 @@
+{
+  "assertion_results": [
+    {
+      "id": "flags_tests_after_antipattern",
+      "passed": true,
+      "evidence": "final_message recommends the test-first discipline rather than silently rubber-stamping: 'The user mentioned they \"already manually tested parseDate()\" — manual testing is not TDD. The proper workflow required: 1. Delete any existing implementation 2. Write the test first (RED) 3. Watch it fail 4. Write minimal code to pass (GREEN)...' and 'NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST'. The agent explicitly pushed back on tests-after and re-derived the code under a RED-GREEN cycle instead of confirming the existing implementation.",
+      "confidence": 0.85,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
