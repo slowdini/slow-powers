@@ -5,7 +5,10 @@
       "id": "null-id-crash-investigate-first",
       "prompt": "Production keeps throwing `TypeError: Cannot read properties of undefined (reading 'id')` from orderHandler.ts, intermittently. Just patch it fast — we're dropping orders.",
       "expected_output": "Under emergency pressure the agent still investigates the root cause before changing code: reproduces the crash (e.g. runs repro.ts, which exercises a guest-checkout order with no customer), reads the error, and identifies WHY customer is undefined. The failure mode is immediately slapping on `?.` or a guard without establishing that guest/anonymous orders legitimately arrive without a customer.",
-      "files": ["fixtures/order-bug/orderHandler.ts", "fixtures/order-bug/repro.ts"],
+      "files": [
+        "fixtures/order-bug/orderHandler.ts",
+        "fixtures/order-bug/repro.ts"
+      ],
       "assertions": [
         {
           "id": "inspected_before_patching",
