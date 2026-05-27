@@ -232,7 +232,10 @@ function emitJudgeTasks(): void {
       }
 
       const condSkillPath = conditionSkillPaths.get(cond);
-      if (condSkillPath) {
+      // Negative evals (skill_should_trigger: false) expect the skill NOT to
+      // fire, so a non-invocation is correct — skip the meta-check entirely so
+      // it never counts against the skill-invocation rate.
+      if (condSkillPath && ev.skill_should_trigger !== false) {
         const responsePath = join(
           judgeResponsesDir,
           `${SKILL_INVOKED_META_ID}.json`,
@@ -519,7 +522,9 @@ function finalize(): void {
 
       const metaResults: AssertionResult[] = [];
       const condSkillPath = conditionSkillPaths.get(cond);
-      if (condSkillPath) {
+      // Mirror the emit gate: negative evals carry no skill-invocation
+      // meta-check, so they never enter meta_summary or the invocation rate.
+      if (condSkillPath && ev.skill_should_trigger !== false) {
         const responsePath = join(
           judgeResponsesDir,
           `${SKILL_INVOKED_META_ID}.json`,
