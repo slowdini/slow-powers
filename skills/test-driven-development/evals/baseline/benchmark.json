@@ -1,0 +1,51 @@
+{
+  "generated": "2026-05-27T08:03:14.838Z",
+  "mode": "new-skill",
+  "conditions_compared": ["with_skill", "without_skill"],
+  "missing_gradings": 0,
+  "validity_warnings": [],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.875,
+        "stddev": 0.125,
+        "n": 2
+      },
+      "duration_ms": {
+        "mean": 54902,
+        "stddev": 5297,
+        "n": 2
+      },
+      "total_tokens": {
+        "mean": 94168,
+        "stddev": 1106,
+        "n": 2
+      },
+      "skill_invocation_n": 2,
+      "skill_invocation_rate": 1
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.125,
+        "stddev": 0.125,
+        "n": 2
+      },
+      "duration_ms": {
+        "mean": 28472,
+        "stddev": 8340,
+        "n": 2
+      },
+      "total_tokens": {
+        "mean": 94108,
+        "stddev": 4854,
+        "n": 2
+      }
+    }
+  },
+  "delta": {
+    "direction": "with_skill - without_skill",
+    "pass_rate": 0.75,
+    "duration_ms": 26430,
+    "total_tokens": 60
+  }
+}
