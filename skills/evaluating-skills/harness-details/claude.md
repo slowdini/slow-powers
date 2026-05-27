@@ -85,7 +85,7 @@ Add `--bootstrap <path>` if the user has authored a framing file they want prepe
 
 Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task object:
 
-1. Dispatch a fresh subagent via the **Task tool**, passing `dispatch_prompt` verbatim as the prompt and `agent_description` (`<eval_id>:<condition>`) as the description. Passing the description correctly is what lets transcript correlation work in Step 9.
+1. Dispatch a fresh subagent via the **Task tool**, passing `dispatch_prompt` verbatim as the prompt and `agent_description` verbatim as the description. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 9 without cross-matching an agent from another iteration.
 2. When the subagent returns, write the portable run record to `run_record_path` (with `tool_invocations: []`) and the timing record (`{ "total_tokens": <n>, "duration_ms": <n>}`) to `timing_path`. Capture tokens/duration from the task completion event — they may not be persisted elsewhere.
 
 ## Step 9 — Fill transcripts, grade, aggregate

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { randomBytes } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -267,6 +268,14 @@ function commandRun(args: Args, ctx: RunContext): void {
   const iteration = nextIteration(workspaceSkillDir, args.iteration);
   const iterationDir = join(workspaceSkillDir, `iteration-${iteration}`);
 
+  // A per-run nonce makes each dispatch description globally unique. The
+  // subagents dir is shared across iterations of one parent session, so a bare
+  // `<eval>:<condition>` description repeats and fill-transcripts could fill an
+  // iteration's run from a colliding agent in another iteration. `i<N>-<nonce>`
+  // also disambiguates re-running the same iteration number.
+  const runNonce = `${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`;
+  const runTag = `i${iteration}-${runNonce}`;
+
   if (existsSync(iterationDir) && args.iteration === undefined)
     die(
       `iteration-${iteration} already exists; pass --iteration to overwrite explicitly`,
@@ -364,6 +373,7 @@ function commandRun(args: Args, ctx: RunContext): void {
     ],
     timestamp: new Date().toISOString(),
     harness: ctx.harness,
+    run_nonce: runNonce,
   };
   writeJson(join(iterationDir, "conditions.json"), conditions);
 
@@ -412,6 +422,7 @@ function commandRun(args: Args, ctx: RunContext): void {
           bootstrapContent,
           skillName: ctx.skillName,
           availableSkills: availableSkillsFor(condSkillPath),
+          runTag,
         }),
       );
     }
@@ -433,6 +444,7 @@ function commandRun(args: Args, ctx: RunContext): void {
   writeJson(dispatchJsonPath, {
     skill_name: ctx.skillName,
     iteration,
+    run_nonce: runNonce,
     iteration_dir: iterationDir,
     mode: args.mode,
     baseline: args.baseline ?? null,
@@ -552,6 +564,12 @@ export function buildDispatchTask(opts: {
   bootstrapContent: string | null;
   skillName: string;
   availableSkills: AvailableSkill[];
+  /**
+   * Per-run uniqueness suffix (`i<iteration>-<nonce>`). Appended to the
+   * dispatch description so transcripts can't collide across iterations or
+   * re-runs. Omitted in unit tests that exercise prompt assembly directly.
+   */
+  runTag?: string;
 }): DispatchTask {
   const stagedSkills = [...opts.availableSkills].sort((a, b) =>
     a.name.localeCompare(b.name),
@@ -688,7 +706,9 @@ export function buildDispatchTask(opts: {
     outputs_dir: opts.outputsDir,
     run_record_path: join(opts.condDir, "run.json"),
     timing_path: join(opts.condDir, "timing.json"),
-    agent_description: `${opts.evalId}:${opts.condition}`,
+    agent_description: opts.runTag
+      ? `${opts.evalId}:${opts.condition}:${opts.runTag}`
+      : `${opts.evalId}:${opts.condition}`,
     dispatch_prompt: sections.join(""),
   };
 }
@@ -711,7 +731,7 @@ function buildManifest(opts: {
     "",
     "In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
     "",
-    "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string as the dispatch `description`. The transcript adapter uses it to correlate each subagent's persisted transcript back to the right `(eval, condition)` slot.",
+    "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>:i<N>-<nonce>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string verbatim as the dispatch `description` — do not reconstruct it. The per-run nonce keeps descriptions unique across iterations sharing one session's subagents dir, so the transcript adapter correlates each subagent's persisted transcript back to the right `(eval, condition)` slot without collisions.",
     "",
     "After every dispatch:",
     "",

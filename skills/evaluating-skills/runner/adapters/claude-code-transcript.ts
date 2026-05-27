@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { ToolInvocation } from "../types";
 
@@ -131,5 +131,16 @@ export function findByDescription(
   const matches = entries.filter((e) => e.meta.description === description);
   if (matches.length === 0) return null;
   if (matches.length === 1) return matches[0];
-  return matches[matches.length - 1];
+
+  // Descriptions are namespaced per iteration+run (see run.ts), so duplicates
+  // here mean a retry within the same run. Prefer the most-recently-written
+  // transcript; readdir order is not chronological.
+  matches.sort((a, b) => {
+    try {
+      return statSync(b.jsonlPath).mtimeMs - statSync(a.jsonlPath).mtimeMs;
+    } catch {
+      return 0;
+    }
+  });
+  return matches[0];
 }
