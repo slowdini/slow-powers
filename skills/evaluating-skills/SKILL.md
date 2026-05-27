@@ -248,6 +248,25 @@ The delta tells you what the skill costs and what it buys. A skill that adds 13 
 
 For Mode B, the `run_summary` keys are `old_skill` and `new_skill`. The same logic applies — positive `delta.pass_rate` means the revision is an improvement.
 
+## Version-controlled baselines
+
+The full workspace tree is ephemeral and gitignored — it churns on every run. But two parts of a *canonical* run are worth keeping under version control: the `benchmark.json` delta (the headline "this skill earns its place" number) and the per-run `grading.json` rationales (why each assertion passed or failed, useful to reference when iterating later). Promote those into the skill's tracked `evals/baseline/` directory:
+
+```bash
+bun run evals:promote-baseline -- --skill <name> --iteration <N> [--label <tag>]
+```
+
+This copies `benchmark.json` and each `eval-<id>/<condition>/grading.json` (as `grading/<eval-id>__<condition>.json`) into `<skill>/evals/baseline/`, and writes a `BASELINE.md` recording the mode, iteration, harness, and run timestamp. Everything else in the workspace stays out of git.
+
+```
+skills/<skill>/evals/baseline/
+  BASELINE.md                          # provenance
+  benchmark.json                       # the committed delta
+  grading/<eval-id>__<condition>.json  # judge rationales per run
+```
+
+This works the same for a personal skill: point `--skill-dir` at your skill's parent, run a canonical eval, then promote — you get a committed reference of what "passing" looked like for your skill, equivalent to the baselines superslow ships for its own skills.
+
 ## Analyzing patterns
 
 After aggregating:

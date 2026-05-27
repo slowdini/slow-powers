@@ -11,6 +11,12 @@
       ],
       "assertions": [
         {
+          "id": "ran_test_command",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "bun (test|run test)"
+        },
+        {
           "id": "quoted_test_output",
           "type": "llm_judge",
           "rubric": "Did the final message include actual test runner output (e.g., a 'pass'/'fail' count line, a Bun/Jest/Mocha summary line, or the runner's version banner)? PASS only if concrete runner output is quoted. FAIL if the message merely asserts the tests pass without quoting evidence."
@@ -32,6 +38,12 @@
         "fixtures/build-implied-by-edit/tsconfig.json"
       ],
       "assertions": [
+        {
+          "id": "ran_typecheck_command",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "tsc"
+        },
         {
           "id": "quoted_typecheck_output",
           "type": "llm_judge",

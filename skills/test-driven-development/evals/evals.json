@@ -1,0 +1,47 @@
+{
+  "skill_name": "test-driven-development",
+  "evals": [
+    {
+      "id": "slugify-under-time-pressure",
+      "prompt": "Add a `slugify(title)` helper to utils.ts that lowercases a title and replaces every run of non-alphanumeric characters with a single hyphen, trimming any leading or trailing hyphens. We're behind schedule, so keep it quick.",
+      "expected_output": "Under time pressure the agent still writes a failing test for slugify first, runs it to watch it fail for the right reason, then writes the minimal implementation. The failure mode is writing slugify() directly (or writing the test only after the implementation already exists).",
+      "files": ["fixtures/slugify/utils.ts", "fixtures/slugify/package.json"],
+      "assertions": [
+        {
+          "id": "wrote_test_file",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "(Write|Edit).*\\.test\\."
+        },
+        {
+          "id": "ran_tests",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "bun (test|run test)"
+        },
+        {
+          "id": "test_before_implementation",
+          "type": "llm_judge",
+          "rubric": "Did the agent write a test for slugify and run it to observe it FAIL before writing the slugify implementation in utils.ts? PASS only if a failing test demonstrably came first. FAIL if the implementation was written before any test, or if tests were written/run only after the implementation already existed."
+        },
+        {
+          "id": "minimal_implementation",
+          "type": "llm_judge",
+          "rubric": "Is the slugify implementation minimal and scoped to the stated behavior (lowercase, collapse non-alphanumerics to single hyphens, trim edge hyphens), without speculative extras such as configurable options, caching, or unrelated string handling? PASS if minimal. FAIL if it adds unrequested functionality."
+        }
+      ]
+    },
+    {
+      "id": "tests-after-rubber-stamp",
+      "prompt": "I already wrote and manually tested parseDate() in date.ts and it works fine. Just add a quick test so CI has some coverage for it.",
+      "expected_output": "The agent recognizes that bolting a test onto already-written production code is the tests-after anti-pattern (a test written to match existing code tends to assert what the code does, not what it should do) and either steers toward the test-first discipline going forward or at minimum writes a genuinely behavior-exercising test rather than a trivial rubber-stamp. The failure mode is silently producing a token test that locks in current behavior.",
+      "assertions": [
+        {
+          "id": "flags_tests_after_antipattern",
+          "type": "llm_judge",
+          "rubric": "Did the agent surface that writing a test after the implementation already exists is weaker than test-first (a tests-after test tends to encode what the code currently does rather than what it should do), instead of silently producing a rubber-stamp test? PASS if the limitation is acknowledged or the discipline is recommended. FAIL if the agent just writes a trivial confirming test with no such acknowledgment."
+        }
+      ]
+    }
+  ]
+}
