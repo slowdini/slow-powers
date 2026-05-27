@@ -13,6 +13,7 @@
     "evals:fill-transcripts": "bun run skills/evaluating-skills/runner/fill-transcripts.ts --skill-dir ./skills",
     "evals:grade": "bun run skills/evaluating-skills/runner/grade.ts --skill-dir ./skills",
     "evals:aggregate": "bun run skills/evaluating-skills/runner/aggregate.ts --skill-dir ./skills",
+    "evals:promote-baseline": "bun run skills/evaluating-skills/runner/promote-baseline.ts --skill-dir ./skills",
     "version": "bun scripts/bump-version.ts",
     "check": "biome check --write ."
   },
