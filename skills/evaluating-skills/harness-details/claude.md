@@ -96,6 +96,9 @@ Claude Code persists subagent transcripts under `~/.claude/projects/<project-slu
 bun run "$SUPERSLOW_RUNNER_ROOT/fill-transcripts.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
 
+# Optional: flag any subagent writes/installs that escaped the outputs/ dir.
+bun run "$SUPERSLOW_RUNNER_ROOT/detect-stray-writes.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
+
 bun run "$SUPERSLOW_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 # Dispatch a fresh judge subagent for each emitted judge task, writing each response to the path the task specifies, then:
 bun run "$SUPERSLOW_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> --finalize
