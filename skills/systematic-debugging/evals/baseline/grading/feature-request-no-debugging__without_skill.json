@@ -1,0 +1,17 @@
+{
+  "assertion_results": [
+    {
+      "id": "did_not_overtrigger_debugging",
+      "passed": true,
+      "evidence": "final_message: 'I've added a `--verbose` flag (also available as `-v`) to the CLI.' — the agent explored the project, wrote cli.ts with the flag, and described feature changes (parseArgs/processFiles/main). No bug reproduction, stack traces, or failure hypotheses appear in the record.",
+      "confidence": 0.98,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  }
+}
