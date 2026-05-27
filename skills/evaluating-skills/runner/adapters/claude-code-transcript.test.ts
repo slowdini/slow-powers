@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -233,5 +233,31 @@ describe("listSubagents / findByDescription", () => {
     expect(
       findByDescription(join(FIXTURE_ROOT, "does-not-exist"), "x"),
     ).toBeNull();
+  });
+
+  test("on duplicate descriptions, returns the most-recently-written transcript", () => {
+    const dir = join(FIXTURE_ROOT, "dup-subagents");
+    mkdirSync(dir, { recursive: true });
+
+    // Older agent for this description.
+    writeFileSync(
+      join(dir, "agent-old.meta.json"),
+      JSON.stringify({ description: "dup:with_skill", toolUseId: "toolu_old" }),
+    );
+    writeFileSync(join(dir, "agent-old.jsonl"), "");
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(join(dir, "agent-old.jsonl"), old, old);
+
+    // Newer agent with the same description (e.g. a retry within the same run).
+    writeFileSync(
+      join(dir, "agent-new.meta.json"),
+      JSON.stringify({ description: "dup:with_skill", toolUseId: "toolu_new" }),
+    );
+    writeFileSync(join(dir, "agent-new.jsonl"), "");
+    const recent = new Date();
+    utimesSync(join(dir, "agent-new.jsonl"), recent, recent);
+
+    const match = findByDescription(dir, "dup:with_skill");
+    expect(match?.meta.toolUseId).toBe("toolu_new");
   });
 });

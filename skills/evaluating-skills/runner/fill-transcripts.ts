@@ -11,6 +11,44 @@ function die(msg: string): never {
   process.exit(1);
 }
 
+type DispatchTaskRef = {
+  eval_id: string;
+  condition: string;
+  agent_description?: string;
+};
+
+/**
+ * The canonical dispatch description for an (eval, condition) run.
+ *
+ * The runner writes a unique `agent_description` per task into `dispatch.json`
+ * (namespaced with the iteration + run nonce). Reading it back — rather than
+ * reconstructing `<eval_id>:<condition>` — is what binds each run to the exact
+ * agent that produced it, even when one parent session's shared subagents dir
+ * holds colliding descriptions from other iterations. Falls back to the legacy
+ * reconstruction when dispatch.json is absent (hand-authored/operator runs).
+ */
+export function resolveAgentDescription(
+  iterationDir: string,
+  evalId: string,
+  condition: string,
+): string {
+  const dispatchPath = join(iterationDir, "dispatch.json");
+  if (existsSync(dispatchPath)) {
+    try {
+      const dispatch = JSON.parse(readFileSync(dispatchPath, "utf8")) as {
+        tasks?: DispatchTaskRef[];
+      };
+      const task = dispatch.tasks?.find(
+        (t) => t.eval_id === evalId && t.condition === condition,
+      );
+      if (task?.agent_description) return task.agent_description;
+    } catch {
+      // fall through to legacy reconstruction
+    }
+  }
+  return `${evalId}:${condition}`;
+}
+
 function parseArgs(argv: string[]) {
   const flag = (name: string): string | undefined => {
     const i = argv.indexOf(`--${name}`);
@@ -30,102 +68,107 @@ function parseArgs(argv: string[]) {
   return { iteration, subagentsDir, harness, overwrite };
 }
 
-const fillArgv = Bun.argv.slice(2);
-const { iteration, subagentsDir, harness, overwrite } = parseArgs(fillArgv);
-const fillCtx = detectRunContext(fillArgv);
-const skill = fillCtx.skillName;
+if (import.meta.main) {
+  const fillArgv = Bun.argv.slice(2);
+  const { iteration, subagentsDir, harness, overwrite } = parseArgs(fillArgv);
+  const fillCtx = detectRunContext(fillArgv);
+  const skill = fillCtx.skillName;
 
-if (!existsSync(subagentsDir)) die(`subagents-dir not found: ${subagentsDir}`);
+  if (!existsSync(subagentsDir))
+    die(`subagents-dir not found: ${subagentsDir}`);
 
-let adapter: typeof claudeAdapter | typeof antigravityAdapter = claudeAdapter;
-let selectedHarness = "claude-code";
+  let adapter: typeof claudeAdapter | typeof antigravityAdapter = claudeAdapter;
+  let selectedHarness = "claude-code";
 
-if (harness === "antigravity") {
-  adapter = antigravityAdapter;
-  selectedHarness = "antigravity";
-} else if (harness === "claude-code") {
-  adapter = claudeAdapter;
-  selectedHarness = "claude-code";
-} else {
-  // Auto-detect
-  if (
-    subagentsDir.includes("antigravity-cli") ||
-    subagentsDir.includes("brain") ||
-    existsSync(join(subagentsDir, "..", "conversations"))
-  ) {
+  if (harness === "antigravity") {
     adapter = antigravityAdapter;
-    selectedHarness = "antigravity (auto-detected)";
-  } else {
+    selectedHarness = "antigravity";
+  } else if (harness === "claude-code") {
     adapter = claudeAdapter;
-    selectedHarness = "claude-code (auto-detected)";
-  }
-}
-
-console.log(`Using harness transcript adapter: ${selectedHarness}`);
-
-const iterationDir = join(
-  fillCtx.workspaceRoot,
-  skill,
-  `iteration-${iteration}`,
-);
-if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
-
-const conditionsPath = join(iterationDir, "conditions.json");
-if (!existsSync(conditionsPath)) die(`missing: ${conditionsPath}`);
-const conditions: ConditionsRecord = JSON.parse(
-  readFileSync(conditionsPath, "utf8"),
-);
-const conditionNames = conditions.conditions.map((c) => c.name);
-
-const evalDirs = readdirSync(iterationDir).filter((d) => d.startsWith("eval-"));
-
-let filled = 0;
-let skipped = 0;
-let missing = 0;
-
-for (const evalDir of evalDirs) {
-  const evalId = evalDir.replace(/^eval-/, "");
-  for (const cond of conditionNames) {
-    const condDir = join(iterationDir, evalDir, cond);
-    const runPath = join(condDir, "run.json");
-    if (!existsSync(runPath)) continue;
-
-    const run: RunRecord = JSON.parse(readFileSync(runPath, "utf8"));
-    const existing = Array.isArray(run.tool_invocations)
-      ? run.tool_invocations
-      : [];
-    if (existing.length > 0 && !overwrite) {
-      console.log(
-        `skip ${evalId}/${cond}: already has ${existing.length} tool_invocations (use --overwrite to replace)`,
-      );
-      skipped++;
-      continue;
+    selectedHarness = "claude-code";
+  } else {
+    // Auto-detect
+    if (
+      subagentsDir.includes("antigravity-cli") ||
+      subagentsDir.includes("brain") ||
+      existsSync(join(subagentsDir, "..", "conversations"))
+    ) {
+      adapter = antigravityAdapter;
+      selectedHarness = "antigravity (auto-detected)";
+    } else {
+      adapter = claudeAdapter;
+      selectedHarness = "claude-code (auto-detected)";
     }
-
-    const description = `${evalId}:${cond}`;
-    const subagent = adapter.findByDescription(subagentsDir, description);
-    if (!subagent) {
-      console.warn(
-        `miss ${evalId}/${cond}: no subagent transcript with description='${description}'`,
-      );
-      missing++;
-      continue;
-    }
-
-    const invocations = adapter.parseTranscript(subagent.jsonlPath);
-    run.tool_invocations = invocations;
-    writeFileSync(runPath, `${JSON.stringify(run, null, 2)}\n`);
-    console.log(
-      `fill ${evalId}/${cond}: wrote ${invocations.length} tool_invocations from ${subagent.jsonlPath}`,
-    );
-    filled++;
   }
-}
 
-console.log(
-  `\nFilled: ${filled}, skipped (already populated): ${skipped}, missing transcript: ${missing}`,
-);
-if (missing > 0)
-  console.warn(
-    "Missing transcripts mean the dispatching agent did not use the expected `description` format (eval-id:condition). transcript_check assertions for those runs will be graded unverifiable.",
+  console.log(`Using harness transcript adapter: ${selectedHarness}`);
+
+  const iterationDir = join(
+    fillCtx.workspaceRoot,
+    skill,
+    `iteration-${iteration}`,
   );
+  if (!existsSync(iterationDir)) die(`not found: ${iterationDir}`);
+
+  const conditionsPath = join(iterationDir, "conditions.json");
+  if (!existsSync(conditionsPath)) die(`missing: ${conditionsPath}`);
+  const conditions: ConditionsRecord = JSON.parse(
+    readFileSync(conditionsPath, "utf8"),
+  );
+  const conditionNames = conditions.conditions.map((c) => c.name);
+
+  const evalDirs = readdirSync(iterationDir).filter((d) =>
+    d.startsWith("eval-"),
+  );
+
+  let filled = 0;
+  let skipped = 0;
+  let missing = 0;
+
+  for (const evalDir of evalDirs) {
+    const evalId = evalDir.replace(/^eval-/, "");
+    for (const cond of conditionNames) {
+      const condDir = join(iterationDir, evalDir, cond);
+      const runPath = join(condDir, "run.json");
+      if (!existsSync(runPath)) continue;
+
+      const run: RunRecord = JSON.parse(readFileSync(runPath, "utf8"));
+      const existing = Array.isArray(run.tool_invocations)
+        ? run.tool_invocations
+        : [];
+      if (existing.length > 0 && !overwrite) {
+        console.log(
+          `skip ${evalId}/${cond}: already has ${existing.length} tool_invocations (use --overwrite to replace)`,
+        );
+        skipped++;
+        continue;
+      }
+
+      const description = resolveAgentDescription(iterationDir, evalId, cond);
+      const subagent = adapter.findByDescription(subagentsDir, description);
+      if (!subagent) {
+        console.warn(
+          `miss ${evalId}/${cond}: no subagent transcript with description='${description}'`,
+        );
+        missing++;
+        continue;
+      }
+
+      const invocations = adapter.parseTranscript(subagent.jsonlPath);
+      run.tool_invocations = invocations;
+      writeFileSync(runPath, `${JSON.stringify(run, null, 2)}\n`);
+      console.log(
+        `fill ${evalId}/${cond}: wrote ${invocations.length} tool_invocations from ${subagent.jsonlPath}`,
+      );
+      filled++;
+    }
+  }
+
+  console.log(
+    `\nFilled: ${filled}, skipped (already populated): ${skipped}, missing transcript: ${missing}`,
+  );
+  if (missing > 0)
+    console.warn(
+      "Missing transcripts mean the dispatching agent's dispatch `description` did not match the task's `agent_description` in dispatch.json (or dispatch.json is absent and the legacy `eval-id:condition` reconstruction found no match). transcript_check assertions for those runs will be graded unverifiable.",
+    );
+}

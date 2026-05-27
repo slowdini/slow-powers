@@ -173,6 +173,31 @@ for (const cond of conditionNames) {
   }
 }
 
+// Stray-write findings (from `evals:detect-stray-writes`, if it ran) taint a
+// run the same way a missed skill invocation does: a subagent that edited the
+// real repo or installed packages is no longer a clean data point.
+const strayPath = join(iterationDir, "stray-writes.json");
+if (existsSync(strayPath)) {
+  try {
+    const stray = JSON.parse(readFileSync(strayPath, "utf8")) as {
+      runs?: Array<{
+        eval_id: string;
+        condition: string;
+        violations?: unknown[];
+      }>;
+    };
+    for (const r of stray.runs ?? []) {
+      const n = r.violations?.length ?? 0;
+      if (n > 0)
+        validityWarnings.push(
+          `${r.eval_id}/${r.condition} wrote ${n} file(s) outside its outputs dir — data point may be tainted (see stray-writes.json).`,
+        );
+    }
+  } catch {
+    // ignore a malformed report rather than failing aggregation
+  }
+}
+
 const benchmark = {
   generated: new Date().toISOString(),
   mode: conditions.mode,

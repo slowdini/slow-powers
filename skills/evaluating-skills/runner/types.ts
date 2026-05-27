@@ -47,6 +47,9 @@ export type ConditionsRecord = {
   conditions: ConditionEntry[];
   timestamp: string;
   harness?: string;
+  /** Per-run nonce; namespaces dispatch descriptions so transcripts can't
+   * collide across iterations sharing one parent session's subagents dir. */
+  run_nonce?: string;
 };
 
 export type ToolInvocation = {
