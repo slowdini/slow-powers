@@ -27,6 +27,20 @@ jobs:
       - name: Run lint and format checks
         run: bun run check
 
+      - name: Validate every skills/*/evals/evals.json
+        run: bun run evals:validate
+
+      - name: Dry-run runner for each skill with evals.json
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for path in skills/*/evals/evals.json; do
+            skill=$(basename "$(dirname "$(dirname "$path")")")
+            echo "::group::Dry-run $skill"
+            bun run evals -- --skill "$skill" --mode new-skill --dry-run
+            echo "::endgroup::"
+          done
+
   full:
     if: github.base_ref == 'main'
     name: Full matrix (PR to main)
@@ -50,3 +64,17 @@ jobs:
 
       - name: Run opencode harness tests
         run: bun run test:opencode
+
+      - name: Validate every skills/*/evals/evals.json
+        run: bun run evals:validate
+
+      - name: Dry-run runner for each skill with evals.json
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for path in skills/*/evals/evals.json; do
+            skill=$(basename "$(dirname "$(dirname "$path")")")
+            echo "::group::Dry-run $skill"
+            bun run evals -- --skill "$skill" --mode new-skill --dry-run
+            echo "::endgroup::"
+          done

@@ -25,14 +25,9 @@ Other flags:
 
 Staging is written under the current working directory: `<CWD>/.claude/skills/`. A subagent dispatched from that CWD discovers the staged skills there. Run the commands from the directory you want to be the eval root (the repo root for internal use; your skill folder or its parent for personal use).
 
-## Two modes
+## Driving the loop
 
-Every run produces both a `dispatch-manifest.md` (human-readable) and a `dispatch.json` (machine-readable). Pick:
-
-- **CLI / manual mode** — operator reads the manifest, manually feeds each dispatch into their subagent primitive, writes `run.json` + `timing.json` by hand.
-- **Agent-driven mode** — an agent in a session reads `dispatch.json`, dispatches each task itself, writes the run/timing records to the paths in each task. The common case.
-
-The runner script is identical for both. Only the consumer differs.
+Every run produces both a `dispatch-manifest.md` (human-readable) and a `dispatch.json` (machine-readable). An agent in a session reads `dispatch.json`, dispatches each task itself, and writes the run/timing records to the paths in each task.
 
 ## Quickstart (internal / repo use)
 
@@ -46,29 +41,27 @@ Maintainers run from the repo root; the npm scripts supply `--skill-dir ./skills
 # 2. Build the iteration-1 workspace.
 bun run evals -- --skill <name> --mode new-skill
 
-# 3. Open skills-workspace/<name>/iteration-1/dispatch-manifest.md and
-#    dispatch each entry as a fresh general-purpose subagent.
+# 3. Read skills-workspace/<name>/iteration-1/dispatch.json and dispatch each
+#    task as a fresh general-purpose subagent, writing run.json + timing.json
+#    to the paths in each task.
 
-# 4. For each completed run, write `run.json` (matching ../schema/run-record.schema.json,
-#    with `tool_invocations: []` for now) and `timing.json` into the condition directory.
-
-# 5. Fill tool_invocations from subagent transcripts:
+# 4. Fill tool_invocations from subagent transcripts:
 #    On Claude Code:
 bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
-#    On Antigravity CLI (auto-detected, or pass --harness antigravity):
+#    On Antigravity (auto-detected, or pass --harness antigravity):
 bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
   --subagents-dir ~/.gemini/antigravity-cli/brain/
 
-# 6. Grade:
+# 5. Grade:
 bun run evals:grade -- --skill <name> --iteration 1
 # (After judge subagents complete and their responses are written, finalize:)
 bun run evals:grade -- --skill <name> --iteration 1 --finalize
 
-# 7. Aggregate:
+# 6. Aggregate:
 bun run evals:aggregate -- --skill <name> --iteration 1
 
-# 8. Read skills-workspace/<name>/iteration-1/benchmark.json.
+# 7. Read skills-workspace/<name>/iteration-1/benchmark.json.
 ```
 
 ### Mode B — Evaluate a language change to an existing skill

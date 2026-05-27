@@ -11,7 +11,7 @@
     "bootstrap.md"
   ],
   "scripts": {
-    "test": "bun test --pass-with-no-tests",
+    "test": "bun test",
     "test:codex": "cd tests/codex && bash test-sync-to-codex-plugin.sh",
     "test:opencode": "cd tests/opencode && bash run-tests.sh",
     "evals": "bun run skills/evaluating-skills/runner/run.ts --skill-dir ./skills --bootstrap ./bootstrap.md",

@@ -453,8 +453,7 @@ function commandRun(args: Args, ctx: RunContext): void {
 	if (args.dryRun) console.log("\n--dry-run: stopping after workspace prep.");
 	else
 		console.log(
-			"\nNext (CLI mode): dispatch subagents per the manifest, then run `bun run evals:grade`.",
-			"\nNext (agent-driven mode): read dispatch.json, dispatch each task as a subagent, write run.json + timing.json to the paths in each task.",
+			"\nNext: read dispatch.json, dispatch each task as a subagent, write run.json + timing.json to the paths in each task.",
 		);
 }
 
@@ -676,12 +675,9 @@ function buildManifest(opts: {
 		"",
 		"## How to use this manifest",
 		"",
-		"**Two ways to drive this:**",
+		"In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
 		"",
-		"1. **CLI / manual mode** — Read each dispatch below. Hand each one to a fresh general-purpose subagent. When the subagent finishes, write `run.json` and `timing.json` to the paths shown.",
-		"2. **Agent-driven mode** — In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
-		"",
-		"**Transcript correlation (agent-driven mode):** Each task has an `agent_description` field of the form `<eval_id>:<condition>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string as the dispatch `description`. The transcript adapter uses it to correlate each subagent's persisted transcript back to the right `(eval, condition)` slot.",
+		"**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string as the dispatch `description`. The transcript adapter uses it to correlate each subagent's persisted transcript back to the right `(eval, condition)` slot.",
 		"",
 		"After every dispatch:",
 		"",
