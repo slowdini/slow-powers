@@ -1,4 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { checkSkillInvokedFromTranscript } from "./grade";
 import type { ToolInvocation } from "./types";
 
@@ -129,5 +132,116 @@ describe("checkSkillInvokedFromTranscript", () => {
     expect(checkSkillInvokedFromTranscript(invocations, null, skillPath)).toBe(
       false,
     );
+  });
+});
+
+const GRADE_FIXTURE_ROOT = join(
+  tmpdir(),
+  `superslow-grade-test-${process.pid}`,
+);
+const GRADE_TS = join(import.meta.dir, "grade.ts");
+
+beforeAll(() => {
+  mkdirSync(GRADE_FIXTURE_ROOT, { recursive: true });
+});
+
+afterAll(() => {
+  rmSync(GRADE_FIXTURE_ROOT, { recursive: true, force: true });
+});
+
+function writeJsonFile(path: string, value: unknown) {
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+describe("emitJudgeTasks skill-invocation meta-check gating", () => {
+  test("omits the skill-invocation meta-check for evals marked skill_should_trigger: false", () => {
+    const root = join(GRADE_FIXTURE_ROOT, "negative-eval");
+    const skill = "mr-review";
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, skill);
+    mkdirSync(join(skillSub, "evals"), { recursive: true });
+    writeFileSync(
+      join(skillSub, "SKILL.md"),
+      "---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+    );
+    // Two evals: a positive one (skill should fire) and a negative one
+    // (skill should NOT fire — non-invocation is the desired behavior).
+    writeJsonFile(join(skillSub, "evals", "evals.json"), {
+      skill_name: skill,
+      evals: [
+        {
+          id: "pos-eval",
+          prompt: "Fix the failing build.",
+          expected_output: "Agent debugs systematically.",
+          assertions: [
+            { id: "a1", type: "llm_judge", rubric: "Did it debug?" },
+          ],
+        },
+        {
+          id: "neg-eval",
+          prompt: "Add a --verbose flag.",
+          expected_output: "Agent treats it as a feature, no debugging.",
+          skill_should_trigger: false,
+          assertions: [
+            { id: "a2", type: "llm_judge", rubric: "Did it avoid debugging?" },
+          ],
+        },
+      ],
+    });
+
+    const cwd = join(root, "work");
+    const iterationDir = join(cwd, "skills-workspace", skill, "iteration-1");
+    mkdirSync(iterationDir, { recursive: true });
+    writeJsonFile(join(iterationDir, "conditions.json"), {
+      mode: "new-skill",
+      conditions: [
+        { name: "with_skill", skill_path: join(skillSub, "SKILL.md") },
+        { name: "without_skill", skill_path: null },
+      ],
+      timestamp: new Date().toISOString(),
+      harness: "claude-code",
+    });
+
+    for (const evalId of ["pos-eval", "neg-eval"]) {
+      for (const cond of ["with_skill", "without_skill"]) {
+        const condDir = join(iterationDir, `eval-${evalId}`, cond);
+        mkdirSync(condDir, { recursive: true });
+        // Empty tool_invocations => meta routed to a judge task (not code-checked).
+        writeJsonFile(join(condDir, "run.json"), {
+          eval_id: evalId,
+          condition: cond,
+          skill_path: cond === "with_skill" ? join(skillSub, "SKILL.md") : null,
+          prompt: "p",
+          files: [],
+          final_message: "done",
+          tool_invocations: [],
+          total_tokens: 100,
+          duration_ms: 1000,
+        });
+      }
+    }
+
+    const res = Bun.spawnSync(
+      [
+        "bun",
+        "run",
+        GRADE_TS,
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        skill,
+        "--iteration",
+        "1",
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(res.exitCode).toBe(0);
+
+    const tasks = JSON.parse(
+      readFileSync(join(iterationDir, "judge-tasks.json"), "utf8"),
+    ) as { tasks: Array<{ eval_id: string; is_meta: boolean }> };
+    const metaTasks = tasks.tasks.filter((t) => t.is_meta);
+    // Exactly one meta-check, and only for the positive eval.
+    expect(metaTasks.map((t) => t.eval_id)).toEqual(["pos-eval"]);
   });
 });

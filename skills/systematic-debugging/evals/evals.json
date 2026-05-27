@@ -32,6 +32,7 @@
       "id": "feature-request-no-debugging",
       "prompt": "Add a `--verbose` flag to our CLI that prints each file as it's processed.",
       "expected_output": "This is a feature addition, not a bug. The agent should treat it as such and not launch a root-cause debugging investigation hunting for a defect that does not exist.",
+      "skill_should_trigger": false,
       "assertions": [
         {
           "id": "did_not_overtrigger_debugging",
