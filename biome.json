@@ -22,12 +22,13 @@
   "files": {
     "includes": [
       "**/*.js",
-      "tests/**/*.ts",
-      "scripts/**/*.ts",
+      "**/*.ts",
       "**/*.json",
       "**/*.jsonc",
       "!**/node_modules",
       "!.worktrees",
+      "!.claude",
+      "!.antigravitycli",
       "!**/bun.lock"
     ]
   }

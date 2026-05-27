@@ -1,18 +1,18 @@
 #!/usr/bin/env bun
 import {
-	cpSync,
-	existsSync,
-	mkdirSync,
-	mkdtempSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-	statSync,
-	writeFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { type RunContext, detectRunContext } from "./context";
+import { detectRunContext, type RunContext } from "./context";
 import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
 import { validateEvalsConfig } from "./validate";
 
@@ -20,707 +20,701 @@ export const STAGED_SKILL_PREFIX = "superslow-eval-";
 export const STAGED_SIBLING_MANIFEST = ".superslow-eval-manifest.json";
 
 export function stageSkillForCC(opts: {
-	content: string;
-	iteration: number;
-	condition: string;
-	skillName: string;
-	repoRoot: string;
+  content: string;
+  iteration: number;
+  condition: string;
+  skillName: string;
+  repoRoot: string;
 }): string {
-	const slug = `${STAGED_SKILL_PREFIX}${opts.iteration}-${opts.condition}__${opts.skillName}`;
-	const skillDir = join(opts.repoRoot, ".claude", "skills", slug);
-	mkdirSync(skillDir, { recursive: true });
-	writeFileSync(join(skillDir, "SKILL.md"), opts.content);
-	return slug;
+  const slug = `${STAGED_SKILL_PREFIX}${opts.iteration}-${opts.condition}__${opts.skillName}`;
+  const skillDir = join(opts.repoRoot, ".claude", "skills", slug);
+  mkdirSync(skillDir, { recursive: true });
+  writeFileSync(join(skillDir, "SKILL.md"), opts.content);
+  return slug;
 }
 
 type SiblingManifest = {
-	created_at: string;
-	staged_under_test: string;
-	created_entries: Array<{
-		name: string;
-		preexisting: boolean;
-		backup_path?: string;
-	}>;
+  created_at: string;
+  staged_under_test: string;
+  created_entries: Array<{
+    name: string;
+    preexisting: boolean;
+    backup_path?: string;
+  }>;
 };
 
 export function stageSiblingSkills(opts: {
-	skillUnderTest: string;
-	skillsSourceDir: string;
-	repoRoot: string;
+  skillUnderTest: string;
+  skillsSourceDir: string;
+  repoRoot: string;
 }): SiblingManifest {
-	const skillsDir = join(opts.repoRoot, ".claude", "skills");
-	mkdirSync(skillsDir, { recursive: true });
+  const skillsDir = join(opts.repoRoot, ".claude", "skills");
+  mkdirSync(skillsDir, { recursive: true });
 
-	const siblings = readdirSync(opts.skillsSourceDir).filter((name) => {
-		if (name === opts.skillUnderTest) return false;
-		const srcDir = join(opts.skillsSourceDir, name);
-		if (!statSync(srcDir).isDirectory()) return false;
-		return existsSync(join(srcDir, "SKILL.md"));
-	});
+  const siblings = readdirSync(opts.skillsSourceDir).filter((name) => {
+    if (name === opts.skillUnderTest) return false;
+    const srcDir = join(opts.skillsSourceDir, name);
+    if (!statSync(srcDir).isDirectory()) return false;
+    return existsSync(join(srcDir, "SKILL.md"));
+  });
 
-	const manifest: SiblingManifest = {
-		created_at: new Date().toISOString(),
-		staged_under_test: opts.skillUnderTest,
-		created_entries: [],
-	};
+  const manifest: SiblingManifest = {
+    created_at: new Date().toISOString(),
+    staged_under_test: opts.skillUnderTest,
+    created_entries: [],
+  };
 
-	for (const name of siblings) {
-		const srcDir = join(opts.skillsSourceDir, name);
-		const dstDir = join(skillsDir, name);
-		const evalsSubdir = join(srcDir, "evals");
+  for (const name of siblings) {
+    const srcDir = join(opts.skillsSourceDir, name);
+    const dstDir = join(skillsDir, name);
+    const evalsSubdir = join(srcDir, "evals");
 
-		const entry: SiblingManifest["created_entries"][number] = {
-			name,
-			preexisting: false,
-		};
+    const entry: SiblingManifest["created_entries"][number] = {
+      name,
+      preexisting: false,
+    };
 
-		if (existsSync(dstDir)) {
-			entry.preexisting = true;
-			const backupRoot = mkdtempSync(
-				join(tmpdir(), "superslow-eval-backup-"),
-			);
-			entry.backup_path = join(backupRoot, name);
-			cpSync(dstDir, entry.backup_path, { recursive: true });
-			rmSync(dstDir, { recursive: true, force: true });
-		}
+    if (existsSync(dstDir)) {
+      entry.preexisting = true;
+      const backupRoot = mkdtempSync(join(tmpdir(), "superslow-eval-backup-"));
+      entry.backup_path = join(backupRoot, name);
+      cpSync(dstDir, entry.backup_path, { recursive: true });
+      rmSync(dstDir, { recursive: true, force: true });
+    }
 
-		cpSync(srcDir, dstDir, {
-			recursive: true,
-			filter: (src) => src !== evalsSubdir && !src.startsWith(`${evalsSubdir}/`),
-		});
+    cpSync(srcDir, dstDir, {
+      recursive: true,
+      filter: (src) =>
+        src !== evalsSubdir && !src.startsWith(`${evalsSubdir}/`),
+    });
 
-		manifest.created_entries.push(entry);
-	}
+    manifest.created_entries.push(entry);
+  }
 
-	writeFileSync(
-		join(skillsDir, STAGED_SIBLING_MANIFEST),
-		`${JSON.stringify(manifest, null, 2)}\n`,
-	);
-	return manifest;
+  writeFileSync(
+    join(skillsDir, STAGED_SIBLING_MANIFEST),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+  return manifest;
 }
 
 export function cleanupStagedSkills(repoRoot: string): void {
-	const skillsDir = join(repoRoot, ".claude", "skills");
-	if (!existsSync(skillsDir)) return;
+  const skillsDir = join(repoRoot, ".claude", "skills");
+  if (!existsSync(skillsDir)) return;
 
-	for (const entry of readdirSync(skillsDir)) {
-		if (!entry.startsWith(STAGED_SKILL_PREFIX)) continue;
-		rmSync(join(skillsDir, entry), { recursive: true, force: true });
-	}
+  for (const entry of readdirSync(skillsDir)) {
+    if (!entry.startsWith(STAGED_SKILL_PREFIX)) continue;
+    rmSync(join(skillsDir, entry), { recursive: true, force: true });
+  }
 
-	const manifestPath = join(skillsDir, STAGED_SIBLING_MANIFEST);
-	if (!existsSync(manifestPath)) return;
-	let manifest: SiblingManifest;
-	try {
-		manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-	} catch {
-		rmSync(manifestPath, { force: true });
-		return;
-	}
-	for (const e of manifest.created_entries) {
-		const target = join(skillsDir, e.name);
-		rmSync(target, { recursive: true, force: true });
-		if (e.preexisting && e.backup_path && existsSync(e.backup_path)) {
-			cpSync(e.backup_path, target, { recursive: true });
-			rmSync(dirname(e.backup_path), { recursive: true, force: true });
-		}
-	}
-	rmSync(manifestPath, { force: true });
+  const manifestPath = join(skillsDir, STAGED_SIBLING_MANIFEST);
+  if (!existsSync(manifestPath)) return;
+  let manifest: SiblingManifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch {
+    rmSync(manifestPath, { force: true });
+    return;
+  }
+  for (const e of manifest.created_entries) {
+    const target = join(skillsDir, e.name);
+    rmSync(target, { recursive: true, force: true });
+    if (e.preexisting && e.backup_path && existsSync(e.backup_path)) {
+      cpSync(e.backup_path, target, { recursive: true });
+      rmSync(dirname(e.backup_path), { recursive: true, force: true });
+    }
+  }
+  rmSync(manifestPath, { force: true });
 }
 
 type Mode = "new-skill" | "revision";
 
 type Args = {
-	command: "run" | "snapshot";
-	mode?: Mode;
-	baseline?: string;
-	label?: string;
-	iteration?: number;
-	dryRun: boolean;
-	noStage: boolean;
+  command: "run" | "snapshot";
+  mode?: Mode;
+  baseline?: string;
+  label?: string;
+  iteration?: number;
+  dryRun: boolean;
+  noStage: boolean;
 };
 
 function die(msg: string): never {
-	console.error(`error: ${msg}`);
-	process.exit(1);
+  console.error(`error: ${msg}`);
+  process.exit(1);
 }
 
 function parseArgs(argv: string[]): Args {
-	const positionals = argv.filter((a) => !a.startsWith("--"));
-	const command: "run" | "snapshot" =
-		positionals[0] === "snapshot" ? "snapshot" : "run";
+  const positionals = argv.filter((a) => !a.startsWith("--"));
+  const command: "run" | "snapshot" =
+    positionals[0] === "snapshot" ? "snapshot" : "run";
 
-	const flag = (name: string): string | undefined => {
-		const i = argv.indexOf(`--${name}`);
-		if (i === -1) return undefined;
-		const v = argv[i + 1];
-		if (v === undefined || v.startsWith("--")) {
-			die(`flag --${name} requires a value`);
-		}
-		return v;
-	};
+  const flag = (name: string): string | undefined => {
+    const i = argv.indexOf(`--${name}`);
+    if (i === -1) return undefined;
+    const v = argv[i + 1];
+    if (v === undefined || v.startsWith("--")) {
+      die(`flag --${name} requires a value`);
+    }
+    return v;
+  };
 
-	const has = (name: string) => argv.includes(`--${name}`);
+  const has = (name: string) => argv.includes(`--${name}`);
 
-	const iterationFlag = flag("iteration");
-	const iteration =
-		iterationFlag !== undefined ? Number(iterationFlag) : undefined;
-	if (iteration !== undefined && !Number.isInteger(iteration))
-		die(`--iteration must be an integer, got ${iterationFlag}`);
+  const iterationFlag = flag("iteration");
+  const iteration =
+    iterationFlag !== undefined ? Number(iterationFlag) : undefined;
+  if (iteration !== undefined && !Number.isInteger(iteration))
+    die(`--iteration must be an integer, got ${iterationFlag}`);
 
-	return {
-		command,
-		mode: flag("mode") as Mode | undefined,
-		baseline: flag("baseline"),
-		label: flag("label"),
-		iteration,
-		dryRun: has("dry-run"),
-		noStage: has("no-stage"),
-	};
+  return {
+    command,
+    mode: flag("mode") as Mode | undefined,
+    baseline: flag("baseline"),
+    label: flag("label"),
+    iteration,
+    dryRun: has("dry-run"),
+    noStage: has("no-stage"),
+  };
 }
 
 function ensureDir(path: string): void {
-	if (!existsSync(path)) mkdirSync(path, { recursive: true });
+  if (!existsSync(path)) mkdirSync(path, { recursive: true });
 }
 
 function writeJson(path: string, value: unknown): void {
-	writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function readJson<T>(path: string): T {
-	return JSON.parse(readFileSync(path, "utf8"));
+  return JSON.parse(readFileSync(path, "utf8"));
 }
 
-function nextIteration(
-	workspaceSkillDir: string,
-	override?: number,
-): number {
-	if (override !== undefined) return override;
-	if (!existsSync(workspaceSkillDir)) return 1;
-	const entries = readdirSync(workspaceSkillDir).filter((e) =>
-		e.startsWith("iteration-"),
-	);
-	if (entries.length === 0) return 1;
-	const nums = entries
-		.map((e) => Number(e.slice("iteration-".length)))
-		.filter((n) => Number.isFinite(n));
-	return Math.max(...nums, 0) + 1;
+function nextIteration(workspaceSkillDir: string, override?: number): number {
+  if (override !== undefined) return override;
+  if (!existsSync(workspaceSkillDir)) return 1;
+  const entries = readdirSync(workspaceSkillDir).filter((e) =>
+    e.startsWith("iteration-"),
+  );
+  if (entries.length === 0) return 1;
+  const nums = entries
+    .map((e) => Number(e.slice("iteration-".length)))
+    .filter((n) => Number.isFinite(n));
+  return Math.max(...nums, 0) + 1;
 }
 
 function conditionNamesFor(mode: Mode): [string, string] {
-	return mode === "new-skill"
-		? ["with_skill", "without_skill"]
-		: ["old_skill", "new_skill"];
+  return mode === "new-skill"
+    ? ["with_skill", "without_skill"]
+    : ["old_skill", "new_skill"];
 }
 
 function commandSnapshot(args: Args, ctx: RunContext): void {
-	if (!args.label) die("snapshot requires --label <name>");
-	const skillDir = ctx.skillSubdir;
-	const skillMd = join(skillDir, "SKILL.md");
-	if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
+  if (!args.label) die("snapshot requires --label <name>");
+  const skillDir = ctx.skillSubdir;
+  const skillMd = join(skillDir, "SKILL.md");
+  if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
 
-	const destDir = join(
-		ctx.workspaceRoot,
-		ctx.skillName,
-		"snapshots",
-		args.label,
-	);
-	if (existsSync(destDir))
-		die(
-			`snapshot already exists: ${destDir}\n` +
-				"  Use a different --label or delete the existing snapshot first.",
-		);
-	ensureDir(destDir);
+  const destDir = join(
+    ctx.workspaceRoot,
+    ctx.skillName,
+    "snapshots",
+    args.label,
+  );
+  if (existsSync(destDir))
+    die(
+      `snapshot already exists: ${destDir}\n` +
+        "  Use a different --label or delete the existing snapshot first.",
+    );
+  ensureDir(destDir);
 
-	cpSync(skillMd, join(destDir, "SKILL.md"));
-	for (const entry of readdirSync(skillDir)) {
-		if (entry === "SKILL.md" || entry === "evals") continue;
-		const src = join(skillDir, entry);
-		const dst = join(destDir, entry);
-		if (statSync(src).isDirectory()) cpSync(src, dst, { recursive: true });
-		else cpSync(src, dst);
-	}
+  cpSync(skillMd, join(destDir, "SKILL.md"));
+  for (const entry of readdirSync(skillDir)) {
+    if (entry === "SKILL.md" || entry === "evals") continue;
+    const src = join(skillDir, entry);
+    const dst = join(destDir, entry);
+    if (statSync(src).isDirectory()) cpSync(src, dst, { recursive: true });
+    else cpSync(src, dst);
+  }
 
-	console.log(`Snapshotted ${ctx.skillName} → ${destDir}`);
+  console.log(`Snapshotted ${ctx.skillName} → ${destDir}`);
 }
 
 function commandRun(args: Args, ctx: RunContext): void {
-	if (!args.mode) die("--mode required: new-skill | revision");
-	if (args.mode !== "new-skill" && args.mode !== "revision")
-		die(`unknown --mode: ${args.mode}`);
-	if (args.mode === "revision" && !args.baseline)
-		die("revision mode requires --baseline <label>");
+  if (!args.mode) die("--mode required: new-skill | revision");
+  if (args.mode !== "new-skill" && args.mode !== "revision")
+    die(`unknown --mode: ${args.mode}`);
+  if (args.mode === "revision" && !args.baseline)
+    die("revision mode requires --baseline <label>");
 
-	const skillDir = ctx.skillSubdir;
-	const skillMd = join(skillDir, "SKILL.md");
-	if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
+  const skillDir = ctx.skillSubdir;
+  const skillMd = join(skillDir, "SKILL.md");
+  if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
 
-	const evalsPath = join(skillDir, "evals", "evals.json");
-	if (!existsSync(evalsPath)) die(`evals.json not found: ${evalsPath}`);
+  const evalsPath = join(skillDir, "evals", "evals.json");
+  if (!existsSync(evalsPath)) die(`evals.json not found: ${evalsPath}`);
 
-	const config: EvalsConfig = validateEvalsConfig(
-		readJson(evalsPath),
-		evalsPath,
-	);
-	if (config.skill_name !== ctx.skillName)
-		console.warn(
-			`warning: evals.json skill_name (${config.skill_name}) does not match the skill folder (${ctx.skillName}). Proceeding with ${ctx.skillName}.`,
-		);
+  const config: EvalsConfig = validateEvalsConfig(
+    readJson(evalsPath),
+    evalsPath,
+  );
+  if (config.skill_name !== ctx.skillName)
+    console.warn(
+      `warning: evals.json skill_name (${config.skill_name}) does not match the skill folder (${ctx.skillName}). Proceeding with ${ctx.skillName}.`,
+    );
 
-	const workspaceSkillDir = join(ctx.workspaceRoot, ctx.skillName);
-	const iteration = nextIteration(workspaceSkillDir, args.iteration);
-	const iterationDir = join(workspaceSkillDir, `iteration-${iteration}`);
+  const workspaceSkillDir = join(ctx.workspaceRoot, ctx.skillName);
+  const iteration = nextIteration(workspaceSkillDir, args.iteration);
+  const iterationDir = join(workspaceSkillDir, `iteration-${iteration}`);
 
-	if (existsSync(iterationDir) && args.iteration === undefined)
-		die(
-			`iteration-${iteration} already exists; pass --iteration to overwrite explicitly`,
-		);
+  if (existsSync(iterationDir) && args.iteration === undefined)
+    die(
+      `iteration-${iteration} already exists; pass --iteration to overwrite explicitly`,
+    );
 
-	const [conditionA, conditionB] = conditionNamesFor(args.mode);
+  const [conditionA, conditionB] = conditionNamesFor(args.mode);
 
-	let skillPathForA: string | null;
-	let skillPathForB: string | null;
-	if (args.mode === "new-skill") {
-		skillPathForA = skillMd;
-		skillPathForB = null;
-	} else {
-		const baselineSkill = join(
-			workspaceSkillDir,
-			"snapshots",
-			args.baseline as string,
-			"SKILL.md",
-		);
-		if (!existsSync(baselineSkill))
-			die(
-				`baseline snapshot not found: ${baselineSkill}\n` +
-					`  Run: bun run evals:snapshot --skill ${ctx.skillName} --skill-dir ${ctx.skillDir} --label ${args.baseline} (before editing)`,
-			);
-		skillPathForA = baselineSkill;
-		skillPathForB = skillMd;
-	}
+  let skillPathForA: string | null;
+  let skillPathForB: string | null;
+  if (args.mode === "new-skill") {
+    skillPathForA = skillMd;
+    skillPathForB = null;
+  } else {
+    const baselineSkill = join(
+      workspaceSkillDir,
+      "snapshots",
+      args.baseline as string,
+      "SKILL.md",
+    );
+    if (!existsSync(baselineSkill))
+      die(
+        `baseline snapshot not found: ${baselineSkill}\n` +
+          `  Run: bun run evals:snapshot --skill ${ctx.skillName} --skill-dir ${ctx.skillDir} --label ${args.baseline} (before editing)`,
+      );
+    skillPathForA = baselineSkill;
+    skillPathForB = skillMd;
+  }
 
-	console.log(
-		`Preparing ${ctx.skillName} iteration-${iteration} (${args.mode})`,
-	);
-	console.log(`  ${conditionA}: ${skillPathForA ?? "(no skill)"}`);
-	console.log(`  ${conditionB}: ${skillPathForB ?? "(no skill)"}`);
-	if (args.noStage)
-		console.log(
-			"  staging: disabled (--no-stage) — skills will be inlined into dispatch_prompt for harnesses without project-local skill discovery",
-		);
+  console.log(
+    `Preparing ${ctx.skillName} iteration-${iteration} (${args.mode})`,
+  );
+  console.log(`  ${conditionA}: ${skillPathForA ?? "(no skill)"}`);
+  console.log(`  ${conditionB}: ${skillPathForB ?? "(no skill)"}`);
+  if (args.noStage)
+    console.log(
+      "  staging: disabled (--no-stage) — skills will be inlined into dispatch_prompt for harnesses without project-local skill discovery",
+    );
 
-	ensureDir(iterationDir);
-	cpSync(skillMd, join(iterationDir, "skill-snapshot.md"));
+  ensureDir(iterationDir);
+  cpSync(skillMd, join(iterationDir, "skill-snapshot.md"));
 
-	if (!args.noStage) cleanupStagedSkills(ctx.stageRoot);
+  if (!args.noStage) cleanupStagedSkills(ctx.stageRoot);
 
-	if (!args.noStage && ctx.harness === "claude-code") {
-		stageSiblingSkills({
-			skillUnderTest: ctx.skillName,
-			skillsSourceDir: ctx.skillDir,
-			repoRoot: ctx.stageRoot,
-		});
-	}
+  if (!args.noStage && ctx.harness === "claude-code") {
+    stageSiblingSkills({
+      skillUnderTest: ctx.skillName,
+      skillsSourceDir: ctx.skillDir,
+      repoRoot: ctx.stageRoot,
+    });
+  }
 
-	const bootstrapContent =
-		ctx.bootstrapPath !== null ? readFileSync(ctx.bootstrapPath, "utf8") : null;
+  const bootstrapContent =
+    ctx.bootstrapPath !== null ? readFileSync(ctx.bootstrapPath, "utf8") : null;
 
-	// Sibling skill metadata, shared across conditions. Empty when --no-stage
-	// (nothing is staged, so nothing is discoverable to list).
-	const siblingSkills: AvailableSkill[] = args.noStage
-		? []
-		: ctx.siblingSkillNames.map((name) => {
-				const p = join(ctx.skillDir, name, "SKILL.md");
-				return { name, path: p, description: getSkillDescription(p) };
-			});
+  // Sibling skill metadata, shared across conditions. Empty when --no-stage
+  // (nothing is staged, so nothing is discoverable to list).
+  const siblingSkills: AvailableSkill[] = args.noStage
+    ? []
+    : ctx.siblingSkillNames.map((name) => {
+        const p = join(ctx.skillDir, name, "SKILL.md");
+        return { name, path: p, description: getSkillDescription(p) };
+      });
 
-	const stageFor = (
-		condName: string,
-		condSkillPath: string | null,
-	): string | null => {
-		if (!condSkillPath || args.noStage) return null;
-		return stageSkillForCC({
-			content: readFileSync(condSkillPath, "utf8"),
-			iteration,
-			condition: condName,
-			skillName: ctx.skillName,
-			repoRoot: ctx.stageRoot,
-		});
-	};
+  const stageFor = (
+    condName: string,
+    condSkillPath: string | null,
+  ): string | null => {
+    if (!condSkillPath || args.noStage) return null;
+    return stageSkillForCC({
+      content: readFileSync(condSkillPath, "utf8"),
+      iteration,
+      condition: condName,
+      skillName: ctx.skillName,
+      repoRoot: ctx.stageRoot,
+    });
+  };
 
-	const conditionASlug = stageFor(conditionA, skillPathForA);
-	const conditionBSlug = stageFor(conditionB, skillPathForB);
+  const conditionASlug = stageFor(conditionA, skillPathForA);
+  const conditionBSlug = stageFor(conditionB, skillPathForB);
 
-	const conditions: ConditionsRecord = {
-		mode: args.mode,
-		baseline: args.baseline,
-		conditions: [
-			{
-				name: conditionA,
-				skill_path: skillPathForA,
-				staged_skill_slug: conditionASlug,
-			},
-			{
-				name: conditionB,
-				skill_path: skillPathForB,
-				staged_skill_slug: conditionBSlug,
-			},
-		],
-		timestamp: new Date().toISOString(),
-		harness: ctx.harness,
-	};
-	writeJson(join(iterationDir, "conditions.json"), conditions);
+  const conditions: ConditionsRecord = {
+    mode: args.mode,
+    baseline: args.baseline,
+    conditions: [
+      {
+        name: conditionA,
+        skill_path: skillPathForA,
+        staged_skill_slug: conditionASlug,
+      },
+      {
+        name: conditionB,
+        skill_path: skillPathForB,
+        staged_skill_slug: conditionBSlug,
+      },
+    ],
+    timestamp: new Date().toISOString(),
+    harness: ctx.harness,
+  };
+  writeJson(join(iterationDir, "conditions.json"), conditions);
 
-	// availableSkills for a condition = siblings + the skill-under-test when
-	// that condition loads it. Empty when nothing was staged.
-	const availableSkillsFor = (condSkillPath: string | null): AvailableSkill[] => {
-		if (args.noStage) return [];
-		const skills = [...siblingSkills];
-		if (condSkillPath) {
-			skills.push({
-				name: ctx.skillName,
-				path: condSkillPath,
-				description: getSkillDescription(condSkillPath),
-			});
-		}
-		return skills;
-	};
+  // availableSkills for a condition = siblings + the skill-under-test when
+  // that condition loads it. Empty when nothing was staged.
+  const availableSkillsFor = (
+    condSkillPath: string | null,
+  ): AvailableSkill[] => {
+    if (args.noStage) return [];
+    const skills = [...siblingSkills];
+    if (condSkillPath) {
+      skills.push({
+        name: ctx.skillName,
+        path: condSkillPath,
+        description: getSkillDescription(condSkillPath),
+      });
+    }
+    return skills;
+  };
 
-	const tasks: DispatchTask[] = [];
-	for (const ev of config.evals) {
-		const evalDir = join(iterationDir, `eval-${ev.id}`);
-		ensureDir(evalDir);
+  const tasks: DispatchTask[] = [];
+  for (const ev of config.evals) {
+    const evalDir = join(iterationDir, `eval-${ev.id}`);
+    ensureDir(evalDir);
 
-		for (const [condName, condSkillPath, condSlug] of [
-			[conditionA, skillPathForA, conditionASlug],
-			[conditionB, skillPathForB, conditionBSlug],
-		] as const) {
-			const condDir = join(evalDir, condName);
-			const outputsDir = join(condDir, "outputs");
-			ensureDir(outputsDir);
+    for (const [condName, condSkillPath, condSlug] of [
+      [conditionA, skillPathForA, conditionASlug],
+      [conditionB, skillPathForB, conditionBSlug],
+    ] as const) {
+      const condDir = join(evalDir, condName);
+      const outputsDir = join(condDir, "outputs");
+      ensureDir(outputsDir);
 
-			const fixtures = copyFixtures(ev, skillDir, condDir);
-			tasks.push(
-				buildDispatchTask({
-					evalId: ev.id,
-					condition: condName,
-					skillPath: condSkillPath,
-					stagedSkillSlug: condSlug,
-					userPrompt: ev.prompt,
-					fixtures,
-					outputsDir,
-					condDir,
-					harness: ctx.harness,
-					bootstrapContent,
-					skillName: ctx.skillName,
-					availableSkills: availableSkillsFor(condSkillPath),
-				}),
-			);
-		}
-	}
+      const fixtures = copyFixtures(ev, skillDir, condDir);
+      tasks.push(
+        buildDispatchTask({
+          evalId: ev.id,
+          condition: condName,
+          skillPath: condSkillPath,
+          stagedSkillSlug: condSlug,
+          userPrompt: ev.prompt,
+          fixtures,
+          outputsDir,
+          condDir,
+          harness: ctx.harness,
+          bootstrapContent,
+          skillName: ctx.skillName,
+          availableSkills: availableSkillsFor(condSkillPath),
+        }),
+      );
+    }
+  }
 
-	const manifestPath = join(iterationDir, "dispatch-manifest.md");
-	writeFileSync(
-		manifestPath,
-		buildManifest({
-			skillName: ctx.skillName,
-			mode: args.mode,
-			baseline: args.baseline,
-			iteration,
-			tasks,
-		}),
-	);
+  const manifestPath = join(iterationDir, "dispatch-manifest.md");
+  writeFileSync(
+    manifestPath,
+    buildManifest({
+      skillName: ctx.skillName,
+      mode: args.mode,
+      baseline: args.baseline,
+      iteration,
+      tasks,
+    }),
+  );
 
-	const dispatchJsonPath = join(iterationDir, "dispatch.json");
-	writeJson(dispatchJsonPath, {
-		skill_name: ctx.skillName,
-		iteration,
-		iteration_dir: iterationDir,
-		mode: args.mode,
-		baseline: args.baseline ?? null,
-		conditions: conditions.conditions,
-		harness: ctx.harness,
-		tasks,
-	});
+  const dispatchJsonPath = join(iterationDir, "dispatch.json");
+  writeJson(dispatchJsonPath, {
+    skill_name: ctx.skillName,
+    iteration,
+    iteration_dir: iterationDir,
+    mode: args.mode,
+    baseline: args.baseline ?? null,
+    conditions: conditions.conditions,
+    harness: ctx.harness,
+    tasks,
+  });
 
-	console.log(`\nWorkspace prepared: ${iterationDir}`);
-	console.log(`Dispatch manifest:  ${manifestPath}`);
-	console.log(`Dispatch tasks:     ${dispatchJsonPath}`);
-	console.log(
-		`\n${tasks.length} dispatches required (${config.evals.length} evals × 2 conditions).`,
-	);
+  console.log(`\nWorkspace prepared: ${iterationDir}`);
+  console.log(`Dispatch manifest:  ${manifestPath}`);
+  console.log(`Dispatch tasks:     ${dispatchJsonPath}`);
+  console.log(
+    `\n${tasks.length} dispatches required (${config.evals.length} evals × 2 conditions).`,
+  );
 
-	if (args.dryRun) console.log("\n--dry-run: stopping after workspace prep.");
-	else
-		console.log(
-			"\nNext: read dispatch.json, dispatch each task as a subagent, write run.json + timing.json to the paths in each task.",
-		);
+  if (args.dryRun) console.log("\n--dry-run: stopping after workspace prep.");
+  else
+    console.log(
+      "\nNext: read dispatch.json, dispatch each task as a subagent, write run.json + timing.json to the paths in each task.",
+    );
 }
 
 type DispatchTask = {
-	eval_id: string;
-	condition: string;
-	skill_path: string | null;
-	staged_skill_slug: string | null;
-	user_prompt: string;
-	fixtures: string[];
-	outputs_dir: string;
-	run_record_path: string;
-	timing_path: string;
-	agent_description: string;
-	dispatch_prompt: string;
+  eval_id: string;
+  condition: string;
+  skill_path: string | null;
+  staged_skill_slug: string | null;
+  user_prompt: string;
+  fixtures: string[];
+  outputs_dir: string;
+  run_record_path: string;
+  timing_path: string;
+  agent_description: string;
+  dispatch_prompt: string;
 };
 
 export type AvailableSkill = {
-	name: string;
-	path: string;
-	description: string;
+  name: string;
+  path: string;
+  description: string;
 };
 
-function copyFixtures(
-	ev: Eval,
-	skillDir: string,
-	condDir: string,
-): string[] {
-	if (!ev.files || ev.files.length === 0) return [];
-	const inputsDir = join(condDir, "inputs");
-	ensureDir(inputsDir);
-	const copied: string[] = [];
-	for (const f of ev.files) {
-		const src = join(skillDir, "evals", f);
-		if (!existsSync(src)) die(`fixture not found: ${src}`);
-		const dst = join(inputsDir, basename(f));
-		if (statSync(src).isDirectory()) cpSync(src, dst, { recursive: true });
-		else cpSync(src, dst);
-		copied.push(dst);
-	}
-	return copied;
+function copyFixtures(ev: Eval, skillDir: string, condDir: string): string[] {
+  if (!ev.files || ev.files.length === 0) return [];
+  const inputsDir = join(condDir, "inputs");
+  ensureDir(inputsDir);
+  const copied: string[] = [];
+  for (const f of ev.files) {
+    const src = join(skillDir, "evals", f);
+    if (!existsSync(src)) die(`fixture not found: ${src}`);
+    const dst = join(inputsDir, basename(f));
+    if (statSync(src).isDirectory()) cpSync(src, dst, { recursive: true });
+    else cpSync(src, dst);
+    copied.push(dst);
+  }
+  return copied;
 }
 
 function getSkillDescription(skillPath: string): string {
-	try {
-		const content = readFileSync(skillPath, "utf8");
-		const match = content.match(/description:\s*([^\n\r]+)/);
-		if (match) {
-			let desc = match[1].trim();
-			if (
-				(desc.startsWith('"') && desc.endsWith('"')) ||
-				(desc.startsWith("'") && desc.endsWith("'"))
-			) {
-				desc = desc.slice(1, -1).trim();
-			}
-			return desc;
-		}
-	} catch {}
-	return "No description available.";
+  try {
+    const content = readFileSync(skillPath, "utf8");
+    const match = content.match(/description:\s*([^\n\r]+)/);
+    if (match) {
+      let desc = match[1].trim();
+      if (
+        (desc.startsWith('"') && desc.endsWith('"')) ||
+        (desc.startsWith("'") && desc.endsWith("'"))
+      ) {
+        desc = desc.slice(1, -1).trim();
+      }
+      return desc;
+    }
+  } catch {}
+  return "No description available.";
 }
 
 export function buildDispatchTask(opts: {
-	evalId: string;
-	condition: string;
-	skillPath: string | null;
-	stagedSkillSlug: string | null;
-	userPrompt: string;
-	fixtures: string[];
-	outputsDir: string;
-	condDir: string;
-	harness: string;
-	bootstrapContent: string | null;
-	skillName: string;
-	availableSkills: AvailableSkill[];
+  evalId: string;
+  condition: string;
+  skillPath: string | null;
+  stagedSkillSlug: string | null;
+  userPrompt: string;
+  fixtures: string[];
+  outputsDir: string;
+  condDir: string;
+  harness: string;
+  bootstrapContent: string | null;
+  skillName: string;
+  availableSkills: AvailableSkill[];
 }): DispatchTask {
-	const stagedSkills = [...opts.availableSkills].sort((a, b) =>
-		a.name.localeCompare(b.name),
-	);
+  const stagedSkills = [...opts.availableSkills].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 
-	let skillBlock: string;
-	if (opts.harness === "antigravity") {
-		if (stagedSkills.length > 0) {
-			const skillsLines = stagedSkills.map(
-				(s) => `- ${s.name} (${s.path}): ${s.description}`,
-			);
-			skillBlock = [
-				"<skills>",
-				"Available skills:",
-				...skillsLines,
-				"</skills>",
-				"",
-				"If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
-			].join("\n");
-		} else {
-			skillBlock = ["<skills>", "Available skills: none", "</skills>"].join(
-				"\n",
-			);
-		}
-	} else {
-		if (opts.stagedSkillSlug) {
-			skillBlock = [
-				"Your environment has the superslow plugin loaded. All superslow skills are",
-				"discoverable via the Skill tool. The skill currently under evaluation is",
-				`staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
-				"than the natural name if the skill applies to the user's request.",
-			].join("\n");
-		} else if (opts.skillPath) {
-			skillBlock = [
-				"The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
-				"",
-				`<skill name="${basename(dirname(opts.skillPath))}">`,
-				readFileSync(opts.skillPath, "utf8").trim(),
-				"</skill>",
-			].join("\n");
-		} else if (stagedSkills.length > 0 || opts.bootstrapContent) {
-			skillBlock = [
-				"The skill currently under evaluation is NOT available in this environment.",
-				"Other staged skills remain discoverable via the Skill tool; apply any",
-				"that fit the user's request.",
-			].join("\n");
-		} else {
-			skillBlock = "No skill is loaded. Respond as you naturally would.";
-		}
-	}
+  let skillBlock: string;
+  if (opts.harness === "antigravity") {
+    if (stagedSkills.length > 0) {
+      const skillsLines = stagedSkills.map(
+        (s) => `- ${s.name} (${s.path}): ${s.description}`,
+      );
+      skillBlock = [
+        "<skills>",
+        "Available skills:",
+        ...skillsLines,
+        "</skills>",
+        "",
+        "If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
+      ].join("\n");
+    } else {
+      skillBlock = ["<skills>", "Available skills: none", "</skills>"].join(
+        "\n",
+      );
+    }
+  } else {
+    if (opts.stagedSkillSlug) {
+      skillBlock = [
+        "Your environment has the superslow plugin loaded. All superslow skills are",
+        "discoverable via the Skill tool. The skill currently under evaluation is",
+        `staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
+        "than the natural name if the skill applies to the user's request.",
+      ].join("\n");
+    } else if (opts.skillPath) {
+      skillBlock = [
+        "The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
+        "",
+        `<skill name="${basename(dirname(opts.skillPath))}">`,
+        readFileSync(opts.skillPath, "utf8").trim(),
+        "</skill>",
+      ].join("\n");
+    } else if (stagedSkills.length > 0 || opts.bootstrapContent) {
+      skillBlock = [
+        "The skill currently under evaluation is NOT available in this environment.",
+        "Other staged skills remain discoverable via the Skill tool; apply any",
+        "that fit the user's request.",
+      ].join("\n");
+    } else {
+      skillBlock = "No skill is loaded. Respond as you naturally would.";
+    }
+  }
 
-	const fixturesBlock = opts.fixtures.length
-		? `Available fixture files:\n${opts.fixtures.map((f) => `  - ${f}`).join("\n")}`
-		: "Available fixture files: none";
+  const fixturesBlock = opts.fixtures.length
+    ? `Available fixture files:\n${opts.fixtures.map((f) => `  - ${f}`).join("\n")}`
+    : "Available fixture files: none";
 
-	// The session-start context carries two kinds of content:
-	//   1. The verbatim --bootstrap file (product-specific framing), if supplied.
-	//   2. An auto-built inventory of the skills staged for this eval. On
-	//      Claude Code this is the only place the staged skills are listed; on
-	//      Antigravity the <skills> block in the body already serves that role,
-	//      so the inventory is omitted here to avoid a redundant second list.
-	const startContextParts: string[] = [];
-	if (opts.bootstrapContent) {
-		startContextParts.push(
-			[
-				"The following guidelines were loaded at session start by the superslow plugin",
-				"(equivalent to the SessionStart hook firing in a real user's environment):",
-				"",
-				opts.bootstrapContent.trim(),
-			].join("\n"),
-		);
-	}
-	if (opts.harness !== "antigravity" && stagedSkills.length > 0) {
-		const inventoryLines = stagedSkills.map(
-			(s) => `* \`${s.name}\`\n  * *Trigger:* ${s.description}`,
-		);
-		startContextParts.push(
-			[
-				"The following skills are staged and discoverable in this eval environment:",
-				"",
-				...inventoryLines,
-			].join("\n"),
-		);
-	}
+  // The session-start context carries two kinds of content:
+  //   1. The verbatim --bootstrap file (product-specific framing), if supplied.
+  //   2. An auto-built inventory of the skills staged for this eval. On
+  //      Claude Code this is the only place the staged skills are listed; on
+  //      Antigravity the <skills> block in the body already serves that role,
+  //      so the inventory is omitted here to avoid a redundant second list.
+  const startContextParts: string[] = [];
+  if (opts.bootstrapContent) {
+    startContextParts.push(
+      [
+        "The following guidelines were loaded at session start by the superslow plugin",
+        "(equivalent to the SessionStart hook firing in a real user's environment):",
+        "",
+        opts.bootstrapContent.trim(),
+      ].join("\n"),
+    );
+  }
+  if (opts.harness !== "antigravity" && stagedSkills.length > 0) {
+    const inventoryLines = stagedSkills.map(
+      (s) => `* \`${s.name}\`\n  * *Trigger:* ${s.description}`,
+    );
+    startContextParts.push(
+      [
+        "The following skills are staged and discoverable in this eval environment:",
+        "",
+        ...inventoryLines,
+      ].join("\n"),
+    );
+  }
 
-	const sections: string[] = [];
-	if (startContextParts.length > 0) {
-		sections.push(
-			[
-				"<session-start-context>",
-				startContextParts.join("\n\n"),
-				"</session-start-context>",
-				"",
-			].join("\n"),
-		);
-	}
-	sections.push(
-		[
-			"You are executing a single test case for a skill evaluation framework.",
-			"Treat this as a real user request — do NOT optimize behavior for the eval.",
-			"",
-			skillBlock,
-			"",
-			fixturesBlock,
-			`Output directory: ${opts.outputsDir}`,
-			"",
-			"Instructions:",
-			"- Write any files you produce into the output directory.",
-			`- After completing the task, write your final user-facing response to ${opts.outputsDir}/final-message.md.`,
-			"- Do not write outside the output directory.",
-			"",
-			"User request:",
-			opts.userPrompt,
-		].join("\n"),
-	);
+  const sections: string[] = [];
+  if (startContextParts.length > 0) {
+    sections.push(
+      [
+        "<session-start-context>",
+        startContextParts.join("\n\n"),
+        "</session-start-context>",
+        "",
+      ].join("\n"),
+    );
+  }
+  sections.push(
+    [
+      "You are executing a single test case for a skill evaluation framework.",
+      "Treat this as a real user request — do NOT optimize behavior for the eval.",
+      "",
+      skillBlock,
+      "",
+      fixturesBlock,
+      `Output directory: ${opts.outputsDir}`,
+      "",
+      "Instructions:",
+      "- Write any files you produce into the output directory.",
+      `- After completing the task, write your final user-facing response to ${opts.outputsDir}/final-message.md.`,
+      "- Do not write outside the output directory.",
+      "",
+      "User request:",
+      opts.userPrompt,
+    ].join("\n"),
+  );
 
-	return {
-		eval_id: opts.evalId,
-		condition: opts.condition,
-		skill_path: opts.skillPath,
-		staged_skill_slug: opts.stagedSkillSlug,
-		user_prompt: opts.userPrompt,
-		fixtures: opts.fixtures,
-		outputs_dir: opts.outputsDir,
-		run_record_path: join(opts.condDir, "run.json"),
-		timing_path: join(opts.condDir, "timing.json"),
-		agent_description: `${opts.evalId}:${opts.condition}`,
-		dispatch_prompt: sections.join(""),
-	};
+  return {
+    eval_id: opts.evalId,
+    condition: opts.condition,
+    skill_path: opts.skillPath,
+    staged_skill_slug: opts.stagedSkillSlug,
+    user_prompt: opts.userPrompt,
+    fixtures: opts.fixtures,
+    outputs_dir: opts.outputsDir,
+    run_record_path: join(opts.condDir, "run.json"),
+    timing_path: join(opts.condDir, "timing.json"),
+    agent_description: `${opts.evalId}:${opts.condition}`,
+    dispatch_prompt: sections.join(""),
+  };
 }
 
 function buildManifest(opts: {
-	skillName: string;
-	mode: Mode;
-	baseline?: string;
-	iteration: number;
-	tasks: DispatchTask[];
+  skillName: string;
+  mode: Mode;
+  baseline?: string;
+  iteration: number;
+  tasks: DispatchTask[];
 }): string {
-	const header = [
-		`# Dispatch manifest — ${opts.skillName} iteration-${opts.iteration}`,
-		"",
-		`Mode: ${opts.mode}${opts.baseline ? ` (baseline: ${opts.baseline})` : ""}`,
-		`Generated: ${new Date().toISOString()}`,
-		`Total dispatches: ${opts.tasks.length}`,
-		"",
-		"## How to use this manifest",
-		"",
-		"In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
-		"",
-		"**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string as the dispatch `description`. The transcript adapter uses it to correlate each subagent's persisted transcript back to the right `(eval, condition)` slot.",
-		"",
-		"After every dispatch:",
-		"",
-		"1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json`. Populate `final_message` from the subagent's reply and leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
-		"2. Capture `total_tokens` and `duration_ms` from the harness's task completion event into `timing.json`. These values may not be persisted anywhere else — save them immediately.",
-		"",
-		"After all dispatches:",
-		"",
-		"3. (Claude Code only, optional) Run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` to fill `tool_invocations` from each subagent's persisted transcript. Skipping this step leaves `transcript_check` assertions unverifiable.",
-		"4. Run `bun run evals:grade --skill <name> --iteration <N>` to grade.",
-		"",
-		"## Dispatches",
-		"",
-	].join("\n");
+  const header = [
+    `# Dispatch manifest — ${opts.skillName} iteration-${opts.iteration}`,
+    "",
+    `Mode: ${opts.mode}${opts.baseline ? ` (baseline: ${opts.baseline})` : ""}`,
+    `Generated: ${new Date().toISOString()}`,
+    `Total dispatches: ${opts.tasks.length}`,
+    "",
+    "## How to use this manifest",
+    "",
+    "In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
+    "",
+    "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string as the dispatch `description`. The transcript adapter uses it to correlate each subagent's persisted transcript back to the right `(eval, condition)` slot.",
+    "",
+    "After every dispatch:",
+    "",
+    "1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json`. Populate `final_message` from the subagent's reply and leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
+    "2. Capture `total_tokens` and `duration_ms` from the harness's task completion event into `timing.json`. These values may not be persisted anywhere else — save them immediately.",
+    "",
+    "After all dispatches:",
+    "",
+    "3. (Claude Code only, optional) Run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` to fill `tool_invocations` from each subagent's persisted transcript. Skipping this step leaves `transcript_check` assertions unverifiable.",
+    "4. Run `bun run evals:grade --skill <name> --iteration <N>` to grade.",
+    "",
+    "## Dispatches",
+    "",
+  ].join("\n");
 
-	const entries = opts.tasks
-		.map((t) =>
-			[
-				`### ${t.eval_id} / ${t.condition}`,
-				"",
-				`- run.json:    ${t.run_record_path}`,
-				`- timing.json: ${t.timing_path}`,
-				"",
-				"```",
-				t.dispatch_prompt,
-				"```",
-				"",
-			].join("\n"),
-		)
-		.join("\n");
+  const entries = opts.tasks
+    .map((t) =>
+      [
+        `### ${t.eval_id} / ${t.condition}`,
+        "",
+        `- run.json:    ${t.run_record_path}`,
+        `- timing.json: ${t.timing_path}`,
+        "",
+        "```",
+        t.dispatch_prompt,
+        "```",
+        "",
+      ].join("\n"),
+    )
+    .join("\n");
 
-	return header + entries;
+  return header + entries;
 }
 
 if (import.meta.main) {
-	const argv = Bun.argv.slice(2);
-	const args = parseArgs(argv);
-	let ctx: RunContext;
-	try {
-		ctx = detectRunContext(argv);
-	} catch (err) {
-		die(err instanceof Error ? err.message : String(err));
-	}
-	if (args.command === "snapshot") commandSnapshot(args, ctx);
-	else commandRun(args, ctx);
+  const argv = Bun.argv.slice(2);
+  const args = parseArgs(argv);
+  let ctx: RunContext;
+  try {
+    ctx = detectRunContext(argv);
+  } catch (err) {
+    die(err instanceof Error ? err.message : String(err));
+  }
+  if (args.command === "snapshot") commandSnapshot(args, ctx);
+  else commandRun(args, ctx);
 }
