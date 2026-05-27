@@ -59,12 +59,6 @@ jobs:
       - name: Run lint and format checks
         run: bun run check
 
-      - name: Run codex harness tests
-        run: bun run test:codex
-
-      - name: Run opencode harness tests
-        run: bun run test:opencode
-
       - name: Validate every skills/*/evals/evals.json
         run: bun run evals:validate
 

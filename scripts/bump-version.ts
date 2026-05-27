@@ -1,22 +1,14 @@
+#!/usr/bin/env bun
 import { readFileSync, writeFileSync } from "node:fs";
+import { VERSION_LOCKED_MANIFESTS } from "./manifest-files";
 
 const version = process.argv[2];
 if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
-  console.error("Usage: node bump-version.js <version>");
+  console.error("Usage: bun scripts/bump-version.ts <version>");
   process.exit(1);
 }
 
-const files = [
-  "package.json",
-  ".claude-plugin/plugin.json",
-  ".codex-plugin/plugin.json",
-  ".cursor-plugin/plugin.json",
-  "antigravity-extension.json",
-  ".claude-plugin/marketplace.json",
-  ".agents/plugins/marketplace.json",
-];
-
-for (const file of files) {
+for (const file of VERSION_LOCKED_MANIFESTS) {
   const content = JSON.parse(readFileSync(file, "utf8"));
   let updated = false;
 
