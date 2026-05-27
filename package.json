@@ -5,11 +5,6 @@
   "description": "Superslow — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
   "main": "./opencode/plugins/superpowers.js",
-  "files": [
-    "opencode/",
-    "skills/",
-    "bootstrap.md"
-  ],
   "scripts": {
     "test": "bun test",
     "evals": "bun run skills/evaluating-skills/runner/run.ts --skill-dir ./skills --bootstrap ./bootstrap.md",
