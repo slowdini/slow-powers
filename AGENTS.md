@@ -8,7 +8,7 @@ for historical reference.
 
 ## What lives here
 
-This repo ships Superslow across five harnesses:
+This repo ships Superslow across six harnesses (five implemented, one planned):
 
 - `skills/` — Skills, assets, and cross-cutting tests
 - `.claude-plugin/` — Claude Code plugin
@@ -16,6 +16,15 @@ This repo ships Superslow across five harnesses:
 - `.cursor-plugin/` — Cursor plugin
 - `opencode/` — OpenCode plugin (`@slowdini/superslow-opencode`)
 - `antigravity-extension.json` + `antigravity-instructions.md` — Antigravity CLI plugin (root-level)
+- Copilot CLI — *planned*, no plugin files yet
+
+See the [feature support](README.md#feature-support) table in the README for current tier per harness.
+
+## Cross-Harness Compatibility
+
+Ensure all features work across supported harnesses, with at least a minimum level of compatibility. If a feature isn't supported in a harness, or has reduced or limited functionality, this should be clearly communicated. A feature MUST NOT break or degrade any harness functionality.
+
+When closing gaps between harnesses, follow [`harness-parity-check.md`](./harness-parity-check.md) — it walks an agent through auditing its harness against Claude Code's reference implementation and prepping to close one gap.
 
 ## Pull Request Requirements
 
@@ -36,6 +45,7 @@ If you modify skill content:
 - Run adversarial pressure testing across multiple sessions, not just the
   happy path.
 - Show before/after eval results in the PR description.
+- Ensure skills are cross-harness compatible: avoid harness-specific tool or feature names.
 
 ## Local development
 
@@ -45,5 +55,5 @@ bun test
 bun run check
 ```
 
-`scripts/bump-version.js <version>` updates every manifest in lockstep.
+`bun scripts/bump-version.ts <version>` updates every manifest in lockstep.
 See `docs/superpowers/specs/` for design history.

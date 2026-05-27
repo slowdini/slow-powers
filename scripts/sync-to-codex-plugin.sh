@@ -59,7 +59,6 @@ EXCLUDES=(
 
   # Root ceremony files
   "/AGENTS.md"
-  "/CHANGELOG.md"
   "/CLAUDE.md"
   "/ANTIGRAVITY.md"
   "/RELEASE-NOTES.md"

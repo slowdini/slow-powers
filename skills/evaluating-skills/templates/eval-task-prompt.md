@@ -14,15 +14,39 @@ Use this template when dispatching a fresh general-purpose subagent to execute a
 | `{{files}}` | Fixture paths the subagent can read (or "none") |
 | `{{output_dir}}` | The workspace directory the subagent writes to |
 | `{{skill_path}}` | Path to SKILL.md to load — omit entirely for `without_skill` |
+| `{{staged_skill_slug}}` | Unique slug the runner staged the skill-under-test under, if the harness supports project-local skill discovery (e.g. Claude Code) |
+| `{{bootstrap_content}}` | Plugin bootstrap / session-start text, injected to mirror what a real user sees when their session starts (optional; runners that don't have an equivalent leave this empty) |
 
 ## Template
 
 ```
+{{#if bootstrap_content}}
+<session-start-context>
+The following guidelines were loaded at session start by the plugin under evaluation
+(equivalent to the harness's session-start hook firing in a real user's environment):
+
+{{bootstrap_content}}
+</session-start-context>
+{{/if}}
 You are executing a single test case for a skill evaluation framework.
 Treat this as a real user request — do NOT optimize your behavior for the eval.
 
-{{#if skill_path}}
-Reference skill (load and follow if applicable): {{skill_path}}
+{{#if staged_skill_slug}}
+Your environment has the plugin under evaluation loaded. Its skills are
+discoverable via the Skill tool. The skill currently under evaluation is
+staged under the unique slug "{{staged_skill_slug}}" — invoke that slug rather
+than the natural name if the skill applies to the user's request.
+{{else if skill_path}}
+The following skill is loaded into your operating guidelines. Apply it where relevant.
+<skill name="{{skill_name}}">
+{{skill_content}}
+</skill>
+{{else if bootstrap_content}}
+The skill currently under evaluation is NOT available in this environment.
+Other skills from the plugin remain discoverable via the Skill tool; apply any
+that fit the user's request.
+{{else}}
+No skill is loaded. Respond as you naturally would.
 {{/if}}
 
 Available fixture files: {{files}}
@@ -36,6 +60,8 @@ Instructions:
 User request:
 {{prompt}}
 ```
+
+`{{staged_skill_slug}}` and `{{bootstrap_content}}` are optional — they describe a *realistic-environment* dispatch where the runner has reproduced what a fresh plugin install would look like (siblings staged, bootstrap text prepended). A simpler runner can leave them empty and the conditional blocks degrade gracefully to the legacy inline / no-skill paths.
 
 ## After the subagent completes
 

@@ -1,32 +1,26 @@
 {
   "name": "@slowdini/superslow-opencode",
   "private": true,
-  "version": "2.1.1",
+  "version": "0.0.1",
   "description": "Superslow — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
   "main": "./opencode/plugins/superpowers.js",
-  "files": [
-    "opencode/",
-    "skills/",
-    "bootstrap.md"
-  ],
   "scripts": {
-    "test": "bun test --pass-with-no-tests",
-    "test:codex": "cd tests/codex && bash test-sync-to-codex-plugin.sh",
-    "test:opencode": "cd tests/opencode && bash run-tests.sh",
-    "evals": "bun run tests/skill-evals/run.ts",
-    "evals:snapshot": "bun run tests/skill-evals/run.ts snapshot",
-    "evals:validate": "bun run tests/skill-evals/validate-all.ts",
-    "evals:fill-transcripts": "bun run tests/skill-evals/fill-transcripts.ts",
-    "evals:grade": "bun run tests/skill-evals/grade.ts",
-    "evals:aggregate": "bun run tests/skill-evals/aggregate.ts",
-    "version": "node scripts/bump-version.js",
-    "check": "biome check --write . && markdownlint-cli2 --fix '**/*.md' '!**/node_modules/**' '!**/.worktrees/**'"
+    "test": "bun test",
+    "evals": "bun run skills/evaluating-skills/runner/run.ts --skill-dir ./skills --bootstrap ./bootstrap.md",
+    "evals:snapshot": "bun run skills/evaluating-skills/runner/run.ts snapshot --skill-dir ./skills",
+    "evals:validate": "bun run skills/evaluating-skills/runner/validate-all.ts --skill-dir ./skills",
+    "evals:fill-transcripts": "bun run skills/evaluating-skills/runner/fill-transcripts.ts --skill-dir ./skills",
+    "evals:grade": "bun run skills/evaluating-skills/runner/grade.ts --skill-dir ./skills",
+    "evals:aggregate": "bun run skills/evaluating-skills/runner/aggregate.ts --skill-dir ./skills",
+    "version": "bun scripts/bump-version.ts",
+    "check": "biome check --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^25.9.1",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.4",
-    "markdownlint-cli2": "^0.22.1"
+    "lint-staged": "^17.0.4"
   }
 }

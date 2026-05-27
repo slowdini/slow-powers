@@ -10,13 +10,22 @@ Superslow is a fork of [obra/superpowers](https://github.com/obra/superpowers)
 at v5.1.0. We preserve the overall workflow of superpowers, while fixing bugs
 and clarifying skill content.
 
-Upstream's full release history is archived at
-[`UPSTREAM-RELEASE-NOTES.md`](./UPSTREAM-RELEASE-NOTES.md). Superslow's own
-release notes live in [`CHANGELOG.md`](./CHANGELOG.md).
-
 ## Quickstart
 
-Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Copilot CLI](#copilot-cli) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode) · [Antigravity CLI](#antigravity-cli).
+Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Copilot CLI](#copilot-cli) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode) · [Antigravity CLI](#antigravity-cli). Support varies per harness — see the [feature support](#feature-support) table.
+
+## Feature support
+
+| Harness         | Status   | Notes                                                          |
+|-----------------|----------|----------------------------------------------------------------|
+| Claude Code     | Full     | Reference implementation                                       |
+| Antigravity CLI | Full     | Skill-eval transcript adapter + realistic eval environment     |
+| Codex CLI       | Partial  | Plugin manifest + shared hooks; no eval transcript adapter     |
+| Cursor          | Partial  | Plugin manifest + dedicated hooks; no eval transcript adapter  |
+| OpenCode        | Partial  | JS plugin with bootstrap injection; no eval transcript adapter |
+| Copilot CLI     | Planned  | No plugin files yet — install steps below are aspirational     |
+
+Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md): it audits which Superslow features are wired up for a given harness and preps an agent to close one gap.
 
 ## How it works
 
@@ -35,6 +44,8 @@ Superslow separately for each.
 ```
 
 ### Copilot CLI
+
+> **Planned — not yet implemented.** The commands below describe the intended install flow once the plugin lands. There is no `.copilot-plugin/` directory in this repo yet.
 
 ```bash
 copilot plugin marketplace add slowdini/superslow
@@ -67,20 +78,15 @@ local plugin directory.
 curl -fsSL https://raw.githubusercontent.com/slowdini/superslow/main/.cursor-plugin/install.sh | sh
 ```
 
-Review the script before running if you prefer:
-<https://github.com/slowdini/superslow/blob/main/.cursor-plugin/install.sh>
-
-Restart Cursor after install.
-
 ### OpenCode
 
-Tell OpenCode:
+Add Superslow to the `plugin` array in your `opencode.json` (global or project-level):
 
+```json
+{
+  "plugin": ["github:slowdini/superslow#main"]
+}
 ```
-Fetch and follow instructions from https://raw.githubusercontent.com/slowdini/superslow/refs/heads/main/opencode/INSTALL.md
-```
-
-Detailed docs: [`opencode/INSTALL.md`](opencode/INSTALL.md).
 
 ### Antigravity CLI
 
@@ -136,11 +142,7 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `antigravity-extension.json` + `antigravity-instructions.md` — Antigravity CLI plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
-
-## Contributing
-
-See [`CLAUDE.md`](./CLAUDE.md) for contributor guidelines. Issues live at
-<https://github.com/slowdini/superslow/issues>.
+- `harness-parity-check.md` — Instructions for an agent in any harness to audit feature gaps and prep to close one
 
 ## Releasing
 
@@ -148,7 +150,7 @@ Releases are cut from `dev` and tagged from `main`:
 
 1. Merge feature PRs into `dev` after CI passes.
 2. When ready to ship, trigger the **Release PR** workflow with the next
-   version number. It bumps every manifest via `scripts/bump-version.js`,
+   version number. It bumps every manifest via `scripts/bump-version.ts`,
    commits to `dev`, and opens a `dev → main` PR.
 3. Review the release PR (full test matrix runs on it) and merge.
 4. Merging to `main` automatically tags `vX.Y.Z` and creates the GitHub
