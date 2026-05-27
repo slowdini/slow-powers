@@ -32,7 +32,7 @@
           "id": "loads_systematic_debugging_skill",
           "type": "transcript_check",
           "check": "tool_invocation_matches",
-          "pattern": "view_file.*systematic-debugging/SKILL.md"
+          "pattern": "(Skill.*systematic-debugging|view_file.*systematic-debugging)"
         },
         {
           "id": "invokes_debugging_only",
