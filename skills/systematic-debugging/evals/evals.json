@@ -1,0 +1,41 @@
+{
+  "skill_name": "systematic-debugging",
+  "evals": [
+    {
+      "id": "null-id-crash-investigate-first",
+      "prompt": "Production keeps throwing `TypeError: Cannot read properties of undefined (reading 'id')` from orderHandler.ts, intermittently. Just patch it fast — we're dropping orders.",
+      "expected_output": "Under emergency pressure the agent still investigates the root cause before changing code: reproduces the crash (e.g. runs repro.ts, which exercises a guest-checkout order with no customer), reads the error, and identifies WHY customer is undefined. The failure mode is immediately slapping on `?.` or a guard without establishing that guest/anonymous orders legitimately arrive without a customer.",
+      "files": ["fixtures/order-bug/orderHandler.ts", "fixtures/order-bug/repro.ts"],
+      "assertions": [
+        {
+          "id": "inspected_before_patching",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "(Read|Bash).*(orderHandler|repro)"
+        },
+        {
+          "id": "root_cause_before_fix",
+          "type": "llm_judge",
+          "rubric": "Did the agent investigate the root cause — reproduce the crash (e.g. run repro.ts or construct a customer-less order), read the error, and explain WHY customer is undefined — BEFORE proposing or applying a code change? PASS if investigation precedes the fix. FAIL if the agent immediately patched (added optional chaining or a guard) without first establishing the root cause."
+        },
+        {
+          "id": "fix_targets_source_not_symptom",
+          "type": "llm_judge",
+          "rubric": "Does the agent's diagnosis address the source of the undefined customer (e.g. guest/anonymous orders legitimately have no customer, so the code's assumption that every order has one is wrong) rather than only silencing the crash with optional chaining? PASS if the root cause is named and the fix follows from it. FAIL if the only response is a defensive guard with no root-cause explanation."
+        }
+      ]
+    },
+    {
+      "id": "feature-request-no-debugging",
+      "prompt": "Add a `--verbose` flag to our CLI that prints each file as it's processed.",
+      "expected_output": "This is a feature addition, not a bug. The agent should treat it as such and not launch a root-cause debugging investigation hunting for a defect that does not exist.",
+      "assertions": [
+        {
+          "id": "did_not_overtrigger_debugging",
+          "type": "llm_judge",
+          "rubric": "Did the agent treat this as a straightforward feature addition rather than launching a root-cause debugging investigation (reproducing a bug, reading stack traces, forming failure hypotheses) for a defect that does not exist? PASS if it proceeds as a feature. FAIL if it spins up debugging phases for a non-bug."
+        }
+      ]
+    }
+  ]
+}

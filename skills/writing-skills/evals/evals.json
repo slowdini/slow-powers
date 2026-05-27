@@ -1,0 +1,40 @@
+{
+  "skill_name": "writing-skills",
+  "evals": [
+    {
+      "id": "capture-reusable-technique",
+      "prompt": "We've worked out a solid, reusable way to flush pending async test timers — I keep re-deriving it across projects. Capture it so it sticks.",
+      "expected_output": "The agent drafts a skill with correct frontmatter (a third-person `description` written as triggering conditions — 'Use when…' — with no workflow summary, and a hyphenated name), keeps to one focused example, and treats drafting as incomplete until validated, pointing at superslow:evaluating-skills rather than declaring the skill finished.",
+      "assertions": [
+        {
+          "id": "references_evaluating_skills",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "(Skill.*evaluating-skills|view_file.*evaluating-skills)"
+        },
+        {
+          "id": "description_is_when_not_what",
+          "type": "llm_judge",
+          "rubric": "If the agent drafted skill frontmatter, is the `description` written as triggering conditions ('Use when…') in the third person, WITHOUT summarizing the skill's workflow or steps? PASS if the description states when to use the skill and omits a process summary. FAIL if it summarizes the procedure, is written in the first person, or the name uses characters other than letters/numbers/hyphens."
+        },
+        {
+          "id": "handoff_to_evaluation",
+          "type": "llm_judge",
+          "rubric": "Did the agent treat the draft as unverified until measured — pointing to validating it with evals (superslow:evaluating-skills) — rather than presenting the skill as finished and ready to use? PASS if a validation/eval step is referenced. FAIL if the skill is declared done with no evaluation step."
+        }
+      ]
+    },
+    {
+      "id": "project-convention-not-skill",
+      "prompt": "I keep re-explaining our repo's database-migration steps to you every session. Make that stick so you remember it.",
+      "expected_output": "Repo-specific migration steps are a project convention, not a reusable cross-project technique, so they belong in the repo's CLAUDE.md/AGENTS.md — not a skill. The agent should route this to project memory and decline to create a skill for it.",
+      "assertions": [
+        {
+          "id": "routes_to_project_memory_not_skill",
+          "type": "llm_judge",
+          "rubric": "Did the agent recognize that repo-specific migration steps are a project-specific convention that belongs in the repo's CLAUDE.md / AGENTS.md (project memory), and NOT propose creating a reusable cross-project skill for it? PASS if it routes to project docs and declines a skill. FAIL if it drafts or proposes a skill for this project-specific convention."
+        }
+      ]
+    }
+  ]
+}
