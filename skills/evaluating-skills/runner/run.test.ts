@@ -634,6 +634,53 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     expect(prompt).not.toContain("loaded at session start");
   });
 
+  test("--guard installs a PreToolUse hook; teardown-guard removes it", () => {
+    const { skillDir, cwd } = setup("usermode-guard");
+    const settingsPath = join(cwd, ".claude", "settings.local.json");
+
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--guard",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+    expect(existsSync(settingsPath)).toBe(true);
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    expect(settings.hooks.PreToolUse[0].matcher).toContain("Write");
+
+    const down = runCli(
+      ["teardown-guard", "--skill-dir", skillDir, "--skill", "mr-review"],
+      cwd,
+    );
+    expect(down.exitCode).toBe(0);
+    expect(existsSync(settingsPath)).toBe(false);
+  });
+
+  test("a normal run does not install a guard", () => {
+    const { skillDir, cwd } = setup("usermode-noguard");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+    expect(existsSync(join(cwd, ".claude", "settings.local.json"))).toBe(false);
+  });
+
   test("namespaces agent_description per iteration+run and records run_nonce", () => {
     const { skillDir, cwd } = setup("usermode-nonce");
     const res = runCli(

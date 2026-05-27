@@ -81,6 +81,8 @@ bun run "$SUPERSLOW_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> -
 
 Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built staged-skills inventory.
 
+Add `--guard` to arm the write guard: the runner stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. It's opt-in and Claude-Code-only. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove it immediately, run `bun run "$SUPERSLOW_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the superslow repo). Without `--guard`, rely on the post-hoc `detect-stray-writes` step in Step 9 instead.
+
 ## Step 8 — Drive the dispatches
 
 Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task object:

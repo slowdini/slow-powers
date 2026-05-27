@@ -1,36 +1,14 @@
 #!/usr/bin/env bun
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, resolve, sep } from "node:path";
+import { join } from "node:path";
 import { detectRunContext } from "./context";
+import { classifyBash, isUnder, pathArg, WRITE_TOOLS } from "./sandbox-policy";
 import type { ConditionsRecord, RunRecord, ToolInvocation } from "./types";
 
 function die(msg: string): never {
   console.error(`error: ${msg}`);
   process.exit(1);
 }
-
-/** Tools that mutate the filesystem and carry a target path argument. */
-const WRITE_TOOLS = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit"]);
-
-/**
- * Bash command patterns that mutate state outside an eval's sandbox. These are
- * heuristics surfaced as warnings (not hard violations) — Bash is too flexible
- * to parse exactly. Each fires only when the command does not reference the
- * run's outputs dir (see `detectStrayWrites`).
- */
-const BASH_MUTATION_PATTERNS: Array<{ re: RegExp; reason: string }> = [
-  {
-    re: /\b(npm|pnpm|yarn|bun)\s+(install|add|ci|i)\b/,
-    reason: "package install/add",
-  },
-  { re: /\bpip3?\s+install\b/, reason: "pip install" },
-  { re: /\bsed\s+-i\b/, reason: "in-place file edit (sed -i)" },
-  {
-    re: /\bgit\s+(commit|add|push|checkout|reset|restore|merge|rebase)\b/,
-    reason: "git mutation",
-  },
-  { re: /(^|\s)(>>?|tee)\s/, reason: "output redirection to a file" },
-];
 
 export type StrayFinding = {
   tool: string;
@@ -44,19 +22,6 @@ export type RunFindings = {
   violations: StrayFinding[];
   warnings: StrayFinding[];
 };
-
-function pathArg(args: unknown): string | undefined {
-  if (!args || typeof args !== "object") return undefined;
-  const a = args as Record<string, unknown>;
-  const p = a.file_path ?? a.notebook_path ?? a.path;
-  return typeof p === "string" ? p : undefined;
-}
-
-function isUnder(target: string, dir: string, repoRoot: string): boolean {
-  const base = resolve(dir);
-  const abs = isAbsolute(target) ? resolve(target) : resolve(repoRoot, target);
-  return abs === base || abs.startsWith(base + sep);
-}
 
 /**
  * Classify a run's tool invocations against its allowed outputs dir.
@@ -96,20 +61,9 @@ export function detectStrayWrites(
     if (inv.name === "Bash") {
       const args = inv.args as { command?: unknown } | undefined;
       const command = typeof args?.command === "string" ? args.command : "";
-      if (!command) continue;
-      // Scoped to the sandbox — the command names the outputs dir.
-      if (command.includes(outputsDir)) continue;
-      for (const { re, reason } of BASH_MUTATION_PATTERNS) {
-        if (re.test(command)) {
-          warnings.push({
-            tool: "Bash",
-            command,
-            ordinal: inv.ordinal,
-            reason,
-          });
-          break;
-        }
-      }
+      const reason = classifyBash(command, [outputsDir]);
+      if (reason)
+        warnings.push({ tool: "Bash", command, ordinal: inv.ordinal, reason });
     }
   }
 

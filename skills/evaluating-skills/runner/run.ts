@@ -14,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { detectRunContext, type RunContext } from "./context";
+import { installGuard, teardownGuard } from "./guard/install";
 import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
 import { validateEvalsConfig } from "./validate";
 
@@ -131,13 +132,14 @@ export function cleanupStagedSkills(repoRoot: string): void {
 type Mode = "new-skill" | "revision";
 
 type Args = {
-  command: "run" | "snapshot";
+  command: "run" | "snapshot" | "teardown-guard";
   mode?: Mode;
   baseline?: string;
   label?: string;
   iteration?: number;
   dryRun: boolean;
   noStage: boolean;
+  guard: boolean;
 };
 
 function die(msg: string): never {
@@ -147,8 +149,12 @@ function die(msg: string): never {
 
 function parseArgs(argv: string[]): Args {
   const positionals = argv.filter((a) => !a.startsWith("--"));
-  const command: "run" | "snapshot" =
-    positionals[0] === "snapshot" ? "snapshot" : "run";
+  const command: Args["command"] =
+    positionals[0] === "snapshot"
+      ? "snapshot"
+      : positionals[0] === "teardown-guard"
+        ? "teardown-guard"
+        : "run";
 
   const flag = (name: string): string | undefined => {
     const i = argv.indexOf(`--${name}`);
@@ -176,6 +182,7 @@ function parseArgs(argv: string[]): Args {
     iteration,
     dryRun: has("dry-run"),
     noStage: has("no-stage"),
+    guard: has("guard"),
   };
 }
 
@@ -317,6 +324,10 @@ function commandRun(args: Args, ctx: RunContext): void {
   ensureDir(iterationDir);
   cpSync(skillMd, join(iterationDir, "skill-snapshot.md"));
 
+  // Always disarm a prior run's guard before re-staging, so a crashed run can't
+  // leave the write-blocking hook armed across runs.
+  teardownGuard(ctx.stageRoot);
+
   if (!args.noStage) cleanupStagedSkills(ctx.stageRoot);
 
   if (!args.noStage && ctx.harness === "claude-code") {
@@ -452,6 +463,29 @@ function commandRun(args: Args, ctx: RunContext): void {
     harness: ctx.harness,
     tasks,
   });
+
+  // Opt-in hard guard (Claude Code only). Stages a PreToolUse hook that blocks
+  // subagent writes/installs outside the eval sandbox while dispatches run.
+  if (args.guard && !args.dryRun) {
+    if (args.noStage || ctx.harness !== "claude-code") {
+      console.warn(
+        "\n⚠ --guard is only supported on Claude Code with staging enabled; skipping guard install.",
+      );
+    } else {
+      const guardScriptPath = join(import.meta.dir, "guard", "guard.ts");
+      installGuard({
+        stageRoot: ctx.stageRoot,
+        workspaceRoot: ctx.workspaceRoot,
+        guardScriptPath,
+      });
+      console.log(
+        "\n🛡 Write guard armed: a PreToolUse hook is staged in .claude/settings.local.json\n" +
+          "   and will block writes/installs outside the eval sandbox during dispatches.\n" +
+          "   It auto-expires in 6h and is removed on the next run; to remove it now:\n" +
+          "     bun run evals:teardown-guard --skill <name>",
+      );
+    }
+  }
 
   console.log(`\nWorkspace prepared: ${iterationDir}`);
   console.log(`Dispatch manifest:  ${manifestPath}`);
@@ -776,5 +810,12 @@ if (import.meta.main) {
     die(err instanceof Error ? err.message : String(err));
   }
   if (args.command === "snapshot") commandSnapshot(args, ctx);
-  else commandRun(args, ctx);
+  else if (args.command === "teardown-guard") {
+    const torn = teardownGuard(ctx.stageRoot);
+    console.log(
+      torn
+        ? "🛡 Write guard removed."
+        : "No write guard was installed — nothing to remove.",
+    );
+  } else commandRun(args, ctx);
 }

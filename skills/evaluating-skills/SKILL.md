@@ -45,7 +45,7 @@ The runner takes two required flags:
 - `--skill-dir <path>` — a directory containing one or more skill folders. **This directory is the eval's test environment.** Every skill in it is staged for the subagent: the skill-under-test under a unique slug, every *other* skill under its natural name.
 - `--skill <name>` — which subdirectory of `--skill-dir` to evaluate.
 
-Optional flags: `--bootstrap <path>` (see *Bootstrap content* below), `--workspace-dir <path>` (defaults to `<cwd>/skills-workspace`), `--mode new-skill|revision`, `--baseline <label>`, `--harness`, `--no-stage`, `--dry-run`.
+Optional flags: `--bootstrap <path>` (see *Bootstrap content* below), `--workspace-dir <path>` (defaults to `<cwd>/skills-workspace`), `--mode new-skill|revision`, `--baseline <label>`, `--harness`, `--no-stage`, `--dry-run`, `--guard` (Claude Code only — arm the write guard; see *Sandboxing eval subagents*).
 
 Each iteration lands under `<workspace-dir>/<skill>/iteration-N/` with the same tree described in *Workspace layout* below, plus a machine-readable `dispatch.json` and a human-readable `dispatch-manifest.md`. The end product is `benchmark.json`: read its `run_summary`, `delta`, and `validity_warnings`.
 
