@@ -12,6 +12,7 @@ import { join } from "node:path";
 import {
   buildDispatchTask,
   cleanupStagedSkills,
+  redactSkillFromBootstrap,
   STAGED_SIBLING_MANIFEST,
   STAGED_SKILL_PREFIX,
   stageSiblingSkills,
@@ -333,6 +334,56 @@ describe("buildDispatchTask bootstrap injection", () => {
     const invIdx = task.dispatch_prompt.indexOf("staged and discoverable");
     expect(bootIdx).toBeGreaterThan(-1);
     expect(invIdx).toBeGreaterThan(bootIdx);
+  });
+
+  const SAMPLE_DIRECTORY = [
+    "## Active Skills Directory",
+    "",
+    "* **`test-driven-development`**",
+    "  * *Trigger:* Use whenever implementing code.",
+    "* **`systematic-debugging`**",
+    "  * *Trigger:* Use when debugging.",
+  ].join("\n");
+
+  test("redactSkillFromBootstrap removes the skill-under-test's directory entry", () => {
+    const redacted = redactSkillFromBootstrap(
+      SAMPLE_DIRECTORY,
+      "test-driven-development",
+    );
+    expect(redacted).not.toContain("test-driven-development");
+    expect(redacted).not.toContain("Use whenever implementing code.");
+    // Sibling entries and the heading survive.
+    expect(redacted).toContain("systematic-debugging");
+    expect(redacted).toContain("Use when debugging.");
+    expect(redacted).toContain("## Active Skills Directory");
+  });
+
+  test("redacts the skill-under-test from bootstrap in the skill-absent condition", () => {
+    const withoutSkill = buildDispatchTask({
+      ...baseOpts,
+      condition: "without_skill",
+      skillPath: null,
+      stagedSkillSlug: null,
+      skillName: "test-driven-development",
+      harness: "claude-code",
+      bootstrapContent: SAMPLE_DIRECTORY,
+    });
+    expect(withoutSkill.dispatch_prompt).not.toContain(
+      "test-driven-development",
+    );
+    // A sibling skill named in the same bootstrap is untouched.
+    expect(withoutSkill.dispatch_prompt).toContain("systematic-debugging");
+
+    const withSkill = buildDispatchTask({
+      ...baseOpts,
+      condition: "with_skill",
+      skillPath: null,
+      stagedSkillSlug: "superslow-eval-1-with_skill__test-driven-development",
+      skillName: "test-driven-development",
+      harness: "claude-code",
+      bootstrapContent: SAMPLE_DIRECTORY,
+    });
+    expect(withSkill.dispatch_prompt).toContain("test-driven-development");
   });
 
   test("references staged slug in skill block for claude-code", () => {

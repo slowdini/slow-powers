@@ -41,6 +41,12 @@ export type PromoteOptions = {
   iteration: string;
   harness: string;
   label: string | null;
+  /**
+   * Operator-declared models for provenance. The runner never dispatches the
+   * agent/judge itself, so it cannot observe these — record what was used.
+   */
+  agentModel: string | null;
+  judgeModel: string | null;
   /** Directory used to resolve the committing repo's git HEAD for provenance. */
   gitCwd: string;
 };
@@ -121,6 +127,8 @@ export function promoteBaseline(opts: PromoteOptions): {
     `| Mode | ${mode} |`,
     `| Iteration | iteration-${opts.iteration} |`,
     `| Harness | ${opts.harness} |`,
+    `| Agent model | ${opts.agentModel ?? "unspecified"} |`,
+    `| Judge model | ${opts.judgeModel ?? "unspecified"} |`,
     `| Conditions | ${conditionNames.join(", ") || "unknown"} |`,
     `| Run timestamp | ${timestamp} |`,
     `| Label | ${opts.label ?? "(none)"} |`,
@@ -152,6 +160,14 @@ if (import.meta.main) {
   const labelIdx = argv.indexOf("--label");
   const label = labelIdx === -1 ? null : (argv[labelIdx + 1] ?? null);
 
+  const agentModelIdx = argv.indexOf("--agent-model");
+  const agentModel =
+    agentModelIdx === -1 ? null : (argv[agentModelIdx + 1] ?? null);
+
+  const judgeModelIdx = argv.indexOf("--judge-model");
+  const judgeModel =
+    judgeModelIdx === -1 ? null : (argv[judgeModelIdx + 1] ?? null);
+
   const { baselineDir, gradingsCopied } = promoteBaseline({
     workspaceRoot: ctx.workspaceRoot,
     skillName: ctx.skillName,
@@ -159,6 +175,8 @@ if (import.meta.main) {
     iteration,
     harness: ctx.harness,
     label,
+    agentModel,
+    judgeModel,
     gitCwd: ctx.skillSubdir,
   });
 

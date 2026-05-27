@@ -253,10 +253,12 @@ For Mode B, the `run_summary` keys are `old_skill` and `new_skill`. The same log
 The full workspace tree is ephemeral and gitignored — it churns on every run. But two parts of a *canonical* run are worth keeping under version control: the `benchmark.json` delta (the headline "this skill earns its place" number) and the per-run `grading.json` rationales (why each assertion passed or failed, useful to reference when iterating later). Promote those into the skill's tracked `evals/baseline/` directory:
 
 ```bash
-bun run evals:promote-baseline -- --skill <name> --iteration <N> [--label <tag>]
+bun run evals:promote-baseline -- --skill <name> --iteration <N> [--label <tag>] [--agent-model <id>] [--judge-model <id>]
 ```
 
 This copies `benchmark.json` and each `eval-<id>/<condition>/grading.json` (as `grading/<eval-id>__<condition>.json`) into `<skill>/evals/baseline/`, and writes a `BASELINE.md` recording the mode, iteration, harness, and run timestamp. Everything else in the workspace stays out of git.
+
+The runner never dispatches the agent or judge itself, so it can't observe which models ran. Pass `--agent-model` (the model that ran the agent-under-test) and `--judge-model` (the model that graded `llm_judge` assertions) to record them as provenance rows in `BASELINE.md`; both default to `unspecified` when omitted. Record the resolved id you actually used (e.g. `claude-haiku-4-5-20251001`), even if your harness only let you pick a coarse `haiku`/`opus`/`sonnet` tier at dispatch.
 
 ```
 skills/<skill>/evals/baseline/

@@ -132,6 +132,70 @@ describe("promote-baseline.ts (--skill-dir, isolated CWD)", () => {
     expect(provenance).toContain("iteration-2");
     expect(provenance).toContain("claude-code");
     expect(provenance).toContain(timestamp);
+    // Model rows default to "unspecified" when no flags are passed.
+    expect(provenance).toContain("Agent model | unspecified");
+    expect(provenance).toContain("Judge model | unspecified");
+  });
+
+  test("records agent and judge models in provenance when flags are passed", () => {
+    const root = join(FIXTURE_ROOT, "promote-models");
+
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, "mr-review");
+    mkdirSync(skillSub, { recursive: true });
+    writeFileSync(
+      join(skillSub, "SKILL.md"),
+      "---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+    );
+
+    const cwd = join(root, "work");
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    mkdirSync(iterationDir, { recursive: true });
+    writeJson(join(iterationDir, "conditions.json"), {
+      mode: "new-skill",
+      conditions: [
+        { name: "with_skill", skill_path: join(skillSub, "SKILL.md") },
+        { name: "without_skill", skill_path: null },
+      ],
+      timestamp: "2026-05-27T00:00:00.000Z",
+      harness: "claude-code",
+    });
+    writeJson(join(iterationDir, "benchmark.json"), {
+      delta: { pass_rate: 0 },
+    });
+
+    const res = Bun.spawnSync(
+      [
+        "bun",
+        "run",
+        PROMOTE_TS,
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--iteration",
+        "1",
+        "--agent-model",
+        "claude-haiku-4-5-20251001",
+        "--judge-model",
+        "claude-opus-4-7",
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(res.stderr.toString()).toBe("");
+    expect(res.exitCode).toBe(0);
+
+    const provenance = readFileSync(
+      join(skillSub, "evals", "baseline", "BASELINE.md"),
+      "utf8",
+    );
+    expect(provenance).toContain("Agent model | claude-haiku-4-5-20251001");
+    expect(provenance).toContain("Judge model | claude-opus-4-7");
   });
 
   test("fails clearly when the iteration directory is missing", () => {
