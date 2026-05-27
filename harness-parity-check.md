@@ -35,7 +35,8 @@ Read these files in order. Each one teaches you something specific you will need
 | `skills/evaluating-skills/runner/README.md` | Contains explicit **Cross-harness breadcrumbs** — sketches of how Codex, Cursor, OpenCode would implement environment parity. Treat these as starting points, not specifications |
 | `skills/evaluating-skills/runner/adapters/claude-code-transcript.ts` | The reference transcript adapter. Compare with `antigravity-transcript.ts` in the same directory to see how the same job looks in a second harness |
 | `skills/evaluating-skills/harness-details/claude.md` | The reference per-harness operator walkthrough. Antigravity and others would each get their own file alongside this |
-| `scripts/bump-version.js` | The list of manifest files kept in version lockstep — every harness with its own manifest needs an entry here |
+| `scripts/manifest-files.ts` | The list of manifest files kept in version lockstep (consumed by `scripts/bump-version.ts` and the harness test suite) — every harness with its own manifest needs an entry here |
+| `tests/harness/spec.ts` and `tests/harness/manifests.test.ts` | The cross-harness test descriptor table and the parameterized suite that holds every harness to the standard checks — every harness needs an entry in `spec.ts` |
 
 Do not skim. The parity report you produce in Step 4 is only as good as the reference you internalized here.
 
@@ -47,10 +48,10 @@ Enumerate, using ordinary file search, what already exists in this repo for your
 
 - Top-level directories matching `.<harness>-plugin/` or `<harness>/`
 - Root-level files matching `<harness>-*.{json,md}` or `<HARNESS>.md`
-- Entries in `scripts/bump-version.js` that mention the harness
+- Entries in `scripts/manifest-files.ts` (version lockstep) and `tests/harness/spec.ts` (test descriptor) that mention the harness
 - The harness name anywhere inside `skills/evaluating-skills/runner/` (especially `context.ts`, `adapters/`, `harness-details/`)
 - Hook files in `hooks/` targeting the harness
-- Tests under `tests/` for the harness
+- Tests under `tests/` for the harness, and the harness's entry in `tests/harness/spec.ts`
 - An installation section in `README.md` for the harness
 
 Record every path you find. You will reference them in Step 4.
@@ -72,8 +73,8 @@ For each category below, compare what Claude Code has against what your harness 
 | Realistic eval environment (skill staging) | `runner/run.ts` stages skills under `<stageRoot>/.claude/skills/` and builds a `<session-start-context>` inventory block |
 | Harness-details operator guide | `skills/evaluating-skills/harness-details/claude.md` |
 | Installation docs | README section titled `### Claude Code` |
-| Version-sync registration | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are listed in `scripts/bump-version.js` |
-| CI coverage | Harness-relevant entries in `tests/` and `.github/workflows/` |
+| Version-sync registration | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are listed in `scripts/manifest-files.ts` (the shared lockstep list) |
+| CI coverage | A descriptor entry in `tests/harness/spec.ts` drives the parameterized `tests/harness/manifests.test.ts` suite (the Standard harness test cases below); the whole suite runs via `bun test` in `.github/workflows/ci.yml` |
 
 Surface your findings inline using this template:
 
@@ -104,6 +105,21 @@ The agent reports inline by default. If the user asks for a persistent artifact,
 
 ---
 
+## Standard harness test cases
+
+`tests/harness/manifests.test.ts` holds **every** harness to the same contract, driven by its entry in `tests/harness/spec.ts`. A harness is wired up correctly when it passes all of these (the suite runs under `bun test`):
+
+1. **Valid manifest** — the harness's manifest parses as JSON and carries its required fields (at minimum `name` and `version`; OpenCode reuses `package.json` and its `main` entry).
+2. **Version lockstep** — the manifest's version (and any `plugins[].version`) equals `package.json`'s, for every file in `scripts/manifest-files.ts`.
+3. **Declared paths resolve** — every path-typed manifest field (skills dir, hooks file, icons, `contextFileName`, …) points at an existing file/dir and does not escape the repo root.
+4. **Bootstrap present** — `bootstrap.md` exists, leads with the Superslow instructions marker, and advertises the core skills.
+5. **Skills discoverable** — `skills/` is populated and each `SKILL.md` declares `name` + `description` frontmatter.
+6. **Hook wiring** (harnesses with a hooks manifest) — the hooks JSON is valid, defines a SessionStart hook that calls `run-hook.cmd`, and the `run-hook.cmd` + `session-start` scripts exist. Matcher-style hooks (`hooks.json`) must include `startup`/`resume`/`clear`.
+
+Harness-specific runtime behaviour (e.g. the OpenCode plugin's bootstrap injection/caching, or its published-package contents) lives in sibling suites under `tests/<harness>/`.
+
+---
+
 ## Step 5 — Pick a gap and prep to close it
 
 Surface the report to the user and propose **one or two** gaps worth closing this session. Bias toward the smallest gap with the highest user impact — typically a transcript adapter or a harness-details guide, not a wholesale plugin rewrite.
@@ -115,6 +131,7 @@ Once the user picks a gap:
 3. Propose an adaptation that copies Claude's shape while using your harness's native conventions. State explicitly what you are copying and what you are adapting.
 4. Confirm with the user before writing code.
 5. If your gap involves creating or modifying a skill, load `superslow:writing-skills` first.
+6. Make sure your harness is held to the **Standard harness test cases** above: add or extend its entry in `tests/harness/spec.ts` (and register any new manifest in `scripts/manifest-files.ts`) so the parameterized suite covers it.
 
 ---
 

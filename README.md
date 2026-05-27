@@ -150,7 +150,7 @@ Releases are cut from `dev` and tagged from `main`:
 
 1. Merge feature PRs into `dev` after CI passes.
 2. When ready to ship, trigger the **Release PR** workflow with the next
-   version number. It bumps every manifest via `scripts/bump-version.js`,
+   version number. It bumps every manifest via `scripts/bump-version.ts`,
    commits to `dev`, and opens a `dev → main` PR.
 3. Review the release PR (full test matrix runs on it) and merge.
 4. Merging to `main` automatically tags `vX.Y.Z` and creates the GitHub

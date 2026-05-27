@@ -55,5 +55,5 @@ bun test
 bun run check
 ```
 
-`scripts/bump-version.js <version>` updates every manifest in lockstep.
+`bun scripts/bump-version.ts <version>` updates every manifest in lockstep.
 See `docs/superpowers/specs/` for design history.

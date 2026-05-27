@@ -22,6 +22,8 @@
   "files": {
     "includes": [
       "**/*.js",
+      "tests/**/*.ts",
+      "scripts/**/*.ts",
       "**/*.json",
       "**/*.jsonc",
       "!**/node_modules",
