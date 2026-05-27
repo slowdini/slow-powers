@@ -105,13 +105,9 @@ When a subagent completes, capture:
 
 Convert these into a portable **run record** (`run.json`) using `schema/run-record.schema.json`. Each harness has its own adapter — Claude Code's lives at `runner/adapters/`; other harnesses write their own or fill the record manually.
 
-### Two modes of operation
+### Driving the eval loop
 
-The same workspace tree supports two ways of driving the loop. Pick based on where you're working.
-
-**CLI / manual mode.** Run `bun run evals -- --skill <name> --mode <new-skill|revision>` (or the harness-equivalent command) to build the workspace. Open the generated `dispatch-manifest.md` and feed each dispatch into your subagent primitive one at a time. After each, write `run.json` and `timing.json` to the paths shown in the manifest. This is useful when you want a slow, deliberate run with eyes on each output.
-
-**Agent-driven mode.** From inside a normal agent session, the agent itself drives the entire loop:
+The agent itself drives the entire loop from inside a normal agent session:
 
 1. The agent invokes the runner via Bash to build the workspace (same command as above).
 2. The agent reads the generated `dispatch.json` (machine-readable sibling of the manifest). Each task object has a ready-to-use `dispatch_prompt`, an `agent_description` (`<eval_id>:<condition>`) to pass through as the dispatch description, and exact `run_record_path` and `timing_path` to write to.
