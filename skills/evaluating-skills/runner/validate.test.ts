@@ -31,7 +31,26 @@ describe("validateEvalsConfig skill_should_trigger", () => {
       evals: [{ ...base.evals[0], skill_should_trigger: "false" }],
     };
     expect(() => validateEvalsConfig(cfg, "test")).toThrow(
-      /skill_should_trigger must be a boolean/,
+      /skill_should_trigger/,
     );
+  });
+});
+
+describe("validateEvalsConfig structural + duplicate-id", () => {
+  test("rejects a non-kebab-case id", () => {
+    const cfg = { ...base, evals: [{ ...base.evals[0], id: "Not Kebab" }] };
+    expect(() => validateEvalsConfig(cfg, "test")).toThrow();
+  });
+
+  test("rejects duplicate eval ids (not expressible in JSON Schema)", () => {
+    const cfg = {
+      ...base,
+      evals: [base.evals[0], { ...base.evals[0] }],
+    };
+    expect(() => validateEvalsConfig(cfg, "test")).toThrow(/duplicate/);
+  });
+
+  test("rejects an empty evals array", () => {
+    expect(() => validateEvalsConfig({ ...base, evals: [] }, "test")).toThrow();
   });
 });

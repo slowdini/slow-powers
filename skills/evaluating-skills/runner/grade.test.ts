@@ -171,3 +171,73 @@ describe("emitJudgeTasks skill-invocation meta-check gating", () => {
     expect(metaTasks.map((t) => t.eval_id)).toEqual(["pos-eval"]);
   });
 });
+
+describe("emitJudgeTasks run.json validation", () => {
+  test("fails fast with a schema error when a run.json is malformed", () => {
+    const root = join(GRADE_FIXTURE_ROOT, "bad-run-record");
+    const skill = "mr-review";
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, skill);
+    mkdirSync(join(skillSub, "evals"), { recursive: true });
+    writeFileSync(
+      join(skillSub, "SKILL.md"),
+      "---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+    );
+    writeJsonFile(join(skillSub, "evals", "evals.json"), {
+      skill_name: skill,
+      evals: [
+        {
+          id: "pos-eval",
+          prompt: "Fix the failing build.",
+          expected_output: "Agent debugs systematically.",
+          assertions: [
+            { id: "a1", type: "llm_judge", rubric: "Did it debug?" },
+          ],
+        },
+      ],
+    });
+
+    const cwd = join(root, "work");
+    const iterationDir = join(cwd, "skills-workspace", skill, "iteration-1");
+    mkdirSync(iterationDir, { recursive: true });
+    writeJsonFile(join(iterationDir, "conditions.json"), {
+      mode: "new-skill",
+      conditions: [
+        { name: "with_skill", skill_path: join(skillSub, "SKILL.md") },
+        { name: "without_skill", skill_path: null },
+      ],
+      timestamp: new Date().toISOString(),
+      harness: "claude-code",
+    });
+
+    for (const cond of ["with_skill", "without_skill"]) {
+      const condDir = join(iterationDir, "eval-pos-eval", cond);
+      mkdirSync(condDir, { recursive: true });
+      // Missing required `final_message` and `files` — must be rejected.
+      writeJsonFile(join(condDir, "run.json"), {
+        eval_id: "pos-eval",
+        condition: cond,
+        skill_path: null,
+        prompt: "p",
+        tool_invocations: [],
+      });
+    }
+
+    const res = Bun.spawnSync(
+      [
+        "bun",
+        "run",
+        GRADE_TS,
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        skill,
+        "--iteration",
+        "1",
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(res.exitCode).not.toBe(0);
+    expect(res.stderr.toString()).toContain("run-record schema");
+  });
+});

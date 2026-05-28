@@ -19,6 +19,7 @@ import {
   type ToolInvocation,
 } from "./types";
 import { validateEvalsConfig } from "./validate";
+import { validateAgainstSchema } from "./validate-schema";
 
 type Mode = "emit-judge-tasks" | "finalize";
 
@@ -174,7 +175,11 @@ function emitJudgeTasks(): void {
       }
 
       ensureDir(judgeResponsesDir);
-      const runRecord: RunRecord = readJson(runRecordPath);
+      const runRecord = validateAgainstSchema<RunRecord>(
+        "run-record",
+        readJson(runRecordPath),
+        runRecordPath,
+      );
 
       if (hasAssertions && ev.assertions) {
         for (const assertion of ev.assertions) {
@@ -455,7 +460,11 @@ function finalize(): void {
       const assertionResults: AssertionResult[] = [];
       const runRecordPath = join(condDir, "run.json");
       const runRecord: RunRecord | null = existsSync(runRecordPath)
-        ? readJson<RunRecord>(runRecordPath)
+        ? validateAgainstSchema<RunRecord>(
+            "run-record",
+            readJson(runRecordPath),
+            runRecordPath,
+          )
         : null;
       if (hasAssertions && ev.assertions) {
         for (const assertion of ev.assertions) {
@@ -552,6 +561,7 @@ function finalize(): void {
           skill_invoked: skillInvoked,
         };
       }
+      validateAgainstSchema("grading", grading, gradingPath);
       writeJson(gradingPath, grading);
       const metaTag =
         metaResults.length === 0 ? "" : ` [skill_invoked=${skillInvoked}]`;

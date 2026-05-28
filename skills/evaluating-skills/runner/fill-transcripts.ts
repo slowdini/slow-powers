@@ -4,6 +4,7 @@ import { join } from "node:path";
 import * as claudeAdapter from "./adapters/claude-code-transcript";
 import { detectRunContext } from "./context";
 import type { ConditionsRecord, RunRecord } from "./types";
+import { validateAgainstSchema } from "./validate-schema";
 
 function die(msg: string): never {
   console.error(`error: ${msg}`);
@@ -107,7 +108,11 @@ if (import.meta.main) {
       const runPath = join(condDir, "run.json");
       if (!existsSync(runPath)) continue;
 
-      const run: RunRecord = JSON.parse(readFileSync(runPath, "utf8"));
+      const run = validateAgainstSchema<RunRecord>(
+        "run-record",
+        JSON.parse(readFileSync(runPath, "utf8")),
+        runPath,
+      );
       const existing = Array.isArray(run.tool_invocations)
         ? run.tool_invocations
         : [];
