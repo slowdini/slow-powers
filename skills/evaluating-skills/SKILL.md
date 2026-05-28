@@ -274,7 +274,10 @@ skills/<skill>/evals/baseline/
   BASELINE.md                          # provenance
   benchmark.json                       # the committed delta
   grading/<eval-id>__<condition>.json  # judge rationales per run
+  NOTES.md                             # optional — forward-looking observations
 ```
+
+`NOTES.md` is an **optional** companion file for forward-looking observations from the runs that produced this baseline: which evals discriminated and which didn't, suspected variance/noise, ideas for the next iteration (skill changes or eval-suite changes), and any context a future iterator would want before re-running. It is not provenance (that belongs in `BASELINE.md`) and not results (those belong in `benchmark.json`). `promote-baseline` does not generate it and does not overwrite an existing one — author it by hand alongside the promoted baseline when there's something worth carrying forward; otherwise omit it.
 
 This works the same for a personal skill: point `--skill-dir` at your skill's parent, run a canonical eval, then promote — you get a committed reference of what "passing" looked like for your skill, equivalent to the baselines superslow ships for its own skills.
 
