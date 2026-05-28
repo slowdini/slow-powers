@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
-export type Harness = "claude-code" | "antigravity";
+export type Harness = "claude-code";
 
 export type RunContext = {
   skillDir: string;
@@ -63,10 +63,8 @@ export function detectRunContext(argv: string[]): RunContext {
   const stageRoot = resolve(process.cwd());
 
   const harnessRaw = flag(argv, "harness") ?? "claude-code";
-  if (harnessRaw !== "claude-code" && harnessRaw !== "antigravity") {
-    die(
-      `unknown --harness: ${harnessRaw}. Supported: claude-code, antigravity`,
-    );
+  if (harnessRaw !== "claude-code") {
+    die(`unknown --harness: ${harnessRaw}. Supported: claude-code`);
   }
   const harness = harnessRaw as Harness;
 

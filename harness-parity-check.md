@@ -15,7 +15,7 @@ Name the harness you are running in. You almost certainly already know — confi
 - Any session-start context block injected at the top of the conversation
 - Top-level files or directories matching your harness (e.g. `.<harness>-plugin/`, `<harness>-instructions.md`)
 
-The intended supported harnesses are: **Claude Code, Antigravity CLI, Codex CLI, Cursor, OpenCode, Copilot CLI**.
+The intended supported harnesses are: **Claude Code, Codex CLI, Cursor, OpenCode**.
 
 If the harness you are running in is not in that list, stop and ask the user before continuing.
 
@@ -33,8 +33,8 @@ Read these files in order. Each one teaches you something specific you will need
 | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Claude's reference manifest shape — what fields a harness manifest typically carries |
 | `hooks/hooks.json` | Claude's `SessionStart` hook that injects `bootstrap.md`. Compare with `hooks/hooks-cursor.json` for the Cursor variant |
 | `skills/evaluating-skills/runner/README.md` | Contains explicit **Cross-harness breadcrumbs** — sketches of how Codex, Cursor, OpenCode would implement environment parity. Treat these as starting points, not specifications |
-| `skills/evaluating-skills/runner/adapters/claude-code-transcript.ts` | The reference transcript adapter. Compare with `antigravity-transcript.ts` in the same directory to see how the same job looks in a second harness |
-| `skills/evaluating-skills/harness-details/claude.md` | The reference per-harness operator walkthrough. Antigravity and others would each get their own file alongside this |
+| `skills/evaluating-skills/runner/adapters/claude-code-transcript.ts` | The reference transcript adapter. A second harness would add its own adapter alongside this, translating that harness's transcript shape into the same `ToolInvocation[]` format |
+| `skills/evaluating-skills/harness-details/claude.md` | The reference per-harness operator walkthrough. Other harnesses would each get their own file alongside this |
 | `scripts/manifest-files.ts` | The list of manifest files kept in version lockstep (consumed by `scripts/bump-version.ts` and the harness test suite) — every harness with its own manifest needs an entry here |
 | `tests/harness/spec.ts` and `tests/harness/manifests.test.ts` | The cross-harness test descriptor table and the parameterized suite that holds every harness to the standard checks — every harness needs an entry in `spec.ts` |
 

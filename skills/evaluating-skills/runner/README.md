@@ -2,7 +2,7 @@
 
 Supporting code for the skill eval framework defined in `skills/evaluating-skills/`. This runner ships **with** the skill (it lives under the skill directory and is included in the published plugin), so plugin users can run evals on their own skills, not just superslow maintainers.
 
-The methodology lives in `SKILL.md` and is harness-agnostic. This runner is Bun + Claude Code-aware: it knows how to translate Claude Code (and Antigravity) transcript shapes into the portable `run.json` format. Harness-specific operator instructions live in `../harness-details/<harness>.md`.
+The methodology lives in `SKILL.md` and is harness-agnostic. This runner is Bun + Claude Code-aware: it knows how to translate Claude Code transcript shapes into the portable `run.json` format. Harness-specific operator instructions live in `../harness-details/<harness>.md`.
 
 ## The `--skill-dir` model
 
@@ -20,7 +20,7 @@ Other flags:
 
 - `--bootstrap <path>` (optional) — a Markdown file prepended verbatim to every dispatch prompt inside `<session-start-context>`. Use it for product-specific framing (instruction priority, planning guidelines — anything a SessionStart hook would inject). Internal runs pass `--bootstrap ./bootstrap.md`. Omit it and dispatches carry only the auto-built staged-skills inventory.
 - `--workspace-dir <path>` (optional) — where iteration artifacts are written. Defaults to `<CWD>/skills-workspace`.
-- `--harness <claude-code|antigravity>` (optional, default `claude-code`).
+- `--harness claude-code` (optional, default `claude-code`; the only supported harness).
 - `--no-stage`, `--dry-run`, `--iteration <N>`, `--mode <new-skill|revision>`, `--baseline <label>`, `--label <label>` — as before.
 
 Staging is written under the current working directory: `<CWD>/.claude/skills/`. A subagent dispatched from that CWD discovers the staged skills there. Run the commands from the directory you want to be the eval root (the repo root for internal use; your skill folder or its parent for personal use).
@@ -46,12 +46,8 @@ bun run evals -- --skill <name> --mode new-skill
 #    to the paths in each task.
 
 # 4. Fill tool_invocations from subagent transcripts:
-#    On Claude Code:
 bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
-#    On Antigravity (auto-detected, or pass --harness antigravity):
-bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
-  --subagents-dir ~/.gemini/antigravity-cli/brain/
 
 # 5. Grade:
 bun run evals:grade -- --skill <name> --iteration 1
@@ -101,7 +97,6 @@ If you have the superslow plugin installed and a personal skill, you do **not** 
 - `promote-baseline.ts` — copies the durable subset of an iteration (`benchmark.json` + each run's `grading.json` + a `BASELINE.md` provenance file) into the skill's version-controlled `evals/baseline/`. Flags: `--skill-dir`/`--skill` (as everywhere), `--iteration <N>` (required), `--label <tag>` (optional, recorded in provenance). Everything else in the workspace stays gitignored.
 - `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a subagent transcript by description, parses the transcript with the appropriate adapter, populates `tool_invocations` in `run.json`.
 - `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
-- `adapters/antigravity-transcript.ts` — reads an Antigravity subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
 - `types.ts` — shared TypeScript types matching `../schema/*.json`.
 - `validate.ts` / `validate-all.ts` — validator for `evals.json` against the JSON Schema rules. `validate-all.ts` takes `--skill-dir` and validates every skill's `evals.json` in it.
 
@@ -109,9 +104,9 @@ If you have the superslow plugin installed and a personal skill, you do **not** 
 
 A subagent that runs an eval should start in an environment that mirrors a real install of the plugin under evaluation. Otherwise the result depends on the operator's local install state (whether they happen to have the plugin loaded into their parent session, which version, etc.) rather than the skill being measured. The runner produces this parity explicitly so results reproduce on a clean checkout or in CI.
 
-Parity has two parts, both applied when `--no-stage` is NOT set and `--harness claude-code` (the default) or `--harness antigravity` is in effect:
+Parity has two parts, both applied when `--no-stage` is NOT set (the default `--harness claude-code`):
 
-1. **A staged-skills inventory is built into every dispatch prompt.** The runner lists the skills actually staged for the eval — the skill-under-test plus the siblings found in `--skill-dir` — inside the `<session-start-context>` block. On Claude Code this is a Markdown bullet list; on Antigravity the `<skills>` block (with `view_file` instructions) serves the same role. This tells the subagent what is discoverable, independent of any `--bootstrap` file.
+1. **A staged-skills inventory is built into every dispatch prompt.** The runner lists the skills actually staged for the eval — the skill-under-test plus the siblings found in `--skill-dir` — inside the `<session-start-context>` block as a Markdown bullet list. This tells the subagent what is discoverable, independent of any `--bootstrap` file.
 2. **Every skill in `--skill-dir` is staged.** The skill-under-test is staged under its unique slug (`<stageRoot>/.claude/skills/superslow-eval-<iteration>-<condition>__<skillName>/`); every *other* skill in `--skill-dir` is copied to `<stageRoot>/.claude/skills/<name>/` at its natural name (excluding each skill's `evals/` subdir). Natural names matter because cross-references inside skill bodies (e.g. "REQUIRED SUB-SKILL: Use `superslow:test-driven-development`") only resolve cleanly to natural-name entries.
 
 `--bootstrap` is **separate** from parity. It injects product-specific framing (the file's verbatim contents) ahead of the staged-skills inventory. Internal runs pass `./bootstrap.md`; that file contains its own "Active Skills Directory" list, which overlaps the auto-built inventory. That small duplication is intentional — it avoids maintaining a second bootstrap file in lockstep with the runner.
@@ -122,11 +117,10 @@ The skill-under-test is **not** staged under its natural name — only under its
 
 For the **`without_skill` / baseline condition** in this realistic environment, the subagent's dispatch block reflects "this skill is unavailable, others remain" rather than the legacy "no skill is loaded." The baseline measures the incremental value of the skill-under-test on top of the rest of the environment — not its absolute value vs. no skills at all. With `--no-stage` (or a `--skill-dir` containing only the skill-under-test and no `--bootstrap`), the legacy "no skill is loaded" wording is preserved.
 
-**Cross-harness breadcrumbs.** Environment parity is implemented for Claude Code and Antigravity. Other harnesses have their own skill-discovery mechanisms; their maintainers know them best. Sketches:
+**Cross-harness breadcrumbs.** Environment parity is implemented for Claude Code. Other harnesses have their own skill-discovery mechanisms; their maintainers know them best. Sketches:
 
 - **Codex / Cursor.** Both declare `"skills": "./skills/"` in their `plugin.json`, so the harness scans a directory at start-up. Sibling staging would write to whatever staging path that harness reads from — analogous to `stageSiblingSkills()` but pointed at the right directory. Bootstrap can be prepended to the dispatch prompt the same way.
 - **OpenCode.** Installed via npm package; the package's own directory is the discoverable surface. Sibling staging would copy into that directory, or — if the harness loads from `node_modules` directly — into a parallel staging path the harness is configured to scan.
-- **Antigravity.** Fully supported. Surfaces skills via `view_file` on absolute paths and emits a `<skills>` block listing all staged SKILL.md files sorted alphabetically. `--bootstrap` content is wrapped in a `<session-start-context>` block and prepended to the dispatch prompt.
 - **General fallback.** Harnesses without project-local discovery should keep using `--no-stage`; the inline `<skill>` block in the dispatch prompt is the only skill the subagent sees. Bootstrap is omitted in this mode because its references to other skills would mislead the agent.
 
 The committed per-skill baselines (`skills/<skill>/evals/baseline/`) plus the `transcript_check` assertions in the baseline eval suite give other harnesses a concrete target to reproduce: a harness whose adapter populates `tool_invocations` faithfully should be able to re-run a skill's eval and land close to the committed `benchmark.json` delta. See `harness-parity-check.md` — the transcript adapter is a parity target, and evals are not production functionality, so a harness can aim high here without risking user-facing behavior.
@@ -135,11 +129,11 @@ The committed per-skill baselines (`skills/<skill>/evals/baseline/`) plus the `t
 
 ## Why this lives in the skill
 
-The runner is bundled as a [supporting file](https://code.claude.com/docs/en/skills#add-supporting-files) of `evaluating-skills` so it ships in the published plugin. Methodology (the SKILL.md prose and the portable schemas) and the orchestration code that executes it travel together; a plugin user can run an eval on their own skill without cloning this repo. The portable run-record schema remains the abstraction that lets the methodology work across harnesses, while this runner stays Bun + Claude-Code/Antigravity-aware.
+The runner is bundled as a [supporting file](https://code.claude.com/docs/en/skills#add-supporting-files) of `evaluating-skills` so it ships in the published plugin. Methodology (the SKILL.md prose and the portable schemas) and the orchestration code that executes it travel together; a plugin user can run an eval on their own skill without cloning this repo. The portable run-record schema remains the abstraction that lets the methodology work across harnesses, while this runner stays Bun + Claude-Code-aware.
 
 ## Caveats
 
-- Ships Claude Code and Antigravity transcript adapters. Other harnesses must populate `tool_invocations` manually or write their own adapter against `../schema/run-record.schema.json`. Without an adapter, `transcript_check` assertions grade as `unverifiable` and the `__skill_invoked` meta-check falls back to the LLM judge.
+- Ships a Claude Code transcript adapter. Other harnesses must populate `tool_invocations` manually or write their own adapter against `../schema/run-record.schema.json`. Without an adapter, `transcript_check` assertions grade as `unverifiable` and the `__skill_invoked` meta-check falls back to the LLM judge.
 - Skill staging writes to `<stageRoot>/.claude/skills/superslow-eval-*/`. The runner sweeps these directories at the start of each fresh run; a crashed run may leave stale entries that the next run will reap.
 - Grading dispatch is operator/agent-driven (the host dispatches judge subagents per the manifest).
 - Single-run evals only for now; the schema supports multi-run later.

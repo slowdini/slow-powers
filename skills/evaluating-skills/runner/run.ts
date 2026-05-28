@@ -330,7 +330,7 @@ function commandRun(args: Args, ctx: RunContext): void {
 
   if (!args.noStage) cleanupStagedSkills(ctx.stageRoot);
 
-  if (!args.noStage && ctx.harness === "claude-code") {
+  if (!args.noStage) {
     stageSiblingSkills({
       skillUnderTest: ctx.skillName,
       skillsSourceDir: ctx.skillDir,
@@ -429,7 +429,6 @@ function commandRun(args: Args, ctx: RunContext): void {
           fixtures,
           outputsDir,
           condDir,
-          harness: ctx.harness,
           bootstrapContent,
           skillName: ctx.skillName,
           availableSkills: availableSkillsFor(condSkillPath),
@@ -464,12 +463,12 @@ function commandRun(args: Args, ctx: RunContext): void {
     tasks,
   });
 
-  // Opt-in hard guard (Claude Code only). Stages a PreToolUse hook that blocks
-  // subagent writes/installs outside the eval sandbox while dispatches run.
+  // Opt-in hard guard. Stages a PreToolUse hook that blocks subagent
+  // writes/installs outside the eval sandbox while dispatches run.
   if (args.guard && !args.dryRun) {
-    if (args.noStage || ctx.harness !== "claude-code") {
+    if (args.noStage) {
       console.warn(
-        "\n⚠ --guard is only supported on Claude Code with staging enabled; skipping guard install.",
+        "\n⚠ --guard requires staging enabled; skipping guard install.",
       );
     } else {
       const guardScriptPath = join(import.meta.dir, "guard", "guard.ts");
@@ -594,7 +593,6 @@ export function buildDispatchTask(opts: {
   fixtures: string[];
   outputsDir: string;
   condDir: string;
-  harness: string;
   bootstrapContent: string | null;
   skillName: string;
   availableSkills: AvailableSkill[];
@@ -610,49 +608,29 @@ export function buildDispatchTask(opts: {
   );
 
   let skillBlock: string;
-  if (opts.harness === "antigravity") {
-    if (stagedSkills.length > 0) {
-      const skillsLines = stagedSkills.map(
-        (s) => `- ${s.name} (${s.path}): ${s.description}`,
-      );
-      skillBlock = [
-        "<skills>",
-        "Available skills:",
-        ...skillsLines,
-        "</skills>",
-        "",
-        "If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
-      ].join("\n");
-    } else {
-      skillBlock = ["<skills>", "Available skills: none", "</skills>"].join(
-        "\n",
-      );
-    }
+  if (opts.stagedSkillSlug) {
+    skillBlock = [
+      "Your environment has the superslow plugin loaded. All superslow skills are",
+      "discoverable via the Skill tool. The skill currently under evaluation is",
+      `staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
+      "than the natural name if the skill applies to the user's request.",
+    ].join("\n");
+  } else if (opts.skillPath) {
+    skillBlock = [
+      "The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
+      "",
+      `<skill name="${basename(dirname(opts.skillPath))}">`,
+      readFileSync(opts.skillPath, "utf8").trim(),
+      "</skill>",
+    ].join("\n");
+  } else if (stagedSkills.length > 0 || opts.bootstrapContent) {
+    skillBlock = [
+      "The skill currently under evaluation is NOT available in this environment.",
+      "Other staged skills remain discoverable via the Skill tool; apply any",
+      "that fit the user's request.",
+    ].join("\n");
   } else {
-    if (opts.stagedSkillSlug) {
-      skillBlock = [
-        "Your environment has the superslow plugin loaded. All superslow skills are",
-        "discoverable via the Skill tool. The skill currently under evaluation is",
-        `staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
-        "than the natural name if the skill applies to the user's request.",
-      ].join("\n");
-    } else if (opts.skillPath) {
-      skillBlock = [
-        "The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
-        "",
-        `<skill name="${basename(dirname(opts.skillPath))}">`,
-        readFileSync(opts.skillPath, "utf8").trim(),
-        "</skill>",
-      ].join("\n");
-    } else if (stagedSkills.length > 0 || opts.bootstrapContent) {
-      skillBlock = [
-        "The skill currently under evaluation is NOT available in this environment.",
-        "Other staged skills remain discoverable via the Skill tool; apply any",
-        "that fit the user's request.",
-      ].join("\n");
-    } else {
-      skillBlock = "No skill is loaded. Respond as you naturally would.";
-    }
+    skillBlock = "No skill is loaded. Respond as you naturally would.";
   }
 
   const fixturesBlock = opts.fixtures.length
@@ -661,10 +639,7 @@ export function buildDispatchTask(opts: {
 
   // The session-start context carries two kinds of content:
   //   1. The verbatim --bootstrap file (product-specific framing), if supplied.
-  //   2. An auto-built inventory of the skills staged for this eval. On
-  //      Claude Code this is the only place the staged skills are listed; on
-  //      Antigravity the <skills> block in the body already serves that role,
-  //      so the inventory is omitted here to avoid a redundant second list.
+  //   2. An auto-built inventory of the skills staged for this eval.
   // A condition that does not load the skill-under-test (the new-skill
   // `without_skill` arm, under staging or --no-stage) must carry zero reference
   // to it — including in the verbatim bootstrap, which otherwise lists it in its
@@ -686,7 +661,7 @@ export function buildDispatchTask(opts: {
       ].join("\n"),
     );
   }
-  if (opts.harness !== "antigravity" && stagedSkills.length > 0) {
+  if (stagedSkills.length > 0) {
     const inventoryLines = stagedSkills.map(
       (s) => `* \`${s.name}\`\n  * *Trigger:* ${s.description}`,
     );

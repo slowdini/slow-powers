@@ -11,7 +11,7 @@ Skill development has two phases: **drafting** (`superslow:writing-skills`) and 
 
 An eval is a structured measurement of whether a skill actually shifts behavior. Each test case is a realistic prompt; each run dispatches a fresh general-purpose subagent twice — once with the skill loaded, once without (or once with the prior version, once with the revised version) — and grades the outputs against assertions. Pass-rate deltas tell you whether the skill is worth shipping or the change is worth landing.
 
-This skill is harness-agnostic. Run records use a portable JSON schema so evals authored on one harness (Claude Code, Codex, Cursor, OpenCode, Antigravity) can be executed and graded on any other. See `schema/run-record.schema.json`.
+This skill is harness-agnostic. Run records use a portable JSON schema so evals authored on one harness (Claude Code, Codex, Cursor, OpenCode) can be executed and graded on any other. See `schema/run-record.schema.json`.
 
 ## Two comparison modes
 
@@ -112,9 +112,9 @@ The agent itself drives the entire loop from inside a normal agent session:
 
 1. The agent invokes the runner via Bash to build the workspace (same command as above).
 2. The agent reads the generated `dispatch.json` (machine-readable sibling of the manifest). Each task object has a ready-to-use `dispatch_prompt`, an `agent_description` to pass through as the dispatch description, and exact `run_record_path` and `timing_path` to write to. The `agent_description` is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) so transcripts from different iterations sharing one session's subagents dir can't collide — **pass it verbatim; do not reconstruct it from the eval id and condition.**
-3. For each task, the agent dispatches a fresh subagent using its host's primitive, passing `dispatch_prompt` verbatim and `agent_description` verbatim as the dispatch `description` (or as the subagent's `Role` on Antigravity). Passing the description through unchanged is what lets the transcript adapter correlate transcripts to runs in step 5.
+3. For each task, the agent dispatches a fresh subagent using its host's primitive, passing `dispatch_prompt` verbatim and `agent_description` verbatim as the dispatch `description`. Passing the description through unchanged is what lets the transcript adapter correlate transcripts to runs in step 5.
 4. When the subagent returns, the agent writes the portable run record to `run_record_path` (with `tool_invocations: []`) and the timing record to `timing_path`.
-5. (Claude Code & Antigravity) The agent runs `bun run evals:fill-transcripts` to populate `tool_invocations` from persisted subagent transcripts. Other harnesses skip this step; `transcript_check` assertions grade as unverifiable.
+5. (Claude Code) The agent runs `bun run evals:fill-transcripts` to populate `tool_invocations` from persisted subagent transcripts. Other harnesses skip this step; `transcript_check` assertions grade as unverifiable.
 6. (Optional, where transcripts were filled) The agent runs `bun run evals:detect-stray-writes --skill <name> --iteration <N>` to flag any subagent writes or installs that landed outside the run's `outputs/` dir. See *Sandboxing eval subagents* below.
 7. The agent runs the grader (Bash) and then dispatches judge subagents for any `llm_judge` assertions — same pattern: read a tasks file, dispatch, write results back to a path.
 8. The agent runs the aggregator.
@@ -126,9 +126,8 @@ Agent-driven mode is the common case because the framework is most useful from i
 `transcript_check` assertions match regex patterns against a run's `tool_invocations`. Filling that list depends on what the harness exposes:
 
 - **Claude Code:** subagent transcripts are persisted to `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/agent-<id>.jsonl`, with a sibling `.meta.json` recording the dispatch description. The runner emits a unique `agent_description` (`<eval_id>:<condition>:i<N>-<nonce>`) field on each task; pass that string verbatim as the Agent tool's `description` when dispatching. The nonce namespaces the description per run, so `fill-transcripts` reads each task's `agent_description` straight from `dispatch.json` and can't cross-match a colliding agent from another iteration. After all dispatches complete, run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir <path>` to populate `tool_invocations` on every run record via the adapter at `runner/adapters/claude-code-transcript.ts`.
-- **Antigravity CLI:** subagent transcripts are persisted directly under `<appDataDir>/brain/<conversation-id>/.system_generated/logs/transcript.jsonl`. When dispatching the subagent, pass the task's `agent_description` verbatim as the `Role` parameter of the `invoke_subagent` tool. After all dispatches complete, run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir ~/.gemini/antigravity-cli/brain/` to dynamically populate `tool_invocations` on every run record via the adapter at `runner/adapters/antigravity-transcript.ts` (auto-detected, or pass `--harness antigravity`).
 - **Other harnesses (no transcript access):** the agent records only `final_message`; `tool_invocations` stays empty and `transcript_check` assertions grade as `unverifiable`. Lean on `llm_judge` for substantive checks. This is an honest limitation, not a bug.
-- **Operator-driven mode on Claude Code and Antigravity:** the operator can run `evals:fill-transcripts` after the fact, since they have filesystem access to the persisted transcripts.
+- **Operator-driven mode on Claude Code:** the operator can run `evals:fill-transcripts` after the fact, since they have filesystem access to the persisted transcripts.
 
 Design your assertions accordingly. For maximally portable evals, lean on `llm_judge` for the substantive checks and use `transcript_check` for cheap mechanical signals where the adapter is available.
 

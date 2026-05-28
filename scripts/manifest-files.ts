@@ -7,7 +7,6 @@ export const VERSION_LOCKED_MANIFESTS = [
   ".claude-plugin/plugin.json",
   ".codex-plugin/plugin.json",
   ".cursor-plugin/plugin.json",
-  "gemini-extension.json",
   ".claude-plugin/marketplace.json",
   ".agents/plugins/marketplace.json",
 ] as const;

@@ -285,7 +285,6 @@ describe("buildDispatchTask bootstrap injection", () => {
   test("prepends <session-start-context> for claude-code when bootstrapContent is provided", () => {
     const task = buildDispatchTask({
       ...baseOpts,
-      harness: "claude-code",
       bootstrapContent: "BOOT-LOADED",
     });
     expect(task.dispatch_prompt.startsWith("<session-start-context>")).toBe(
@@ -298,7 +297,6 @@ describe("buildDispatchTask bootstrap injection", () => {
   test("omits <session-start-context> when bootstrapContent is null and nothing is staged", () => {
     const task = buildDispatchTask({
       ...baseOpts,
-      harness: "claude-code",
       bootstrapContent: null,
     });
     expect(task.dispatch_prompt).not.toContain("<session-start-context>");
@@ -307,7 +305,6 @@ describe("buildDispatchTask bootstrap injection", () => {
   test("emits <session-start-context> with a staged-skills inventory even when bootstrapContent is null", () => {
     const task = buildDispatchTask({
       ...baseOpts,
-      harness: "claude-code",
       bootstrapContent: null,
       availableSkills: [
         { name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
@@ -324,7 +321,6 @@ describe("buildDispatchTask bootstrap injection", () => {
   test("staged-skills inventory follows the verbatim bootstrap content when both are present", () => {
     const task = buildDispatchTask({
       ...baseOpts,
-      harness: "claude-code",
       bootstrapContent: "BOOT-LOADED",
       availableSkills: [
         { name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
@@ -365,7 +361,6 @@ describe("buildDispatchTask bootstrap injection", () => {
       skillPath: null,
       stagedSkillSlug: null,
       skillName: "test-driven-development",
-      harness: "claude-code",
       bootstrapContent: SAMPLE_DIRECTORY,
     });
     expect(withoutSkill.dispatch_prompt).not.toContain(
@@ -380,7 +375,6 @@ describe("buildDispatchTask bootstrap injection", () => {
       skillPath: null,
       stagedSkillSlug: "superslow-eval-1-with_skill__test-driven-development",
       skillName: "test-driven-development",
-      harness: "claude-code",
       bootstrapContent: SAMPLE_DIRECTORY,
     });
     expect(withSkill.dispatch_prompt).toContain("test-driven-development");
@@ -389,7 +383,6 @@ describe("buildDispatchTask bootstrap injection", () => {
   test("references staged slug in skill block for claude-code", () => {
     const task = buildDispatchTask({
       ...baseOpts,
-      harness: "claude-code",
       bootstrapContent: "BOOT-LOADED",
     });
     expect(task.dispatch_prompt).toContain("superslow-eval-1-with_skill__foo");
@@ -400,7 +393,6 @@ describe("buildDispatchTask bootstrap injection", () => {
       ...baseOpts,
       skillPath: null,
       stagedSkillSlug: null,
-      harness: "claude-code",
       bootstrapContent: "BOOT-LOADED",
     });
     expect(task.dispatch_prompt).not.toContain("No skill is loaded");
@@ -412,118 +404,9 @@ describe("buildDispatchTask bootstrap injection", () => {
       ...baseOpts,
       skillPath: null,
       stagedSkillSlug: null,
-      harness: "claude-code",
       bootstrapContent: null,
     });
     expect(task.dispatch_prompt).toContain("No skill is loaded");
-  });
-});
-
-describe("buildDispatchTask antigravity parity", () => {
-  const siblingTrio = [
-    {
-      name: "test-driven-development",
-      path: "/x/test-driven-development/SKILL.md",
-      description: "tdd skill",
-    },
-    {
-      name: "using-git-worktrees",
-      path: "/x/using-git-worktrees/SKILL.md",
-      description: "worktrees skill",
-    },
-  ];
-  const baseOpts = {
-    evalId: "e1",
-    condition: "with_skill",
-    skillPath: "/x/writing-plans/SKILL.md",
-    stagedSkillSlug: null,
-    userPrompt: "do the thing",
-    fixtures: [] as string[],
-    outputsDir: "/tmp/out",
-    condDir: "/tmp/cond",
-    skillName: "writing-plans",
-    availableSkills: [] as {
-      name: string;
-      path: string;
-      description: string;
-    }[],
-  };
-
-  test("prepends <session-start-context> for antigravity when bootstrapContent is provided", () => {
-    const task = buildDispatchTask({
-      ...baseOpts,
-      harness: "antigravity",
-      bootstrapContent: "BOOT-LOADED",
-    });
-    expect(task.dispatch_prompt.startsWith("<session-start-context>")).toBe(
-      true,
-    );
-    expect(task.dispatch_prompt).toContain("BOOT-LOADED");
-    expect(task.dispatch_prompt).toContain("</session-start-context>");
-  });
-
-  test("omits <session-start-context> when bootstrapContent is null for antigravity", () => {
-    const task = buildDispatchTask({
-      ...baseOpts,
-      harness: "antigravity",
-      bootstrapContent: null,
-    });
-    expect(task.dispatch_prompt).not.toContain("<session-start-context>");
-  });
-
-  test("with-skill condition for antigravity lists all staged skills alphabetically including paths and descriptions", () => {
-    const task = buildDispatchTask({
-      ...baseOpts,
-      harness: "antigravity",
-      bootstrapContent: "BOOT-LOADED",
-      availableSkills: [
-        ...siblingTrio,
-        {
-          name: "writing-plans",
-          path: "/x/writing-plans/SKILL.md",
-          description: "plans skill",
-        },
-      ],
-    });
-    expect(task.dispatch_prompt).toContain("<skills>");
-    expect(task.dispatch_prompt).toContain("Available skills:");
-    expect(task.dispatch_prompt).toContain("- using-git-worktrees (");
-    expect(task.dispatch_prompt).toContain("- test-driven-development (");
-    expect(task.dispatch_prompt).toContain("- writing-plans (");
-    const idxTDD = task.dispatch_prompt.indexOf("- test-driven-development (");
-    const idxGit = task.dispatch_prompt.indexOf("- using-git-worktrees (");
-    const idxWP = task.dispatch_prompt.indexOf("- writing-plans (");
-    expect(idxTDD).toBeLessThan(idxGit);
-    expect(idxGit).toBeLessThan(idxWP);
-    expect(task.dispatch_prompt).toContain(
-      "If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
-    );
-  });
-
-  test("without-skill condition for antigravity lists only sibling skills and excludes the skill under test", () => {
-    const task = buildDispatchTask({
-      ...baseOpts,
-      skillPath: null,
-      harness: "antigravity",
-      bootstrapContent: "BOOT-LOADED",
-      availableSkills: siblingTrio,
-    });
-    expect(task.dispatch_prompt).toContain("<skills>");
-    expect(task.dispatch_prompt).toContain("Available skills:");
-    expect(task.dispatch_prompt).toContain("- test-driven-development (");
-    expect(task.dispatch_prompt).not.toContain("- writing-plans (");
-  });
-
-  test("without any staged skills (e.g. --no-stage) for antigravity keeps the legacy 'Available skills: none' wording", () => {
-    const task = buildDispatchTask({
-      ...baseOpts,
-      skillPath: null,
-      harness: "antigravity",
-      bootstrapContent: null,
-    });
-    expect(task.dispatch_prompt).toContain(
-      "<skills>\nAvailable skills: none\n</skills>",
-    );
   });
 });
 

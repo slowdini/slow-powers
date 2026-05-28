@@ -1,8 +1,8 @@
 // Standard, cross-harness parity checks. Every supported harness is held to
 // the same contract here; the per-harness specifics live in spec.ts. These
-// checks replace the retired tests/codex/test-plugin-layout.sh and
-// scripts/test-antigravity-extension.sh, and extend coverage to Claude Code,
-// Cursor, and OpenCode which previously had no manifest tests.
+// checks replace the retired tests/codex/test-plugin-layout.sh and extend
+// coverage to Claude Code, Cursor, and OpenCode which previously had no
+// manifest tests.
 import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
@@ -102,38 +102,6 @@ describe.each(HARNESSES)("$name harness", (harness) => {
   if (harness.hooks) {
     test("hook manifest wires SessionStart to run-hook.cmd", () => {
       assertHookWiring(harness.hooks as HookSpec);
-    });
-  }
-
-  if (harness.name === "Antigravity CLI") {
-    test("contextFileName delivers the bootstrap (directly or via @-include)", () => {
-      const manifest = readJson(harness.manifest) as {
-        contextFileName?: string;
-      };
-      const value = manifest.contextFileName;
-      expect(value).toBeDefined();
-      const resolved = resolveWithinRoot(REPO_ROOT, value as string);
-      const content = fs.readFileSync(resolved, "utf8");
-      // agy reads GEMINI.md by convention; it may carry the bootstrap inline
-      // or pull it in with an @./bootstrap.md include (bootstrap.md itself is
-      // checked for the marker in the shared-assets suite above).
-      const includesBootstrap = /@\.\/bootstrap\.md\b/.test(content);
-      const deliversMarker = content.includes(BOOTSTRAP_MARKER);
-      expect(deliversMarker || includesBootstrap).toBe(true);
-    });
-
-    test("ANTIGRAVITY.md is a real file (not a symlink) that delivers the bootstrap", () => {
-      // agy prefers its harness-native ANTIGRAVITY.md over the manifest's
-      // contextFileName, and `gemini extensions install` rewrites symlinks to
-      // an absolute temp path that is deleted post-install (dangling link ->
-      // empty context). So this file MUST be real and carry the bootstrap.
-      const p = path.join(REPO_ROOT, "ANTIGRAVITY.md");
-      expect(fs.existsSync(p)).toBe(true);
-      expect(fs.lstatSync(p).isSymbolicLink()).toBe(false);
-      const content = fs.readFileSync(p, "utf8");
-      const includesBootstrap = /@\.\/bootstrap\.md\b/.test(content);
-      const deliversMarker = content.includes(BOOTSTRAP_MARKER);
-      expect(deliversMarker || includesBootstrap).toBe(true);
     });
   }
 });

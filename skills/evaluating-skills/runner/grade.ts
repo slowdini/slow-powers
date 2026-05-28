@@ -6,7 +6,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { join } from "node:path";
 import { detectRunContext } from "./context";
 import {
   type AssertionResult,
@@ -110,39 +110,13 @@ type JudgeTask = {
 export function checkSkillInvokedFromTranscript(
   invocations: ToolInvocation[],
   stagedSlug: string | null,
-  skillPath: string | null,
 ): boolean {
   for (const inv of invocations) {
-    // 1. Claude Code Skill tool check
+    // Claude Code Skill tool check
     if (stagedSlug && inv.name === "Skill") {
       if (!inv.args || typeof inv.args !== "object") continue;
       const argSkill = (inv.args as { skill?: unknown }).skill;
       if (typeof argSkill === "string" && argSkill === stagedSlug) return true;
-    }
-
-    // 2. Antigravity view_file skill check
-    if (
-      skillPath &&
-      (inv.name === "view_file" || inv.name === "default_api:view_file")
-    ) {
-      if (!inv.args || typeof inv.args !== "object") continue;
-      const args = inv.args as {
-        IsSkillFile?: unknown;
-        AbsolutePath?: unknown;
-      };
-      const isSkillFile =
-        args.IsSkillFile === true || args.IsSkillFile === "true";
-      if (!isSkillFile) continue;
-      const absPath = args.AbsolutePath;
-      if (typeof absPath === "string") {
-        const skillName = basename(dirname(skillPath)); // e.g. "writing-plans"
-        if (absPath.includes(skillName) && absPath.endsWith("SKILL.md")) {
-          return true;
-        }
-        if (absPath.endsWith("skill-snapshot.md")) {
-          return true;
-        }
-      }
     }
   }
   return false;
@@ -243,11 +217,10 @@ function emitJudgeTasks(): void {
         const stagedSlug = conditionStagedSlugs.get(cond) ?? null;
         const transcriptFilled = runRecord.tool_invocations.length > 0;
 
-        if ((stagedSlug || condSkillPath) && transcriptFilled) {
+        if (stagedSlug && transcriptFilled) {
           const invoked = checkSkillInvokedFromTranscript(
             runRecord.tool_invocations,
             stagedSlug,
-            condSkillPath,
           );
           const evidence = invoked
             ? `Skill invocation verified from transcript.`
