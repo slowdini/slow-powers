@@ -104,6 +104,14 @@ type JudgeTask = {
   run_record_path: string;
   outputs_dir: string;
   response_path: string;
+  /**
+   * Absolute path to the file holding the full judge prompt. The orchestrator
+   * dispatches each judge with a short "read this file and follow it" prompt
+   * rather than inlining the prompt (rubric + full run record + principles).
+   * `dispatch_prompt` carries the same text in-memory but is stripped from the
+   * serialized judge-tasks.json.
+   */
+  dispatch_prompt_path: string;
   dispatch_prompt: string;
 };
 
@@ -166,6 +174,7 @@ function emitJudgeTasks(): void {
       const runRecordPath = join(condDir, "run.json");
       const outputsDir = join(condDir, "outputs");
       const judgeResponsesDir = join(condDir, "judge-responses");
+      const judgePromptsDir = join(condDir, "judge-prompts");
 
       if (!existsSync(runRecordPath)) {
         console.warn(`warn: missing run.json for ${ev.id}/${cond} — skipping`);
@@ -174,6 +183,7 @@ function emitJudgeTasks(): void {
       }
 
       ensureDir(judgeResponsesDir);
+      ensureDir(judgePromptsDir);
       const runRecord: RunRecord = readJson(runRecordPath);
 
       if (hasAssertions && ev.assertions) {
@@ -190,6 +200,8 @@ function emitJudgeTasks(): void {
             outputsDir,
             responsePath,
           });
+          const promptPath = join(judgePromptsDir, `${assertion.id}.txt`);
+          writeFileSync(promptPath, dispatchPrompt);
           tasks.push({
             eval_id: ev.id,
             condition: cond,
@@ -200,6 +212,7 @@ function emitJudgeTasks(): void {
             run_record_path: runRecordPath,
             outputs_dir: outputsDir,
             response_path: responsePath,
+            dispatch_prompt_path: promptPath,
             dispatch_prompt: dispatchPrompt,
           });
         }
@@ -240,6 +253,11 @@ function emitJudgeTasks(): void {
             outputsDir,
             responsePath,
           });
+          const promptPath = join(
+            judgePromptsDir,
+            `${SKILL_INVOKED_META_ID}.txt`,
+          );
+          writeFileSync(promptPath, dispatchPrompt);
           tasks.push({
             eval_id: ev.id,
             condition: cond,
@@ -250,6 +268,7 @@ function emitJudgeTasks(): void {
             run_record_path: runRecordPath,
             outputs_dir: outputsDir,
             response_path: responsePath,
+            dispatch_prompt_path: promptPath,
             dispatch_prompt: dispatchPrompt,
           });
           metaInjected++;
@@ -264,7 +283,7 @@ function emitJudgeTasks(): void {
     total_tasks: tasks.length,
     meta_tasks_injected: metaInjected,
     skipped_transcript_checks: unverifiableCount,
-    tasks,
+    tasks: tasks.map(({ dispatch_prompt: _omit, ...rest }) => rest),
   });
 
   console.log(`Wrote ${tasksPath}`);

@@ -450,6 +450,13 @@ function commandRun(args: Args, ctx: RunContext): void {
     }),
   );
 
+  // Write each prompt to its own file and reference it by path in dispatch.json.
+  // The orchestrator then dispatches with a short "read this file" prompt instead
+  // of reproducing the full prompt verbatim per Task call.
+  for (const task of tasks) {
+    writeFileSync(task.dispatch_prompt_path, task.dispatch_prompt);
+  }
+
   const dispatchJsonPath = join(iterationDir, "dispatch.json");
   writeJson(dispatchJsonPath, {
     skill_name: ctx.skillName,
@@ -460,7 +467,7 @@ function commandRun(args: Args, ctx: RunContext): void {
     baseline: args.baseline ?? null,
     conditions: conditions.conditions,
     harness: ctx.harness,
-    tasks,
+    tasks: tasks.map(({ dispatch_prompt: _omit, ...rest }) => rest),
   });
 
   // Opt-in hard guard. Stages a PreToolUse hook that blocks subagent
@@ -511,6 +518,14 @@ type DispatchTask = {
   run_record_path: string;
   timing_path: string;
   agent_description: string;
+  /**
+   * Absolute path to the file holding the full dispatch prompt. The orchestrator
+   * dispatches each subagent with a short "read this file and follow it" prompt
+   * rather than inlining the prompt, so it never has to reproduce ~KB of text per
+   * Task call. `dispatch_prompt` carries the same text in-memory (for manifest
+   * building and unit tests) but is stripped from the serialized dispatch.json.
+   */
+  dispatch_prompt_path: string;
   dispatch_prompt: string;
 };
 
@@ -718,6 +733,7 @@ export function buildDispatchTask(opts: {
     agent_description: opts.runTag
       ? `${opts.evalId}:${opts.condition}:${opts.runTag}`
       : `${opts.evalId}:${opts.condition}`,
+    dispatch_prompt_path: join(opts.condDir, "dispatch-prompt.txt"),
     dispatch_prompt: sections.join(""),
   };
 }
@@ -738,7 +754,7 @@ function buildManifest(opts: {
     "",
     "## How to use this manifest",
     "",
-    "In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
+    'In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt_path` field pointing at the file that holds the full prompt — dispatch the subagent with a short "read this file and follow it" instruction rather than inlining the prompt — plus exact paths for `run.json` and `timing.json`.',
     "",
     "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>:i<N>-<nonce>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string verbatim as the dispatch `description` — do not reconstruct it. The per-run nonce keeps descriptions unique across iterations sharing one session's subagents dir, so the transcript adapter correlates each subagent's persisted transcript back to the right `(eval, condition)` slot without collisions.",
     "",
