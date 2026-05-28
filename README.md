@@ -139,7 +139,7 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `.codex-plugin/` — OpenAI Codex plugin manifest
 - `.cursor-plugin/` — Cursor plugin manifest, hooks, and install script
 - `opencode/` — OpenCode plugin and installation docs
-- `antigravity-extension.json` + `antigravity-instructions.md` — Antigravity CLI plugin
+- `antigravity-extension.json` — Antigravity CLI plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
 - `harness-parity-check.md` — Instructions for an agent in any harness to audit feature gaps and prep to close one

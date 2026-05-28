@@ -15,7 +15,7 @@ This repo ships Superslow across six harnesses (five implemented, one planned):
 - `.codex-plugin/` — OpenAI Codex plugin
 - `.cursor-plugin/` — Cursor plugin
 - `opencode/` — OpenCode plugin (`@slowdini/superslow-opencode`)
-- `antigravity-extension.json` + `antigravity-instructions.md` — Antigravity CLI plugin (root-level)
+- `antigravity-extension.json` — Antigravity CLI plugin (root-level)
 - Copilot CLI — *planned*, no plugin files yet
 
 See the [feature support](README.md#feature-support) table in the README for current tier per harness.
