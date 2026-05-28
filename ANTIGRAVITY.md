@@ -1,1 +1,1 @@
-AGENTS.md
+bootstrap.md
