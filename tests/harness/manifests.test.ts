@@ -104,6 +104,19 @@ describe.each(HARNESSES)("$name harness", (harness) => {
       assertHookWiring(harness.hooks as HookSpec);
     });
   }
+
+  if (harness.name === "Antigravity CLI") {
+    test("contextFileName contains bootstrap content", () => {
+      const manifest = readJson(harness.manifest) as {
+        contextFileName?: string;
+      };
+      const value = manifest.contextFileName;
+      expect(value).toBeDefined();
+      const resolved = resolveWithinRoot(REPO_ROOT, value as string);
+      const content = fs.readFileSync(resolved, "utf8");
+      expect(content).toContain(BOOTSTRAP_MARKER);
+    });
+  }
 });
 
 function assertHookWiring(hooks: HookSpec): void {
