@@ -332,6 +332,14 @@ describe("buildDispatchTask bootstrap injection", () => {
     expect(invIdx).toBeGreaterThan(bootIdx);
   });
 
+  test("sets dispatch_prompt_path to dispatch-prompt.txt under the condition dir", () => {
+    const task = buildDispatchTask({
+      ...baseOpts,
+      bootstrapContent: null,
+    });
+    expect(task.dispatch_prompt_path).toBe("/tmp/cond/dispatch-prompt.txt");
+  });
+
   const SAMPLE_DIRECTORY = [
     "## Active Skills Directory",
     "",
@@ -503,11 +511,19 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
         ),
         "utf8",
       ),
-    ) as { tasks: Array<{ condition: string; dispatch_prompt: string }> };
+    ) as {
+      tasks: Array<{
+        condition: string;
+        dispatch_prompt?: string;
+        dispatch_prompt_path: string;
+      }>;
+    };
 
     const withSkill = dispatch.tasks.find((t) => t.condition === "with_skill");
     expect(withSkill).toBeDefined();
-    const prompt = withSkill?.dispatch_prompt ?? "";
+    // The full prompt is no longer inlined in dispatch.json — it lives in a file.
+    expect(withSkill?.dispatch_prompt).toBeUndefined();
+    const prompt = readFileSync(withSkill?.dispatch_prompt_path ?? "", "utf8");
     expect(prompt).toContain("<session-start-context>");
     expect(prompt).toContain("* `mr-review`");
     expect(prompt).not.toContain("test-driven-development");
@@ -515,6 +531,49 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     // No product framing (EXTREMELY-IMPORTANT etc.) without a --bootstrap file.
     expect(prompt).not.toContain("EXTREMELY-IMPORTANT");
     expect(prompt).not.toContain("loaded at session start");
+  });
+
+  test("writes each dispatch prompt to a file and drops the inline prompt from dispatch.json", () => {
+    const { skillDir, cwd } = setup("usermode-prompt-file");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const dispatch = JSON.parse(
+      readFileSync(
+        join(
+          cwd,
+          "skills-workspace",
+          "mr-review",
+          "iteration-1",
+          "dispatch.json",
+        ),
+        "utf8",
+      ),
+    ) as {
+      tasks: Array<{ dispatch_prompt?: string; dispatch_prompt_path: string }>;
+    };
+
+    expect(dispatch.tasks.length).toBeGreaterThan(0);
+    for (const t of dispatch.tasks) {
+      // Nothing inlined; everything goes through the file pointer.
+      expect(t.dispatch_prompt).toBeUndefined();
+      expect(t.dispatch_prompt_path.endsWith("dispatch-prompt.txt")).toBe(true);
+      expect(existsSync(t.dispatch_prompt_path)).toBe(true);
+      const contents = readFileSync(t.dispatch_prompt_path, "utf8");
+      expect(contents.length).toBeGreaterThan(0);
+      expect(contents).toContain("User request:");
+    }
   });
 
   test("--guard installs a PreToolUse hook; teardown-guard removes it", () => {
@@ -640,10 +699,13 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
         ),
         "utf8",
       ),
-    ) as { tasks: Array<{ condition: string; dispatch_prompt: string }> };
-    const prompt =
-      dispatch.tasks.find((t) => t.condition === "with_skill")
-        ?.dispatch_prompt ?? "";
+    ) as {
+      tasks: Array<{ condition: string; dispatch_prompt_path: string }>;
+    };
+    const withSkill = dispatch.tasks.find((t) => t.condition === "with_skill");
+    const prompt = withSkill
+      ? readFileSync(withSkill.dispatch_prompt_path, "utf8")
+      : "";
     const bootIdx = prompt.indexOf("MY CUSTOM EVAL FRAMING");
     const invIdx = prompt.indexOf("staged and discoverable");
     expect(bootIdx).toBeGreaterThan(-1);
