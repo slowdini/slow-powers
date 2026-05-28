@@ -104,6 +104,24 @@ describe.each(HARNESSES)("$name harness", (harness) => {
       assertHookWiring(harness.hooks as HookSpec);
     });
   }
+
+  if (harness.name === "Antigravity CLI") {
+    test("contextFileName delivers the bootstrap (directly or via @-include)", () => {
+      const manifest = readJson(harness.manifest) as {
+        contextFileName?: string;
+      };
+      const value = manifest.contextFileName;
+      expect(value).toBeDefined();
+      const resolved = resolveWithinRoot(REPO_ROOT, value as string);
+      const content = fs.readFileSync(resolved, "utf8");
+      // agy reads GEMINI.md by convention; it may carry the bootstrap inline
+      // or pull it in with an @./bootstrap.md include (bootstrap.md itself is
+      // checked for the marker in the shared-assets suite above).
+      const includesBootstrap = /@\.\/bootstrap\.md\b/.test(content);
+      const deliversMarker = content.includes(BOOTSTRAP_MARKER);
+      expect(deliversMarker || includesBootstrap).toBe(true);
+    });
+  }
 });
 
 function assertHookWiring(hooks: HookSpec): void {
