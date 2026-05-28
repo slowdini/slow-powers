@@ -1,5 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkSkillInvokedFromTranscript } from "./grade";
@@ -239,5 +245,101 @@ describe("emitJudgeTasks run.json validation", () => {
     );
     expect(res.exitCode).not.toBe(0);
     expect(res.stderr.toString()).toContain("run-record schema");
+  });
+});
+
+describe("emitJudgeTasks file-pointer dispatch", () => {
+  test("writes each judge prompt to a file and drops the inline prompt from judge-tasks.json", () => {
+    const root = join(GRADE_FIXTURE_ROOT, "judge-prompt-file");
+    const skill = "mr-review";
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, skill);
+    mkdirSync(join(skillSub, "evals"), { recursive: true });
+    writeFileSync(
+      join(skillSub, "SKILL.md"),
+      "---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+    );
+    writeJsonFile(join(skillSub, "evals", "evals.json"), {
+      skill_name: skill,
+      evals: [
+        {
+          id: "pos-eval",
+          prompt: "Fix the failing build.",
+          expected_output: "Agent debugs systematically.",
+          assertions: [
+            { id: "a1", type: "llm_judge", rubric: "Did it debug?" },
+          ],
+        },
+      ],
+    });
+
+    const cwd = join(root, "work");
+    const iterationDir = join(cwd, "skills-workspace", skill, "iteration-1");
+    mkdirSync(iterationDir, { recursive: true });
+    writeJsonFile(join(iterationDir, "conditions.json"), {
+      mode: "new-skill",
+      conditions: [
+        { name: "with_skill", skill_path: join(skillSub, "SKILL.md") },
+        { name: "without_skill", skill_path: null },
+      ],
+      timestamp: new Date().toISOString(),
+      harness: "claude-code",
+    });
+
+    for (const cond of ["with_skill", "without_skill"]) {
+      const condDir = join(iterationDir, "eval-pos-eval", cond);
+      mkdirSync(condDir, { recursive: true });
+      writeJsonFile(join(condDir, "run.json"), {
+        eval_id: "pos-eval",
+        condition: cond,
+        skill_path: cond === "with_skill" ? join(skillSub, "SKILL.md") : null,
+        prompt: "p",
+        files: [],
+        final_message: "done",
+        tool_invocations: [],
+        total_tokens: 100,
+        duration_ms: 1000,
+      });
+    }
+
+    const res = Bun.spawnSync(
+      [
+        "bun",
+        "run",
+        GRADE_TS,
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        skill,
+        "--iteration",
+        "1",
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(res.exitCode).toBe(0);
+
+    const tasks = JSON.parse(
+      readFileSync(join(iterationDir, "judge-tasks.json"), "utf8"),
+    ) as {
+      tasks: Array<{
+        assertion_id: string;
+        response_path: string;
+        dispatch_prompt?: string;
+        dispatch_prompt_path: string;
+      }>;
+    };
+
+    expect(tasks.tasks.length).toBeGreaterThan(0);
+    for (const t of tasks.tasks) {
+      // Nothing inlined; the orchestrator reads the prompt from a file.
+      expect(t.dispatch_prompt).toBeUndefined();
+      expect(t.dispatch_prompt_path.endsWith(`${t.assertion_id}.txt`)).toBe(
+        true,
+      );
+      expect(existsSync(t.dispatch_prompt_path)).toBe(true);
+      const contents = readFileSync(t.dispatch_prompt_path, "utf8");
+      // The judge still learns where to write its verdict from the prompt text.
+      expect(contents).toContain(t.response_path);
+    }
   });
 });
