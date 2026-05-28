@@ -60,9 +60,7 @@ EXCLUDES=(
   # Root ceremony files
   "/AGENTS.md"
   "/CLAUDE.md"
-  "/ANTIGRAVITY.md"
   "/RELEASE-NOTES.md"
-  "/gemini-extension.json"
   "/package.json"
 
   # Directories not shipped by canonical Codex plugins

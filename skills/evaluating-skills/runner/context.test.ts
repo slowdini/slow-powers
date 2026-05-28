@@ -159,20 +159,6 @@ describe("detectRunContext", () => {
     expect(ctx.bootstrapPath).toBe(resolve(bootstrapPath));
   });
 
-  test("--harness antigravity is accepted", () => {
-    const root = fixturePath("harness-agy");
-    const skillDir = makeSkillDir(root, ["foo"]);
-    const ctx = detectRunContext([
-      "--skill-dir",
-      skillDir,
-      "--skill",
-      "foo",
-      "--harness",
-      "antigravity",
-    ]);
-    expect(ctx.harness).toBe("antigravity");
-  });
-
   test("unknown --harness value is rejected", () => {
     const root = fixturePath("harness-bad");
     const skillDir = makeSkillDir(root, ["foo"]);

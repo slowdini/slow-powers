@@ -330,7 +330,7 @@ function commandRun(args: Args, ctx: RunContext): void {
 
   if (!args.noStage) cleanupStagedSkills(ctx.stageRoot);
 
-  if (!args.noStage && ctx.harness === "claude-code") {
+  if (!args.noStage) {
     stageSiblingSkills({
       skillUnderTest: ctx.skillName,
       skillsSourceDir: ctx.skillDir,
@@ -429,7 +429,6 @@ function commandRun(args: Args, ctx: RunContext): void {
           fixtures,
           outputsDir,
           condDir,
-          harness: ctx.harness,
           bootstrapContent,
           skillName: ctx.skillName,
           availableSkills: availableSkillsFor(condSkillPath),
@@ -451,6 +450,13 @@ function commandRun(args: Args, ctx: RunContext): void {
     }),
   );
 
+  // Write each prompt to its own file and reference it by path in dispatch.json.
+  // The orchestrator then dispatches with a short "read this file" prompt instead
+  // of reproducing the full prompt verbatim per Task call.
+  for (const task of tasks) {
+    writeFileSync(task.dispatch_prompt_path, task.dispatch_prompt);
+  }
+
   const dispatchJsonPath = join(iterationDir, "dispatch.json");
   writeJson(dispatchJsonPath, {
     skill_name: ctx.skillName,
@@ -461,15 +467,15 @@ function commandRun(args: Args, ctx: RunContext): void {
     baseline: args.baseline ?? null,
     conditions: conditions.conditions,
     harness: ctx.harness,
-    tasks,
+    tasks: tasks.map(({ dispatch_prompt: _omit, ...rest }) => rest),
   });
 
-  // Opt-in hard guard (Claude Code only). Stages a PreToolUse hook that blocks
-  // subagent writes/installs outside the eval sandbox while dispatches run.
+  // Opt-in hard guard. Stages a PreToolUse hook that blocks subagent
+  // writes/installs outside the eval sandbox while dispatches run.
   if (args.guard && !args.dryRun) {
-    if (args.noStage || ctx.harness !== "claude-code") {
+    if (args.noStage) {
       console.warn(
-        "\n⚠ --guard is only supported on Claude Code with staging enabled; skipping guard install.",
+        "\n⚠ --guard requires staging enabled; skipping guard install.",
       );
     } else {
       const guardScriptPath = join(import.meta.dir, "guard", "guard.ts");
@@ -512,6 +518,14 @@ type DispatchTask = {
   run_record_path: string;
   timing_path: string;
   agent_description: string;
+  /**
+   * Absolute path to the file holding the full dispatch prompt. The orchestrator
+   * dispatches each subagent with a short "read this file and follow it" prompt
+   * rather than inlining the prompt, so it never has to reproduce ~KB of text per
+   * Task call. `dispatch_prompt` carries the same text in-memory (for manifest
+   * building and unit tests) but is stripped from the serialized dispatch.json.
+   */
+  dispatch_prompt_path: string;
   dispatch_prompt: string;
 };
 
@@ -594,7 +608,6 @@ export function buildDispatchTask(opts: {
   fixtures: string[];
   outputsDir: string;
   condDir: string;
-  harness: string;
   bootstrapContent: string | null;
   skillName: string;
   availableSkills: AvailableSkill[];
@@ -610,49 +623,29 @@ export function buildDispatchTask(opts: {
   );
 
   let skillBlock: string;
-  if (opts.harness === "antigravity") {
-    if (stagedSkills.length > 0) {
-      const skillsLines = stagedSkills.map(
-        (s) => `- ${s.name} (${s.path}): ${s.description}`,
-      );
-      skillBlock = [
-        "<skills>",
-        "Available skills:",
-        ...skillsLines,
-        "</skills>",
-        "",
-        "If a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.",
-      ].join("\n");
-    } else {
-      skillBlock = ["<skills>", "Available skills: none", "</skills>"].join(
-        "\n",
-      );
-    }
+  if (opts.stagedSkillSlug) {
+    skillBlock = [
+      "Your environment has the superslow plugin loaded. All superslow skills are",
+      "discoverable via the Skill tool. The skill currently under evaluation is",
+      `staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
+      "than the natural name if the skill applies to the user's request.",
+    ].join("\n");
+  } else if (opts.skillPath) {
+    skillBlock = [
+      "The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
+      "",
+      `<skill name="${basename(dirname(opts.skillPath))}">`,
+      readFileSync(opts.skillPath, "utf8").trim(),
+      "</skill>",
+    ].join("\n");
+  } else if (stagedSkills.length > 0 || opts.bootstrapContent) {
+    skillBlock = [
+      "The skill currently under evaluation is NOT available in this environment.",
+      "Other staged skills remain discoverable via the Skill tool; apply any",
+      "that fit the user's request.",
+    ].join("\n");
   } else {
-    if (opts.stagedSkillSlug) {
-      skillBlock = [
-        "Your environment has the superslow plugin loaded. All superslow skills are",
-        "discoverable via the Skill tool. The skill currently under evaluation is",
-        `staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
-        "than the natural name if the skill applies to the user's request.",
-      ].join("\n");
-    } else if (opts.skillPath) {
-      skillBlock = [
-        "The following skill is loaded into your operating guidelines. Apply it where relevant to the user's request.",
-        "",
-        `<skill name="${basename(dirname(opts.skillPath))}">`,
-        readFileSync(opts.skillPath, "utf8").trim(),
-        "</skill>",
-      ].join("\n");
-    } else if (stagedSkills.length > 0 || opts.bootstrapContent) {
-      skillBlock = [
-        "The skill currently under evaluation is NOT available in this environment.",
-        "Other staged skills remain discoverable via the Skill tool; apply any",
-        "that fit the user's request.",
-      ].join("\n");
-    } else {
-      skillBlock = "No skill is loaded. Respond as you naturally would.";
-    }
+    skillBlock = "No skill is loaded. Respond as you naturally would.";
   }
 
   const fixturesBlock = opts.fixtures.length
@@ -661,10 +654,7 @@ export function buildDispatchTask(opts: {
 
   // The session-start context carries two kinds of content:
   //   1. The verbatim --bootstrap file (product-specific framing), if supplied.
-  //   2. An auto-built inventory of the skills staged for this eval. On
-  //      Claude Code this is the only place the staged skills are listed; on
-  //      Antigravity the <skills> block in the body already serves that role,
-  //      so the inventory is omitted here to avoid a redundant second list.
+  //   2. An auto-built inventory of the skills staged for this eval.
   // A condition that does not load the skill-under-test (the new-skill
   // `without_skill` arm, under staging or --no-stage) must carry zero reference
   // to it — including in the verbatim bootstrap, which otherwise lists it in its
@@ -686,7 +676,7 @@ export function buildDispatchTask(opts: {
       ].join("\n"),
     );
   }
-  if (opts.harness !== "antigravity" && stagedSkills.length > 0) {
+  if (stagedSkills.length > 0) {
     const inventoryLines = stagedSkills.map(
       (s) => `* \`${s.name}\`\n  * *Trigger:* ${s.description}`,
     );
@@ -743,6 +733,7 @@ export function buildDispatchTask(opts: {
     agent_description: opts.runTag
       ? `${opts.evalId}:${opts.condition}:${opts.runTag}`
       : `${opts.evalId}:${opts.condition}`,
+    dispatch_prompt_path: join(opts.condDir, "dispatch-prompt.txt"),
     dispatch_prompt: sections.join(""),
   };
 }
@@ -763,13 +754,13 @@ function buildManifest(opts: {
     "",
     "## How to use this manifest",
     "",
-    "In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
+    'In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt_path` field pointing at the file that holds the full prompt — dispatch the subagent with a short "read this file and follow it" instruction rather than inlining the prompt — plus exact paths for `run.json` and `timing.json`.',
     "",
     "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>:i<N>-<nonce>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string verbatim as the dispatch `description` — do not reconstruct it. The per-run nonce keeps descriptions unique across iterations sharing one session's subagents dir, so the transcript adapter correlates each subagent's persisted transcript back to the right `(eval, condition)` slot without collisions.",
     "",
     "After every dispatch:",
     "",
-    "1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json`. Populate `final_message` from the subagent's reply and leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
+    "1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json` (enforced at runtime by grade/fill-transcripts/detect-stray-writes). Carry over `eval_id`, `condition`, `skill_path` (`null` on the without_skill arm), `prompt`, and `files` from the task; populate `final_message` from the subagent's reply; leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
     "2. Capture `total_tokens` and `duration_ms` from the harness's task completion event into `timing.json`. These values may not be persisted anywhere else — save them immediately.",
     "",
     "After all dispatches:",

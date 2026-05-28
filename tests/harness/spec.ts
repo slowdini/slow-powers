@@ -111,14 +111,6 @@ export const HARNESSES: HarnessSpec[] = [
     hooks: { path: "hooks/hooks-cursor.json", format: "list" },
   },
   {
-    name: "Antigravity CLI",
-    manifest: "gemini-extension.json",
-    requiredFields: ["name", "version", "contextFileName"],
-    pathFields: [{ field: "contextFileName", kind: "file" }],
-    // Antigravity injects context via contextFileName, not a hook manifest.
-    hooks: null,
-  },
-  {
     name: "OpenCode",
     // OpenCode has no standalone manifest; the npm package.json `main` field
     // points at the runtime plugin it loads.

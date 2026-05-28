@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { detectRunContext } from "./context";
 import { classifyBash, isUnder, pathArg, WRITE_TOOLS } from "./sandbox-policy";
 import type { ConditionsRecord, RunRecord, ToolInvocation } from "./types";
+import { validateAgainstSchema } from "./validate-schema";
 
 function die(msg: string): never {
   console.error(`error: ${msg}`);
@@ -137,7 +138,11 @@ if (import.meta.main) {
       const condDir = join(iterationDir, evalDir, cond);
       const runPath = join(condDir, "run.json");
       if (!existsSync(runPath)) continue;
-      const run: RunRecord = JSON.parse(readFileSync(runPath, "utf8"));
+      const run = validateAgainstSchema<RunRecord>(
+        "run-record",
+        JSON.parse(readFileSync(runPath, "utf8")),
+        runPath,
+      );
       const invocations = Array.isArray(run.tool_invocations)
         ? run.tool_invocations
         : [];
@@ -164,6 +169,7 @@ if (import.meta.main) {
     runs,
   };
   const outPath = join(iterationDir, "stray-writes.json");
+  validateAgainstSchema("stray-writes", report, outPath);
   writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
   console.log(`Wrote ${outPath}`);
 

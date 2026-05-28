@@ -27,6 +27,8 @@ bun --version
 
 If `bun` is missing, the runner can't execute. Tell the user to install it: `curl -fsSL https://bun.sh/install | bash` (or `brew install bun`), then retry.
 
+The runner depends on one package, `ajv` (runtime schema validation). `bun` auto-installs it on first run, so no manual step is normally needed. In an offline/airgapped environment where auto-install can't reach the registry, run `bun install` once (in the superslow repo, or wherever `package.json` lives) before the first eval.
+
 ## Step 3 — Detect the skill folder
 
 The user typically opens Claude Code inside their skill folder. Confirm it:
@@ -87,8 +89,8 @@ Add `--guard` to arm the write guard: the runner stages a `PreToolUse` hook into
 
 Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task object:
 
-1. Dispatch a fresh subagent via the **Task tool**, passing `dispatch_prompt` verbatim as the prompt and `agent_description` verbatim as the description. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 9 without cross-matching an agent from another iteration.
-2. When the subagent returns, write the portable run record to `run_record_path` (with `tool_invocations: []`) and the timing record (`{ "total_tokens": <n>, "duration_ms": <n>}`) to `timing_path`. Capture tokens/duration from the task completion event — they may not be persisted elsewhere.
+1. Dispatch a fresh subagent via the **Task tool** with the prompt `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (substituting the task's `dispatch_prompt_path`), and pass `agent_description` verbatim as the description. The full prompt lives in that file rather than inline in `dispatch.json`, so you never reproduce ~KB of text per dispatch. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 9 without cross-matching an agent from another iteration.
+2. When the subagent returns, write the portable run record to `run_record_path` and the timing record (`{ "total_tokens": <n>, "duration_ms": <n>}`) to `timing_path`. Capture tokens/duration from the task completion event — they may not be persisted elsewhere. The run record must satisfy `schema/run-record.schema.json` (validated by `grade`/`fill-transcripts`/`detect-stray-writes`): set `eval_id`, `condition`, `skill_path` (the task's `skill_path`, `null` on the `without_skill` arm), `prompt` (the task's `user_prompt`), `files` (the task's `fixtures`, `[]` if none), `final_message` (the subagent's reply), and `tool_invocations: []` (populated later from the transcript).
 
 ## Step 9 — Fill transcripts, grade, aggregate
 
@@ -102,7 +104,7 @@ bun run "$SUPERSLOW_RUNNER_ROOT/fill-transcripts.ts" --skill-dir <skill-dir> --s
 bun run "$SUPERSLOW_RUNNER_ROOT/detect-stray-writes.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 
 bun run "$SUPERSLOW_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
-# Dispatch a fresh judge subagent for each emitted judge task, writing each response to the path the task specifies, then:
+# Dispatch a fresh judge subagent for each emitted judge task — prompt it with `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (the prompt tells the judge where to write its response). Then:
 bun run "$SUPERSLOW_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> --finalize
 
 bun run "$SUPERSLOW_RUNNER_ROOT/aggregate.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>

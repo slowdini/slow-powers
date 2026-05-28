@@ -6,7 +6,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { join } from "node:path";
 import { detectRunContext } from "./context";
 import {
   type AssertionResult,
@@ -19,6 +19,7 @@ import {
   type ToolInvocation,
 } from "./types";
 import { validateEvalsConfig } from "./validate";
+import { validateAgainstSchema } from "./validate-schema";
 
 type Mode = "emit-judge-tasks" | "finalize";
 
@@ -104,45 +105,27 @@ type JudgeTask = {
   run_record_path: string;
   outputs_dir: string;
   response_path: string;
+  /**
+   * Absolute path to the file holding the full judge prompt. The orchestrator
+   * dispatches each judge with a short "read this file and follow it" prompt
+   * rather than inlining the prompt (rubric + full run record + principles).
+   * `dispatch_prompt` carries the same text in-memory but is stripped from the
+   * serialized judge-tasks.json.
+   */
+  dispatch_prompt_path: string;
   dispatch_prompt: string;
 };
 
 export function checkSkillInvokedFromTranscript(
   invocations: ToolInvocation[],
   stagedSlug: string | null,
-  skillPath: string | null,
 ): boolean {
   for (const inv of invocations) {
-    // 1. Claude Code Skill tool check
+    // Claude Code Skill tool check
     if (stagedSlug && inv.name === "Skill") {
       if (!inv.args || typeof inv.args !== "object") continue;
       const argSkill = (inv.args as { skill?: unknown }).skill;
       if (typeof argSkill === "string" && argSkill === stagedSlug) return true;
-    }
-
-    // 2. Antigravity view_file skill check
-    if (
-      skillPath &&
-      (inv.name === "view_file" || inv.name === "default_api:view_file")
-    ) {
-      if (!inv.args || typeof inv.args !== "object") continue;
-      const args = inv.args as {
-        IsSkillFile?: unknown;
-        AbsolutePath?: unknown;
-      };
-      const isSkillFile =
-        args.IsSkillFile === true || args.IsSkillFile === "true";
-      if (!isSkillFile) continue;
-      const absPath = args.AbsolutePath;
-      if (typeof absPath === "string") {
-        const skillName = basename(dirname(skillPath)); // e.g. "writing-plans"
-        if (absPath.includes(skillName) && absPath.endsWith("SKILL.md")) {
-          return true;
-        }
-        if (absPath.endsWith("skill-snapshot.md")) {
-          return true;
-        }
-      }
     }
   }
   return false;
@@ -192,6 +175,7 @@ function emitJudgeTasks(): void {
       const runRecordPath = join(condDir, "run.json");
       const outputsDir = join(condDir, "outputs");
       const judgeResponsesDir = join(condDir, "judge-responses");
+      const judgePromptsDir = join(condDir, "judge-prompts");
 
       if (!existsSync(runRecordPath)) {
         console.warn(`warn: missing run.json for ${ev.id}/${cond} — skipping`);
@@ -200,7 +184,12 @@ function emitJudgeTasks(): void {
       }
 
       ensureDir(judgeResponsesDir);
-      const runRecord: RunRecord = readJson(runRecordPath);
+      ensureDir(judgePromptsDir);
+      const runRecord = validateAgainstSchema<RunRecord>(
+        "run-record",
+        readJson(runRecordPath),
+        runRecordPath,
+      );
 
       if (hasAssertions && ev.assertions) {
         for (const assertion of ev.assertions) {
@@ -216,6 +205,8 @@ function emitJudgeTasks(): void {
             outputsDir,
             responsePath,
           });
+          const promptPath = join(judgePromptsDir, `${assertion.id}.txt`);
+          writeFileSync(promptPath, dispatchPrompt);
           tasks.push({
             eval_id: ev.id,
             condition: cond,
@@ -226,6 +217,7 @@ function emitJudgeTasks(): void {
             run_record_path: runRecordPath,
             outputs_dir: outputsDir,
             response_path: responsePath,
+            dispatch_prompt_path: promptPath,
             dispatch_prompt: dispatchPrompt,
           });
         }
@@ -243,11 +235,10 @@ function emitJudgeTasks(): void {
         const stagedSlug = conditionStagedSlugs.get(cond) ?? null;
         const transcriptFilled = runRecord.tool_invocations.length > 0;
 
-        if ((stagedSlug || condSkillPath) && transcriptFilled) {
+        if (stagedSlug && transcriptFilled) {
           const invoked = checkSkillInvokedFromTranscript(
             runRecord.tool_invocations,
             stagedSlug,
-            condSkillPath,
           );
           const evidence = invoked
             ? `Skill invocation verified from transcript.`
@@ -267,6 +258,11 @@ function emitJudgeTasks(): void {
             outputsDir,
             responsePath,
           });
+          const promptPath = join(
+            judgePromptsDir,
+            `${SKILL_INVOKED_META_ID}.txt`,
+          );
+          writeFileSync(promptPath, dispatchPrompt);
           tasks.push({
             eval_id: ev.id,
             condition: cond,
@@ -277,6 +273,7 @@ function emitJudgeTasks(): void {
             run_record_path: runRecordPath,
             outputs_dir: outputsDir,
             response_path: responsePath,
+            dispatch_prompt_path: promptPath,
             dispatch_prompt: dispatchPrompt,
           });
           metaInjected++;
@@ -291,7 +288,7 @@ function emitJudgeTasks(): void {
     total_tasks: tasks.length,
     meta_tasks_injected: metaInjected,
     skipped_transcript_checks: unverifiableCount,
-    tasks,
+    tasks: tasks.map(({ dispatch_prompt: _omit, ...rest }) => rest),
   });
 
   console.log(`Wrote ${tasksPath}`);
@@ -482,7 +479,11 @@ function finalize(): void {
       const assertionResults: AssertionResult[] = [];
       const runRecordPath = join(condDir, "run.json");
       const runRecord: RunRecord | null = existsSync(runRecordPath)
-        ? readJson<RunRecord>(runRecordPath)
+        ? validateAgainstSchema<RunRecord>(
+            "run-record",
+            readJson(runRecordPath),
+            runRecordPath,
+          )
         : null;
       if (hasAssertions && ev.assertions) {
         for (const assertion of ev.assertions) {
@@ -579,6 +580,7 @@ function finalize(): void {
           skill_invoked: skillInvoked,
         };
       }
+      validateAgainstSchema("grading", grading, gradingPath);
       writeJson(gradingPath, grading);
       const metaTag =
         metaResults.length === 0 ? "" : ` [skill_invoked=${skillInvoked}]`;
