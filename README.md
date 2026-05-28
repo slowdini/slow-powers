@@ -12,18 +12,16 @@ and clarifying skill content.
 
 ## Quickstart
 
-Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Copilot CLI](#copilot-cli) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode) · [Antigravity CLI](#antigravity-cli). Support varies per harness — see the [feature support](#feature-support) table.
+Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode). Support varies per harness — see the [feature support](#feature-support) table.
 
 ## Feature support
 
 | Harness         | Status   | Notes                                                          |
 |-----------------|----------|----------------------------------------------------------------|
 | Claude Code     | Full     | Reference implementation                                       |
-| Antigravity CLI | Full     | Skill-eval transcript adapter + realistic eval environment     |
 | Codex CLI       | Partial  | Plugin manifest + shared hooks; no eval transcript adapter     |
 | Cursor          | Partial  | Plugin manifest + dedicated hooks; no eval transcript adapter  |
 | OpenCode        | Partial  | JS plugin with bootstrap injection; no eval transcript adapter |
-| Copilot CLI     | Planned  | No plugin files yet — install steps below are aspirational     |
 
 Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md): it audits which Superslow features are wired up for a given harness and preps an agent to close one gap.
 
@@ -41,15 +39,6 @@ Superslow separately for each.
 ```
 /plugin marketplace add slowdini/superslow
 /plugin install superpowers@superslow
-```
-
-### Copilot CLI
-
-> **Planned — not yet implemented.** The commands below describe the intended install flow once the plugin lands. There is no `.copilot-plugin/` directory in this repo yet.
-
-```bash
-copilot plugin marketplace add slowdini/superslow
-copilot plugin install superslow@slowdini
 ```
 
 ### Codex CLI
@@ -86,18 +75,6 @@ Add Superslow to the `plugin` array in your `opencode.json` (global or project-l
 {
   "plugin": ["github:slowdini/superslow#main"]
 }
-```
-
-### Antigravity CLI
-
-```bash
-agy plugin install https://github.com/slowdini/superslow
-```
-
-To update:
-
-```bash
-agy plugin update superslow
 ```
 
 ## The Core Execution Utilities
@@ -139,7 +116,6 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `.codex-plugin/` — OpenAI Codex plugin manifest
 - `.cursor-plugin/` — Cursor plugin manifest, hooks, and install script
 - `opencode/` — OpenCode plugin and installation docs
-- `gemini-extension.json` — Antigravity CLI plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
 - `harness-parity-check.md` — Instructions for an agent in any harness to audit feature gaps and prep to close one

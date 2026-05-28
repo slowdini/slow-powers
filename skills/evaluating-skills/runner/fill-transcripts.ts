@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import * as antigravityAdapter from "./adapters/antigravity-transcript";
 import * as claudeAdapter from "./adapters/claude-code-transcript";
 import { detectRunContext } from "./context";
 import type { ConditionsRecord, RunRecord } from "./types";
@@ -58,50 +57,26 @@ function parseArgs(argv: string[]) {
   const has = (name: string) => argv.includes(`--${name}`);
   const iteration = flag("iteration");
   const subagentsDir = flag("subagents-dir");
-  const harness = flag("harness");
   const overwrite = has("overwrite");
   if (!iteration) die("missing --iteration");
   if (!subagentsDir)
     die(
-      "missing --subagents-dir (e.g. ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/ or ~/.gemini/antigravity-cli/brain/)",
+      "missing --subagents-dir (e.g. ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/)",
     );
-  return { iteration, subagentsDir, harness, overwrite };
+  return { iteration, subagentsDir, overwrite };
 }
 
 if (import.meta.main) {
   const fillArgv = Bun.argv.slice(2);
-  const { iteration, subagentsDir, harness, overwrite } = parseArgs(fillArgv);
+  const { iteration, subagentsDir, overwrite } = parseArgs(fillArgv);
   const fillCtx = detectRunContext(fillArgv);
   const skill = fillCtx.skillName;
 
   if (!existsSync(subagentsDir))
     die(`subagents-dir not found: ${subagentsDir}`);
 
-  let adapter: typeof claudeAdapter | typeof antigravityAdapter = claudeAdapter;
-  let selectedHarness = "claude-code";
-
-  if (harness === "antigravity") {
-    adapter = antigravityAdapter;
-    selectedHarness = "antigravity";
-  } else if (harness === "claude-code") {
-    adapter = claudeAdapter;
-    selectedHarness = "claude-code";
-  } else {
-    // Auto-detect
-    if (
-      subagentsDir.includes("antigravity-cli") ||
-      subagentsDir.includes("brain") ||
-      existsSync(join(subagentsDir, "..", "conversations"))
-    ) {
-      adapter = antigravityAdapter;
-      selectedHarness = "antigravity (auto-detected)";
-    } else {
-      adapter = claudeAdapter;
-      selectedHarness = "claude-code (auto-detected)";
-    }
-  }
-
-  console.log(`Using harness transcript adapter: ${selectedHarness}`);
+  const adapter = claudeAdapter;
+  console.log("Using harness transcript adapter: claude-code");
 
   const iterationDir = join(
     fillCtx.workspaceRoot,
