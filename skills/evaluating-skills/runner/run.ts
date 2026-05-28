@@ -760,7 +760,7 @@ function buildManifest(opts: {
     "",
     "After every dispatch:",
     "",
-    "1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json`. Populate `final_message` from the subagent's reply and leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
+    "1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json` (enforced at runtime by grade/fill-transcripts/detect-stray-writes). Carry over `eval_id`, `condition`, `skill_path` (`null` on the without_skill arm), `prompt`, and `files` from the task; populate `final_message` from the subagent's reply; leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
     "2. Capture `total_tokens` and `duration_ms` from the harness's task completion event into `timing.json`. These values may not be persisted anywhere else — save them immediately.",
     "",
     "After all dispatches:",
