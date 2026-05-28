@@ -121,6 +121,20 @@ describe.each(HARNESSES)("$name harness", (harness) => {
       const deliversMarker = content.includes(BOOTSTRAP_MARKER);
       expect(deliversMarker || includesBootstrap).toBe(true);
     });
+
+    test("ANTIGRAVITY.md is a real file (not a symlink) that delivers the bootstrap", () => {
+      // agy prefers its harness-native ANTIGRAVITY.md over the manifest's
+      // contextFileName, and `gemini extensions install` rewrites symlinks to
+      // an absolute temp path that is deleted post-install (dangling link ->
+      // empty context). So this file MUST be real and carry the bootstrap.
+      const p = path.join(REPO_ROOT, "ANTIGRAVITY.md");
+      expect(fs.existsSync(p)).toBe(true);
+      expect(fs.lstatSync(p).isSymbolicLink()).toBe(false);
+      const content = fs.readFileSync(p, "utf8");
+      const includesBootstrap = /@\.\/bootstrap\.md\b/.test(content);
+      const deliversMarker = content.includes(BOOTSTRAP_MARKER);
+      expect(deliversMarker || includesBootstrap).toBe(true);
+    });
   }
 });
 
