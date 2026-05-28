@@ -112,7 +112,7 @@ export const HARNESSES: HarnessSpec[] = [
   },
   {
     name: "Antigravity CLI",
-    manifest: "antigravity-extension.json",
+    manifest: "gemini-extension.json",
     requiredFields: ["name", "version", "contextFileName"],
     pathFields: [{ field: "contextFileName", kind: "file" }],
     // Antigravity injects context via contextFileName, not a hook manifest.

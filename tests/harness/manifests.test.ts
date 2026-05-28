@@ -116,6 +116,32 @@ describe.each(HARNESSES)("$name harness", (harness) => {
       const content = fs.readFileSync(resolved, "utf8");
       expect(content).toContain(BOOTSTRAP_MARKER);
     });
+
+    test("manifest filename matches expected filename in agy binary", () => {
+      let agyPath: string | undefined;
+      try {
+        const { execSync } = require("node:child_process");
+        agyPath = execSync("which agy", { encoding: "utf8" }).trim();
+      } catch {
+        const home = process.env.HOME || "";
+        const commonPath = path.join(home, ".local/bin/agy");
+        if (fs.existsSync(commonPath)) {
+          agyPath = commonPath;
+        }
+      }
+
+      if (agyPath && fs.existsSync(agyPath)) {
+        const binaryContent = fs.readFileSync(agyPath);
+        const expectedFilename = harness.manifest;
+        expect(binaryContent.includes(Buffer.from(expectedFilename))).toBe(
+          true,
+        );
+      } else {
+        console.warn(
+          "agy binary not found, skipping binary-manifest sync check",
+        );
+      }
+    });
   }
 });
 

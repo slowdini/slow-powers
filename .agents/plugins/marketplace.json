@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "superslow",
-      "version": "0.0.2",
+      "version": "0.0.3",
       "source": {
         "source": "url",
         "url": "./"
