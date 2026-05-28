@@ -2,7 +2,7 @@
   "name": "superpowers",
   "displayName": "Superslow",
   "description": "Superslow gives your agent superpowers: TDD, debugging, collaboration patterns, and proven techniques",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": {
     "name": "Max Haarhaus",
     "email": "samiamorwas@gmail.com"
