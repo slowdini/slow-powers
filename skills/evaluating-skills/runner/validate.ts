@@ -42,6 +42,12 @@ export function validateEvalsConfig(
       }
     }
 
+    if (
+      ev.skill_should_trigger !== undefined &&
+      typeof ev.skill_should_trigger !== "boolean"
+    )
+      err(`evals[${i}].skill_should_trigger must be a boolean`);
+
     if (ev.assertions !== undefined) {
       if (!Array.isArray(ev.assertions))
         err(`evals[${i}].assertions must be array`);

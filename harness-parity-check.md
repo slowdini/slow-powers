@@ -71,10 +71,38 @@ For each category below, compare what Claude Code has against what your harness 
 | Hook system / session start | `hooks/hooks.json` with matcher `startup\|resume\|clear\|compact` |
 | Skill-eval transcript adapter | `skills/evaluating-skills/runner/adapters/claude-code-transcript.ts` |
 | Realistic eval environment (skill staging) | `runner/run.ts` stages skills under `<stageRoot>/.claude/skills/` and builds a `<session-start-context>` inventory block |
+| Eval subagent write enforcement | Opt-in `--guard` stages a `PreToolUse` hook (`runner/guard/`) that *denies* subagent writes/installs outside the eval sandbox while dispatches run. Portable fallback for every harness: the `evals:detect-stray-writes` post-pass (`runner/detect-stray-writes.ts`) flags out-of-bounds writes from the parsed transcript after the fact |
 | Harness-details operator guide | `skills/evaluating-skills/harness-details/claude.md` |
 | Installation docs | README section titled `### Claude Code` |
 | Version-sync registration | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are listed in `scripts/manifest-files.ts` (the shared lockstep list) |
 | CI coverage | A descriptor entry in `tests/harness/spec.ts` drives the parameterized `tests/harness/manifests.test.ts` suite (the Standard harness test cases below); the whole suite runs via `bun test` in `.github/workflows/ci.yml` |
+
+**Note on the transcript adapter (raised bar).** Superslow's baseline eval suite
+now uses `transcript_check` assertions — deterministic regex checks against a
+run's tool invocations (e.g. "a test command ran", "the sibling skill was
+loaded"). These only grade when a transcript adapter exists for your harness.
+A harness without one still functions: those assertions grade as *unverifiable*
+and the `llm_judge` assertions carry the substantive measurement, the same way
+Codex/Cursor/OpenCode work today. But adapter richness is now an explicit parity
+target, not optional polish — a harness that adds or extends an adapter under
+`skills/evaluating-skills/runner/adapters/` lets more of the baseline suite grade
+mechanically. Treat the transcript-adapter row below as a goal to aim at, not a
+box already checked.
+
+**Note on write enforcement (parity goal).** Eval subagents are instructed to
+write only inside their `outputs/` dir, but nothing in the portable contract
+*enforces* it — a misbehaving subagent can edit the real repo or install
+packages, silently tainting the run. Two layers address this: the portable
+`detect-stray-writes` post-pass (available to every harness, since it works off
+the same parsed transcript the adapters already produce) and, on Claude Code, an
+opt-in `--guard` that stages a native `PreToolUse` hook to *block* the write
+before it happens. **Harness-level tool enforcement — denying out-of-bounds
+subagent writes using the harness's own permission/hook primitive — is an
+explicit parity goal, not optional polish.** A harness that can express a
+pre-tool guard (a hook, a permission rule, a sandboxed cwd) should wire one up so
+its eval runs are as self-contained as Claude Code's; until then, the
+`detect-stray-writes` report is the honest fallback. Treat the write-enforcement
+row above as a goal to aim at, with detection as the baseline every harness meets.
 
 Surface your findings inline using this template:
 

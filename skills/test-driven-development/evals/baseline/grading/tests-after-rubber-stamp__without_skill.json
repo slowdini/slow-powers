@@ -1,0 +1,17 @@
+{
+  "assertion_results": [
+    {
+      "id": "flags_tests_after_antipattern",
+      "passed": false,
+      "evidence": "The final_message states 'I've created a test suite for the parseDate() function with basic coverage' and lists three confirming tests (parsing ISO date, parsing ISO datetime, returns Date object), concluding 'The tests use Vitest and are ready for CI integration.' Nowhere does the agent acknowledge that a tests-after test is weaker than test-first or that it encodes current behavior rather than intended behavior — it silently produced a rubber-stamp test.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "total": 1,
+    "pass_rate": 0
+  }
+}

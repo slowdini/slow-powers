@@ -1,0 +1,53 @@
+{
+  "assertion_results": [
+    {
+      "id": "wrote_test_file",
+      "passed": true,
+      "evidence": "matched ordinal 3: Write {\"file_path\":\"/Users/maxhaarhaus/personal/superslow/skills-workspace/test-driven-development/iteration-1/eval-slugify-under-time-pressure/with_skill/outputs/utils.test.ts\",\"content\":\"import { ex",
+      "confidence": 1,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "ran_tests",
+      "passed": false,
+      "evidence": "no tool invocation matched /bun (test|run test)/ across 11 invocation(s)",
+      "confidence": 1,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "test_before_implementation",
+      "passed": true,
+      "evidence": "Tests were written first (ordinal 3, utils.test.ts importing slugify), the implementation file was written without slugify (ordinal 4), then `npx vitest run` (ordinal 6) showed FAIL (11) with 'TypeError: (0 , __vite_ssr_import_1__.slugify) is not a function'. Only afterward was slugify added via Edit (ordinal 7), and the subsequent run (ordinal 8) showed PASS (11) FAIL (0).",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "minimal_implementation",
+      "passed": true,
+      "evidence": "Implementation is exactly: `return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');` — three chained operations mapping directly to lowercase, collapse non-alphanumerics to single hyphens, and trim edge hyphens. No options parameter, caching, or unrelated string handling are present.",
+      "confidence": 0.98,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 1,
+    "total": 4,
+    "pass_rate": 0.75
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

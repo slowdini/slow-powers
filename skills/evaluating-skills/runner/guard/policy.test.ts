@@ -1,0 +1,71 @@
+import { describe, expect, test } from "bun:test";
+import { decide, type GuardMarker } from "./policy";
+
+const ROOTS = ["/work/skills-workspace", "/work/.claude/skills"];
+const future = () => new Date(Date.now() + 60_000).toISOString();
+const past = () => new Date(Date.now() - 60_000).toISOString();
+
+function marker(over: Partial<GuardMarker> = {}): GuardMarker {
+  return { active: true, allowedRoots: ROOTS, expiresAt: future(), ...over };
+}
+
+describe("guard decide", () => {
+  test("allows everything when marker is null (guard inactive)", () => {
+    expect(decide("Write", { file_path: "/etc/passwd" }, null).allow).toBe(
+      true,
+    );
+  });
+
+  test("allows everything when marker is inactive or expired", () => {
+    expect(
+      decide("Write", { file_path: "/etc/passwd" }, marker({ active: false }))
+        .allow,
+    ).toBe(true);
+    expect(
+      decide(
+        "Write",
+        { file_path: "/etc/passwd" },
+        marker({ expiresAt: past() }),
+      ).allow,
+    ).toBe(true);
+  });
+
+  test("allows a write under an allowed root", () => {
+    expect(
+      decide(
+        "Write",
+        { file_path: "/work/skills-workspace/x/outputs/a.md" },
+        marker(),
+      ).allow,
+    ).toBe(true);
+  });
+
+  test("denies a write outside all allowed roots", () => {
+    const d = decide("Edit", { file_path: "/work/runner/run.ts" }, marker());
+    expect(d.allow).toBe(false);
+    expect(d.reason).toMatch(/outside/i);
+  });
+
+  test("denies an install command", () => {
+    const d = decide("Bash", { command: "npm install left-pad" }, marker());
+    expect(d.allow).toBe(false);
+    expect(d.reason).toMatch(/install/i);
+  });
+
+  test("allows a Bash command scoped to an allowed root", () => {
+    expect(
+      decide(
+        "Bash",
+        { command: "echo hi > /work/skills-workspace/x/outputs/log" },
+        marker(),
+      ).allow,
+    ).toBe(true);
+  });
+
+  test("allows non-mutating Bash and read tools", () => {
+    expect(decide("Bash", { command: "ls -la /" }, marker()).allow).toBe(true);
+    expect(decide("Read", { file_path: "/etc/passwd" }, marker()).allow).toBe(
+      true,
+    );
+  });
+});

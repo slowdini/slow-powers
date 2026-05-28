@@ -1,6 +1,6 @@
 {
   "name": "superslow",
   "description": "Superslow gives your agent superpowers: TDD, debugging, collaboration patterns, and proven techniques",
-  "version": "0.0.1",
-  "contextFileName": "antigravity-instructions.md"
+  "version": "0.0.2",
+  "contextFileName": "bootstrap.md"
 }

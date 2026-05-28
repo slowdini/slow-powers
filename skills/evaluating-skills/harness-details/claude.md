@@ -81,11 +81,13 @@ bun run "$SUPERSLOW_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> -
 
 Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built staged-skills inventory.
 
+Add `--guard` to arm the write guard: the runner stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. It's opt-in and Claude-Code-only. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove it immediately, run `bun run "$SUPERSLOW_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the superslow repo). Without `--guard`, rely on the post-hoc `detect-stray-writes` step in Step 9 instead.
+
 ## Step 8 — Drive the dispatches
 
 Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task object:
 
-1. Dispatch a fresh subagent via the **Task tool**, passing `dispatch_prompt` verbatim as the prompt and `agent_description` (`<eval_id>:<condition>`) as the description. Passing the description correctly is what lets transcript correlation work in Step 9.
+1. Dispatch a fresh subagent via the **Task tool**, passing `dispatch_prompt` verbatim as the prompt and `agent_description` verbatim as the description. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 9 without cross-matching an agent from another iteration.
 2. When the subagent returns, write the portable run record to `run_record_path` (with `tool_invocations: []`) and the timing record (`{ "total_tokens": <n>, "duration_ms": <n>}`) to `timing_path`. Capture tokens/duration from the task completion event — they may not be persisted elsewhere.
 
 ## Step 9 — Fill transcripts, grade, aggregate
@@ -95,6 +97,9 @@ Claude Code persists subagent transcripts under `~/.claude/projects/<project-slu
 ```bash
 bun run "$SUPERSLOW_RUNNER_ROOT/fill-transcripts.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
+
+# Optional: flag any subagent writes/installs that escaped the outputs/ dir.
+bun run "$SUPERSLOW_RUNNER_ROOT/detect-stray-writes.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 
 bun run "$SUPERSLOW_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 # Dispatch a fresh judge subagent for each emitted judge task, writing each response to the path the task specifies, then:

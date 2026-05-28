@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { randomBytes } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -13,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { detectRunContext, type RunContext } from "./context";
+import { installGuard, teardownGuard } from "./guard/install";
 import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
 import { validateEvalsConfig } from "./validate";
 
@@ -130,13 +132,14 @@ export function cleanupStagedSkills(repoRoot: string): void {
 type Mode = "new-skill" | "revision";
 
 type Args = {
-  command: "run" | "snapshot";
+  command: "run" | "snapshot" | "teardown-guard";
   mode?: Mode;
   baseline?: string;
   label?: string;
   iteration?: number;
   dryRun: boolean;
   noStage: boolean;
+  guard: boolean;
 };
 
 function die(msg: string): never {
@@ -146,8 +149,12 @@ function die(msg: string): never {
 
 function parseArgs(argv: string[]): Args {
   const positionals = argv.filter((a) => !a.startsWith("--"));
-  const command: "run" | "snapshot" =
-    positionals[0] === "snapshot" ? "snapshot" : "run";
+  const command: Args["command"] =
+    positionals[0] === "snapshot"
+      ? "snapshot"
+      : positionals[0] === "teardown-guard"
+        ? "teardown-guard"
+        : "run";
 
   const flag = (name: string): string | undefined => {
     const i = argv.indexOf(`--${name}`);
@@ -175,6 +182,7 @@ function parseArgs(argv: string[]): Args {
     iteration,
     dryRun: has("dry-run"),
     noStage: has("no-stage"),
+    guard: has("guard"),
   };
 }
 
@@ -267,6 +275,14 @@ function commandRun(args: Args, ctx: RunContext): void {
   const iteration = nextIteration(workspaceSkillDir, args.iteration);
   const iterationDir = join(workspaceSkillDir, `iteration-${iteration}`);
 
+  // A per-run nonce makes each dispatch description globally unique. The
+  // subagents dir is shared across iterations of one parent session, so a bare
+  // `<eval>:<condition>` description repeats and fill-transcripts could fill an
+  // iteration's run from a colliding agent in another iteration. `i<N>-<nonce>`
+  // also disambiguates re-running the same iteration number.
+  const runNonce = `${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`;
+  const runTag = `i${iteration}-${runNonce}`;
+
   if (existsSync(iterationDir) && args.iteration === undefined)
     die(
       `iteration-${iteration} already exists; pass --iteration to overwrite explicitly`,
@@ -307,6 +323,10 @@ function commandRun(args: Args, ctx: RunContext): void {
 
   ensureDir(iterationDir);
   cpSync(skillMd, join(iterationDir, "skill-snapshot.md"));
+
+  // Always disarm a prior run's guard before re-staging, so a crashed run can't
+  // leave the write-blocking hook armed across runs.
+  teardownGuard(ctx.stageRoot);
 
   if (!args.noStage) cleanupStagedSkills(ctx.stageRoot);
 
@@ -364,6 +384,7 @@ function commandRun(args: Args, ctx: RunContext): void {
     ],
     timestamp: new Date().toISOString(),
     harness: ctx.harness,
+    run_nonce: runNonce,
   };
   writeJson(join(iterationDir, "conditions.json"), conditions);
 
@@ -412,6 +433,7 @@ function commandRun(args: Args, ctx: RunContext): void {
           bootstrapContent,
           skillName: ctx.skillName,
           availableSkills: availableSkillsFor(condSkillPath),
+          runTag,
         }),
       );
     }
@@ -433,6 +455,7 @@ function commandRun(args: Args, ctx: RunContext): void {
   writeJson(dispatchJsonPath, {
     skill_name: ctx.skillName,
     iteration,
+    run_nonce: runNonce,
     iteration_dir: iterationDir,
     mode: args.mode,
     baseline: args.baseline ?? null,
@@ -440,6 +463,29 @@ function commandRun(args: Args, ctx: RunContext): void {
     harness: ctx.harness,
     tasks,
   });
+
+  // Opt-in hard guard (Claude Code only). Stages a PreToolUse hook that blocks
+  // subagent writes/installs outside the eval sandbox while dispatches run.
+  if (args.guard && !args.dryRun) {
+    if (args.noStage || ctx.harness !== "claude-code") {
+      console.warn(
+        "\n⚠ --guard is only supported on Claude Code with staging enabled; skipping guard install.",
+      );
+    } else {
+      const guardScriptPath = join(import.meta.dir, "guard", "guard.ts");
+      installGuard({
+        stageRoot: ctx.stageRoot,
+        workspaceRoot: ctx.workspaceRoot,
+        guardScriptPath,
+      });
+      console.log(
+        "\n🛡 Write guard armed: a PreToolUse hook is staged in .claude/settings.local.json\n" +
+          "   and will block writes/installs outside the eval sandbox during dispatches.\n" +
+          "   It auto-expires in 6h and is removed on the next run; to remove it now:\n" +
+          "     bun run evals:teardown-guard --skill <name>",
+      );
+    }
+  }
 
   console.log(`\nWorkspace prepared: ${iterationDir}`);
   console.log(`Dispatch manifest:  ${manifestPath}`);
@@ -509,6 +555,36 @@ function getSkillDescription(skillPath: string): string {
   return "No description available.";
 }
 
+/**
+ * Removes the skill-under-test's "Active Skills Directory" entry from bootstrap
+ * content so a skill-absent condition (e.g. `without_skill`) carries no
+ * reference to it. Targets the markdown list-item block: a top-level `*`/`-`
+ * bullet whose backticked name equals `skillName`, plus its indented
+ * continuation lines (the `*Trigger:*` sub-bullet). Sibling entries and the
+ * heading are left intact. The eval bootstrap names skills only in that
+ * directory, so this is the sole reference vector to scrub.
+ */
+export function redactSkillFromBootstrap(
+  content: string,
+  skillName: string,
+): string {
+  const out: string[] = [];
+  let skipping = false;
+  for (const line of content.split("\n")) {
+    if (skipping) {
+      // Indented continuation lines belong to the entry being dropped.
+      if (/^\s+\S/.test(line)) continue;
+      skipping = false;
+    }
+    if (/^[*-]\s/.test(line) && line.includes(`\`${skillName}\``)) {
+      skipping = true;
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
 export function buildDispatchTask(opts: {
   evalId: string;
   condition: string;
@@ -522,6 +598,12 @@ export function buildDispatchTask(opts: {
   bootstrapContent: string | null;
   skillName: string;
   availableSkills: AvailableSkill[];
+  /**
+   * Per-run uniqueness suffix (`i<iteration>-<nonce>`). Appended to the
+   * dispatch description so transcripts can't collide across iterations or
+   * re-runs. Omitted in unit tests that exercise prompt assembly directly.
+   */
+  runTag?: string;
 }): DispatchTask {
   const stagedSkills = [...opts.availableSkills].sort((a, b) =>
     a.name.localeCompare(b.name),
@@ -583,14 +665,24 @@ export function buildDispatchTask(opts: {
   //      Claude Code this is the only place the staged skills are listed; on
   //      Antigravity the <skills> block in the body already serves that role,
   //      so the inventory is omitted here to avoid a redundant second list.
+  // A condition that does not load the skill-under-test (the new-skill
+  // `without_skill` arm, under staging or --no-stage) must carry zero reference
+  // to it — including in the verbatim bootstrap, which otherwise lists it in its
+  // Active Skills Directory and leaks the skill into the control arm.
+  const skillAbsent = !opts.skillPath && !opts.stagedSkillSlug;
+  const effectiveBootstrap =
+    opts.bootstrapContent && skillAbsent
+      ? redactSkillFromBootstrap(opts.bootstrapContent, opts.skillName)
+      : opts.bootstrapContent;
+
   const startContextParts: string[] = [];
-  if (opts.bootstrapContent) {
+  if (effectiveBootstrap) {
     startContextParts.push(
       [
         "The following guidelines were loaded at session start by the superslow plugin",
         "(equivalent to the SessionStart hook firing in a real user's environment):",
         "",
-        opts.bootstrapContent.trim(),
+        effectiveBootstrap.trim(),
       ].join("\n"),
     );
   }
@@ -648,7 +740,9 @@ export function buildDispatchTask(opts: {
     outputs_dir: opts.outputsDir,
     run_record_path: join(opts.condDir, "run.json"),
     timing_path: join(opts.condDir, "timing.json"),
-    agent_description: `${opts.evalId}:${opts.condition}`,
+    agent_description: opts.runTag
+      ? `${opts.evalId}:${opts.condition}:${opts.runTag}`
+      : `${opts.evalId}:${opts.condition}`,
     dispatch_prompt: sections.join(""),
   };
 }
@@ -671,7 +765,7 @@ function buildManifest(opts: {
     "",
     "In an agent session, read `dispatch.json` (sibling of this file) instead of this manifest. Each task has a `dispatch_prompt` field ready to hand to the host's subagent dispatch primitive, plus exact paths for `run.json` and `timing.json`.",
     "",
-    "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string as the dispatch `description`. The transcript adapter uses it to correlate each subagent's persisted transcript back to the right `(eval, condition)` slot.",
+    "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>:i<N>-<nonce>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string verbatim as the dispatch `description` — do not reconstruct it. The per-run nonce keeps descriptions unique across iterations sharing one session's subagents dir, so the transcript adapter correlates each subagent's persisted transcript back to the right `(eval, condition)` slot without collisions.",
     "",
     "After every dispatch:",
     "",
@@ -716,5 +810,12 @@ if (import.meta.main) {
     die(err instanceof Error ? err.message : String(err));
   }
   if (args.command === "snapshot") commandSnapshot(args, ctx);
-  else commandRun(args, ctx);
+  else if (args.command === "teardown-guard") {
+    const torn = teardownGuard(ctx.stageRoot);
+    console.log(
+      torn
+        ? "🛡 Write guard removed."
+        : "No write guard was installed — nothing to remove.",
+    );
+  } else commandRun(args, ctx);
 }

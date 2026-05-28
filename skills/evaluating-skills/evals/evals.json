@@ -1,0 +1,35 @@
+{
+  "skill_name": "evaluating-skills",
+  "evals": [
+    {
+      "id": "did-my-revision-help",
+      "prompt": "I just rewrote the Iron Law section of our test-driven-development skill to be more forceful. How do I know it's actually better?",
+      "expected_output": "The agent prescribes a structured before/after measurement: snapshot the prior version, run both the old and new wording against the same prompts (a revision comparison), grade against assertions, and compare pass-rate deltas — keeping the change only if the delta is positive and reverting otherwise. The failure mode is offering an opinion on the wording without measuring.",
+      "files": ["fixtures/iron-law/SKILL.md"],
+      "assertions": [
+        {
+          "id": "prescribes_structured_comparison",
+          "type": "llm_judge",
+          "rubric": "Did the agent prescribe a structured before/after measurement — snapshot the prior version, run both the old and new wording against the same realistic prompts, grade with assertions, and compare pass-rate deltas — rather than eyeballing the wording or asserting it reads better? PASS if a structured eval comparison is described. FAIL if the agent only gives a subjective opinion on the change."
+        },
+        {
+          "id": "keep_only_on_positive_delta",
+          "type": "llm_judge",
+          "rubric": "Did the agent convey that the revision should be kept only if it produces a measurable improvement (a positive pass-rate delta) and reverted otherwise? PASS if the keep-only-on-positive-delta principle is stated. FAIL if it is absent."
+        }
+      ]
+    },
+    {
+      "id": "is-new-skill-ready-to-ship",
+      "prompt": "I wrote a brand-new skill for normalizing phone numbers — is it ready to ship?",
+      "expected_output": "The agent states that a skill is not ready until an eval shows it actually improves behavior — a with-skill vs without-skill comparison on realistic prompts with a positive delta — rather than approving it on inspection.",
+      "assertions": [
+        {
+          "id": "requires_eval_before_ship",
+          "type": "llm_judge",
+          "rubric": "Did the agent state that the skill must pass an eval before shipping — specifically a with-skill vs without-skill comparison on realistic prompts that shows the skill improves behavior — rather than green-lighting it based on reading the skill text? PASS if eval-before-ship (with/without comparison) is required. FAIL if the agent approves shipping without requiring a measured comparison."
+        }
+      ]
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import { join } from "node:path";
 import {
   buildDispatchTask,
   cleanupStagedSkills,
+  redactSkillFromBootstrap,
   STAGED_SIBLING_MANIFEST,
   STAGED_SKILL_PREFIX,
   stageSiblingSkills,
@@ -335,6 +336,56 @@ describe("buildDispatchTask bootstrap injection", () => {
     expect(invIdx).toBeGreaterThan(bootIdx);
   });
 
+  const SAMPLE_DIRECTORY = [
+    "## Active Skills Directory",
+    "",
+    "* **`test-driven-development`**",
+    "  * *Trigger:* Use whenever implementing code.",
+    "* **`systematic-debugging`**",
+    "  * *Trigger:* Use when debugging.",
+  ].join("\n");
+
+  test("redactSkillFromBootstrap removes the skill-under-test's directory entry", () => {
+    const redacted = redactSkillFromBootstrap(
+      SAMPLE_DIRECTORY,
+      "test-driven-development",
+    );
+    expect(redacted).not.toContain("test-driven-development");
+    expect(redacted).not.toContain("Use whenever implementing code.");
+    // Sibling entries and the heading survive.
+    expect(redacted).toContain("systematic-debugging");
+    expect(redacted).toContain("Use when debugging.");
+    expect(redacted).toContain("## Active Skills Directory");
+  });
+
+  test("redacts the skill-under-test from bootstrap in the skill-absent condition", () => {
+    const withoutSkill = buildDispatchTask({
+      ...baseOpts,
+      condition: "without_skill",
+      skillPath: null,
+      stagedSkillSlug: null,
+      skillName: "test-driven-development",
+      harness: "claude-code",
+      bootstrapContent: SAMPLE_DIRECTORY,
+    });
+    expect(withoutSkill.dispatch_prompt).not.toContain(
+      "test-driven-development",
+    );
+    // A sibling skill named in the same bootstrap is untouched.
+    expect(withoutSkill.dispatch_prompt).toContain("systematic-debugging");
+
+    const withSkill = buildDispatchTask({
+      ...baseOpts,
+      condition: "with_skill",
+      skillPath: null,
+      stagedSkillSlug: "superslow-eval-1-with_skill__test-driven-development",
+      skillName: "test-driven-development",
+      harness: "claude-code",
+      bootstrapContent: SAMPLE_DIRECTORY,
+    });
+    expect(withSkill.dispatch_prompt).toContain("test-driven-development");
+  });
+
   test("references staged slug in skill block for claude-code", () => {
     const task = buildDispatchTask({
       ...baseOpts,
@@ -581,6 +632,98 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     // No product framing (EXTREMELY-IMPORTANT etc.) without a --bootstrap file.
     expect(prompt).not.toContain("EXTREMELY-IMPORTANT");
     expect(prompt).not.toContain("loaded at session start");
+  });
+
+  test("--guard installs a PreToolUse hook; teardown-guard removes it", () => {
+    const { skillDir, cwd } = setup("usermode-guard");
+    const settingsPath = join(cwd, ".claude", "settings.local.json");
+
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--guard",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+    expect(existsSync(settingsPath)).toBe(true);
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    expect(settings.hooks.PreToolUse[0].matcher).toContain("Write");
+
+    const down = runCli(
+      ["teardown-guard", "--skill-dir", skillDir, "--skill", "mr-review"],
+      cwd,
+    );
+    expect(down.exitCode).toBe(0);
+    expect(existsSync(settingsPath)).toBe(false);
+  });
+
+  test("a normal run does not install a guard", () => {
+    const { skillDir, cwd } = setup("usermode-noguard");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+    expect(existsSync(join(cwd, ".claude", "settings.local.json"))).toBe(false);
+  });
+
+  test("namespaces agent_description per iteration+run and records run_nonce", () => {
+    const { skillDir, cwd } = setup("usermode-nonce");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    const dispatch = JSON.parse(
+      readFileSync(join(iterationDir, "dispatch.json"), "utf8"),
+    ) as {
+      run_nonce: string;
+      tasks: Array<{ condition: string; agent_description: string }>;
+    };
+    expect(typeof dispatch.run_nonce).toBe("string");
+    expect(dispatch.run_nonce.length).toBeGreaterThan(0);
+
+    for (const t of dispatch.tasks) {
+      // <eval_id>:<condition>:i<iteration>-<nonce> — unique across iterations
+      // and re-runs so fill-transcripts can't cross-match a colliding agent.
+      expect(t.agent_description).toMatch(
+        new RegExp(`:${t.condition}:i1-${dispatch.run_nonce}$`),
+      );
+    }
+
+    const conditions = JSON.parse(
+      readFileSync(join(iterationDir, "conditions.json"), "utf8"),
+    ) as { run_nonce?: string };
+    expect(conditions.run_nonce).toBe(dispatch.run_nonce);
   });
 
   test("--bootstrap content is prepended verbatim before the staged-skills inventory", () => {

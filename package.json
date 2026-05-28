@@ -1,7 +1,7 @@
 {
   "name": "@slowdini/superslow-opencode",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Superslow — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
   "main": "./opencode/plugins/superpowers.js",
@@ -11,8 +11,11 @@
     "evals:snapshot": "bun run skills/evaluating-skills/runner/run.ts snapshot --skill-dir ./skills",
     "evals:validate": "bun run skills/evaluating-skills/runner/validate-all.ts --skill-dir ./skills",
     "evals:fill-transcripts": "bun run skills/evaluating-skills/runner/fill-transcripts.ts --skill-dir ./skills",
+    "evals:detect-stray-writes": "bun run skills/evaluating-skills/runner/detect-stray-writes.ts --skill-dir ./skills",
+    "evals:teardown-guard": "bun run skills/evaluating-skills/runner/run.ts teardown-guard --skill-dir ./skills",
     "evals:grade": "bun run skills/evaluating-skills/runner/grade.ts --skill-dir ./skills",
     "evals:aggregate": "bun run skills/evaluating-skills/runner/aggregate.ts --skill-dir ./skills",
+    "evals:promote-baseline": "bun run skills/evaluating-skills/runner/promote-baseline.ts --skill-dir ./skills",
     "version": "bun scripts/bump-version.ts",
     "check": "biome check --write ."
   },

@@ -21,6 +21,13 @@ export type Eval = {
   expected_output: string;
   files?: string[];
   assertions?: Assertion[];
+  /**
+   * Whether the skill-under-test is expected to fire on this eval. Defaults to
+   * true. Set to false for negative evals where correct behavior is NOT
+   * invoking the skill (e.g. an over-trigger guard). Negative evals are
+   * excluded from the skill-invocation rate and its validity warning.
+   */
+  skill_should_trigger?: boolean;
 };
 
 export type EvalsConfig = {
@@ -40,6 +47,9 @@ export type ConditionsRecord = {
   conditions: ConditionEntry[];
   timestamp: string;
   harness?: string;
+  /** Per-run nonce; namespaces dispatch descriptions so transcripts can't
+   * collide across iterations sharing one parent session's subagents dir. */
+  run_nonce?: string;
 };
 
 export type ToolInvocation = {
