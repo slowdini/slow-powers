@@ -1,6 +1,6 @@
 {
   "name": "superslow",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Superslow gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
   "author": {
     "name": "Max Haarhaus",
