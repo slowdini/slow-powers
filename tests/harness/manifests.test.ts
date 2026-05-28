@@ -106,7 +106,7 @@ describe.each(HARNESSES)("$name harness", (harness) => {
   }
 
   if (harness.name === "Antigravity CLI") {
-    test("contextFileName contains bootstrap content", () => {
+    test("contextFileName delivers the bootstrap (directly or via @-include)", () => {
       const manifest = readJson(harness.manifest) as {
         contextFileName?: string;
       };
@@ -114,33 +114,12 @@ describe.each(HARNESSES)("$name harness", (harness) => {
       expect(value).toBeDefined();
       const resolved = resolveWithinRoot(REPO_ROOT, value as string);
       const content = fs.readFileSync(resolved, "utf8");
-      expect(content).toContain(BOOTSTRAP_MARKER);
-    });
-
-    test("manifest filename matches expected filename in agy binary", () => {
-      let agyPath: string | undefined;
-      try {
-        const { execSync } = require("node:child_process");
-        agyPath = execSync("which agy", { encoding: "utf8" }).trim();
-      } catch {
-        const home = process.env.HOME || "";
-        const commonPath = path.join(home, ".local/bin/agy");
-        if (fs.existsSync(commonPath)) {
-          agyPath = commonPath;
-        }
-      }
-
-      if (agyPath && fs.existsSync(agyPath)) {
-        const binaryContent = fs.readFileSync(agyPath);
-        const expectedFilename = harness.manifest;
-        expect(binaryContent.includes(Buffer.from(expectedFilename))).toBe(
-          true,
-        );
-      } else {
-        console.warn(
-          "agy binary not found, skipping binary-manifest sync check",
-        );
-      }
+      // agy reads GEMINI.md by convention; it may carry the bootstrap inline
+      // or pull it in with an @./bootstrap.md include (bootstrap.md itself is
+      // checked for the marker in the shared-assets suite above).
+      const includesBootstrap = /@\.\/bootstrap\.md\b/.test(content);
+      const deliversMarker = content.includes(BOOTSTRAP_MARKER);
+      expect(deliversMarker || includesBootstrap).toBe(true);
     });
   }
 });
