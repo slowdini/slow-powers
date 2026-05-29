@@ -18,8 +18,8 @@ import { installGuard, teardownGuard } from "./guard/install";
 import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
 import { validateEvalsConfig } from "./validate";
 
-export const STAGED_SKILL_PREFIX = "superslow-eval-";
-export const STAGED_SIBLING_MANIFEST = ".superslow-eval-manifest.json";
+export const STAGED_SKILL_PREFIX = "slow-powers-eval-";
+export const STAGED_SIBLING_MANIFEST = ".slow-powers-eval-manifest.json";
 
 export function stageSkillForCC(opts: {
   content: string;
@@ -78,7 +78,9 @@ export function stageSiblingSkills(opts: {
 
     if (existsSync(dstDir)) {
       entry.preexisting = true;
-      const backupRoot = mkdtempSync(join(tmpdir(), "superslow-eval-backup-"));
+      const backupRoot = mkdtempSync(
+        join(tmpdir(), "slow-powers-eval-backup-"),
+      );
       entry.backup_path = join(backupRoot, name);
       cpSync(dstDir, entry.backup_path, { recursive: true });
       rmSync(dstDir, { recursive: true, force: true });
@@ -625,7 +627,7 @@ export function buildDispatchTask(opts: {
   let skillBlock: string;
   if (opts.stagedSkillSlug) {
     skillBlock = [
-      "Your environment has the superslow plugin loaded. All superslow skills are",
+      "Your environment has the slow-powers plugin loaded. All slow-powers skills are",
       "discoverable via the Skill tool. The skill currently under evaluation is",
       `staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
       "than the natural name if the skill applies to the user's request.",
@@ -669,7 +671,7 @@ export function buildDispatchTask(opts: {
   if (effectiveBootstrap) {
     startContextParts.push(
       [
-        "The following guidelines were loaded at session start by the superslow plugin",
+        "The following guidelines were loaded at session start by the slow-powers plugin",
         "(equivalent to the SessionStart hook firing in a real user's environment):",
         "",
         effectiveBootstrap.trim(),

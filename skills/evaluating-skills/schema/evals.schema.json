@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://superslow.dev/schemas/evals.schema.json",
+  "$id": "https://slow-powers.dev/schemas/evals.schema.json",
   "title": "Skill Evaluation Definition",
   "description": "Defines a set of test cases for evaluating a skill. Lives at <skill>/evals/evals.json.",
   "type": "object",

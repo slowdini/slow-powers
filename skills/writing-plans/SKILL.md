@@ -22,7 +22,7 @@ This skill applies **once you're committed to writing a plan**. It does not push
 * The user asked to "just build", "go fix", or "implement" something — trust the intent.
 * You're investigating, reading code, or gathering context.
 * The change is mechanical (typo, rename, single-line config tweak).
-* The task is debugging — load `superslow:systematic-debugging` instead.
+* The task is debugging — load `slow-powers:systematic-debugging` instead.
 
 ---
 
@@ -65,7 +65,7 @@ Before decomposing into tasks, list the files that will be created or modified a
 2. **Atomic Granularity.** Each task is 2–5 minutes of execution. Larger → decompose.
 3. **Concrete, not prescriptive.** Each task names the file(s), the function or symbol involved, and the observable outcome — error message, return shape, command output. Include code snippets or example output only when prose can't carry the intent (e.g. an exact error format, a tricky regex, a non-obvious config value). Trust the implementer to write idiomatic code from a clear contract. Never back-reference ("similar to Task 3") — the engineer may read tasks out of order; restate the relevant detail.
 4. **Reference TDD, Don't Duplicate It.** For features and bugfixes, structure each task list as Red-Green-Refactor. Don't restate TDD steps inline — point at the skill.
-   * **REQUIRED SUB-SKILL:** Use `superslow:test-driven-development`
+   * **REQUIRED SUB-SKILL:** Use `slow-powers:test-driven-development`
 
 ---
 

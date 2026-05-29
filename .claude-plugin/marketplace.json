@@ -7,8 +7,8 @@
   },
   "plugins": [
     {
-      "name": "superslow",
-      "description": "Superslow gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
+      "name": "slow-powers",
+      "description": "Slow-powers gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
       "version": "0.0.7",
       "source": "./",
       "author": {

@@ -7,7 +7,7 @@ description: Use when testing whether a new skill improves agent behavior, or wh
 
 ## Overview
 
-Skill development has two phases: **drafting** (`superslow:writing-skills`) and **evaluation** (this skill).
+Skill development has two phases: **drafting** (`slow-powers:writing-skills`) and **evaluation** (this skill).
 
 An eval is a structured measurement of whether a skill actually shifts behavior. Each test case is a realistic prompt; each run dispatches a fresh general-purpose subagent twice — once with the skill loaded, once without (or once with the prior version, once with the revised version) — and grades the outputs against assertions. Pass-rate deltas tell you whether the skill is worth shipping or the change is worth landing.
 
@@ -36,7 +36,7 @@ A negative or zero delta is a signal to revert the change — the new language d
 The eval runner ships with this skill (under `runner/`), so you can evaluate any skill — including your own personal skills — not just the ones in this repo. The detailed steps depend on your harness:
 
 - **Claude Code:** follow `harness-details/claude.md` end-to-end (resolving the bundled runner, dispatching subagents via the Task tool, locating transcripts, grading).
-- **Other harnesses:** there's no detailed guide yet. The portable run-record schema (`schema/run-record.schema.json`) and the runner contract below still apply; you'll need to (a) locate the installed superslow plugin on disk, (b) dispatch subagents with your harness's primitive, and (c) supply a transcript adapter under `runner/adapters/` against the portable format if you want `transcript_check` assertions to grade. Otherwise author `run.json` and `timing.json` by hand per the schemas in `schema/`.
+- **Other harnesses:** there's no detailed guide yet. The portable run-record schema (`schema/run-record.schema.json`) and the runner contract below still apply; you'll need to (a) locate the installed slow-powers plugin on disk, (b) dispatch subagents with your harness's primitive, and (c) supply a transcript adapter under `runner/adapters/` against the portable format if you want `transcript_check` assertions to grade. Otherwise author `run.json` and `timing.json` by hand per the schemas in `schema/`.
 
 ### The runner contract (all harnesses)
 
@@ -51,7 +51,7 @@ Each iteration lands under `<workspace-dir>/<skill>/iteration-N/` with the same 
 
 #### What gets staged
 
-The runner stages every skill it finds under `--skill-dir`. The skill-under-test goes under a unique slug for the `__skill_invoked` meta-check; sibling skills stage under their natural names so cross-references resolve. **If your `--skill-dir` contains only your one skill, the eval runs in isolation** — references like "REQUIRED SUB-SKILL: `superslow:test-driven-development`" won't resolve, and your assertions must not depend on a sibling skill firing. To include other skills as siblings, copy or symlink them into `--skill-dir` before running.
+The runner stages every skill it finds under `--skill-dir`. The skill-under-test goes under a unique slug for the `__skill_invoked` meta-check; sibling skills stage under their natural names so cross-references resolve. **If your `--skill-dir` contains only your one skill, the eval runs in isolation** — references like "REQUIRED SUB-SKILL: `slow-powers:test-driven-development`" won't resolve, and your assertions must not depend on a sibling skill firing. To include other skills as siblings, copy or symlink them into `--skill-dir` before running.
 
 #### Bootstrap content
 
@@ -80,7 +80,7 @@ Tips for writing good prompts:
 
 ### Testing by skill type
 
-What "stresses the skill" depends on what kind of skill it is. The four types from `superslow:writing-skills` each need a different style of prompt:
+What "stresses the skill" depends on what kind of skill it is. The four types from `slow-powers:writing-skills` each need a different style of prompt:
 
 - **Discipline-enforcing skills** (TDD, verification-before-completion). Test with pressure — academic prompts ("explain how TDD works") will pass without measuring anything useful. Combine multiple pressures (time + sunk cost + authority + exhaustion) and force a choice. See `pressure-scenarios.md` for the taxonomy. Success = the rule holds under maximum pressure.
 - **Technique skills** (condition-based-waiting, root-cause-tracing). Test application: hand the agent a new scenario where the technique applies and check it gets used correctly. Include at least one edge-case variation. Success = the technique transfers to a situation the skill didn't explicitly describe.
@@ -218,7 +218,7 @@ The check has two tiers, chosen automatically per run:
 - **Code-based (Claude Code).** On harnesses that persist subagent transcripts with discrete `Skill` tool calls, the framework parses the transcript and checks for a `Skill` invocation whose `input.skill` matches the eval-staged slug. This is deterministic, free, and cannot be fooled by superficial vocabulary in the response.
 - **LLM-judge fallback (other harnesses).** Where transcripts aren't available or the harness injects skills via system-prompt hooks rather than a tool call (Codex, Cursor, OpenCode), a judge subagent compares the agent's `final_message` against the SKILL.md content embedded in the run record, looking for behavioral fingerprints — distinctive vocabulary, named sections, procedural steps that mirror the skill's phrasing. It does **not** require the agent to explicitly cite the skill (that would taint the eval).
 
-To enable the code-based check on Claude Code, the runner stages each condition's SKILL.md snapshot at `<repoRoot>/.claude/skills/superslow-eval-<iteration>-<condition>__<skillName>/SKILL.md`. The unique slug prevents collisions with already-installed production skills (relevant when evaluating skills in a repo where the same skills are also installed) and is what the code-based check looks for in the transcript. The dispatch prompt deliberately omits any inline `<skill>...</skill>` block so the subagent must discover and invoke the staged skill naturally — this measures whether the skill's `description:` actually triggers it. Stale staged skills are swept at the start of each fresh run. Pass `--no-stage` to opt out (e.g., when running the same eval against a harness that doesn't support project-local skill discovery); the runner will fall back to inlining the SKILL.md text in the dispatch prompt, and the LLM-judge meta-check will be used.
+To enable the code-based check on Claude Code, the runner stages each condition's SKILL.md snapshot at `<repoRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md`. The unique slug prevents collisions with already-installed production skills (relevant when evaluating skills in a repo where the same skills are also installed) and is what the code-based check looks for in the transcript. The dispatch prompt deliberately omits any inline `<skill>...</skill>` block so the subagent must discover and invoke the staged skill naturally — this measures whether the skill's `description:` actually triggers it. Stale staged skills are swept at the start of each fresh run. Pass `--no-stage` to opt out (e.g., when running the same eval against a harness that doesn't support project-local skill discovery); the runner will fall back to inlining the SKILL.md text in the dispatch prompt, and the LLM-judge meta-check will be used.
 
 The aggregator emits a `validity_warnings` array when any with-skill condition has an invocation rate below 100%. Read those before interpreting the substantive delta. The rate is computed only over evals where the skill *should* fire; negative evals (`skill_should_trigger: false`) are excluded so a correct non-trigger never depresses the rate or raises a spurious warning.
 
@@ -278,7 +278,7 @@ skills/<skill>/evals/baseline/
 
 `NOTES.md` is an **optional** companion file for forward-looking observations from the runs that produced this baseline: which evals discriminated and which didn't, suspected variance/noise, ideas for the next iteration (skill changes or eval-suite changes), and any context a future iterator would want before re-running. It is not provenance (that belongs in `BASELINE.md`) and not results (those belong in `benchmark.json`). `promote-baseline` does not generate it and does not overwrite an existing one — author it by hand alongside the promoted baseline when there's something worth carrying forward; otherwise omit it.
 
-This works the same for a personal skill: point `--skill-dir` at your skill's parent, run a canonical eval, then promote — you get a committed reference of what "passing" looked like for your skill, equivalent to the baselines superslow ships for its own skills.
+This works the same for a personal skill: point `--skill-dir` at your skill's parent, run a canonical eval, then promote — you get a committed reference of what "passing" looked like for your skill, equivalent to the baselines slow-powers ships for its own skills.
 
 ## Analyzing patterns
 
@@ -367,5 +367,5 @@ If you can't measure the change, you don't know if it's an improvement. Tuning s
 
 ## See also
 
-- `superslow:writing-skills` — drafting a skill (Phase 1)
+- `slow-powers:writing-skills` — drafting a skill (Phase 1)
 - agentskills.io/skill-creation/evaluating-skills — the methodology this skill is derived from

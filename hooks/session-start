@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SessionStart hook for Superslow's Claude Code plugin.
+# SessionStart hook for Slow-powers's Claude Code plugin.
 
 set -euo pipefail
 

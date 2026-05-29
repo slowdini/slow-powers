@@ -1,8 +1,8 @@
 # Harness Parity Check
 
-You are an agent running inside one of Superslow's supported harnesses. This file walks you through auditing **which Superslow features are wired up for your harness** and prepping to close one gap. Claude Code is the reference implementation; other harnesses adapt its patterns using their own native conventions.
+You are an agent running inside one of Slow-powers's supported harnesses. This file walks you through auditing **which Slow-powers features are wired up for your harness** and prepping to close one gap. Claude Code is the reference implementation; other harnesses adapt its patterns using their own native conventions.
 
-Read the file end-to-end before acting. The categories in Step 4 are the source of truth for what "parity" means today — when a new feature is added to Superslow, that table is updated and this file stays evergreen.
+Read the file end-to-end before acting. The categories in Step 4 are the source of truth for what "parity" means today — when a new feature is added to Slow-powers, that table is updated and this file stays evergreen.
 
 ---
 
@@ -77,7 +77,7 @@ For each category below, compare what Claude Code has against what your harness 
 | Version-sync registration | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are listed in `scripts/manifest-files.ts` (the shared lockstep list) |
 | CI coverage | A descriptor entry in `tests/harness/spec.ts` drives the parameterized `tests/harness/manifests.test.ts` suite (the Standard harness test cases below); the whole suite runs via `bun test` in `.github/workflows/ci.yml` |
 
-**Note on the transcript adapter (raised bar).** Superslow's baseline eval suite
+**Note on the transcript adapter (raised bar).** Slow-powers's baseline eval suite
 now uses `transcript_check` assertions — deterministic regex checks against a
 run's tool invocations (e.g. "a test command ran", "the sibling skill was
 loaded"). These only grade when a transcript adapter exists for your harness.
@@ -140,7 +140,7 @@ The agent reports inline by default. If the user asks for a persistent artifact,
 1. **Valid manifest** — the harness's manifest parses as JSON and carries its required fields (at minimum `name` and `version`; OpenCode reuses `package.json` and its `main` entry).
 2. **Version lockstep** — the manifest's version (and any `plugins[].version`) equals `package.json`'s, for every file in `scripts/manifest-files.ts`.
 3. **Declared paths resolve** — every path-typed manifest field (skills dir, hooks file, icons, `contextFileName`, …) points at an existing file/dir and does not escape the repo root.
-4. **Bootstrap present** — `bootstrap.md` exists, leads with the Superslow instructions marker, and advertises the core skills.
+4. **Bootstrap present** — `bootstrap.md` exists, leads with the Slow-powers instructions marker, and advertises the core skills.
 5. **Skills discoverable** — `skills/` is populated and each `SKILL.md` declares `name` + `description` frontmatter.
 6. **Hook wiring** (harnesses with a hooks manifest) — the hooks JSON is valid, defines a SessionStart hook that calls `run-hook.cmd`, and the `run-hook.cmd` + `session-start` scripts exist. Matcher-style hooks (`hooks.json`) must include `startup`/`resume`/`clear`.
 
@@ -158,7 +158,7 @@ Once the user picks a gap:
 2. **Consult your harness's own documentation, MCP servers, or built-in references** before proposing harness-specific changes. Do not guess at hook schemas, plugin manifest fields, or native tool names. If a `context7` or equivalent docs-fetch server is available, prefer it over your training data — assume your knowledge of the harness may be stale.
 3. Propose an adaptation that copies Claude's shape while using your harness's native conventions. State explicitly what you are copying and what you are adapting.
 4. Confirm with the user before writing code.
-5. If your gap involves creating or modifying a skill, load `superslow:writing-skills` first.
+5. If your gap involves creating or modifying a skill, load `slow-powers:writing-skills` first.
 6. Make sure your harness is held to the **Standard harness test cases** above: add or extend its entry in `tests/harness/spec.ts` (and register any new manifest in `scripts/manifest-files.ts`) so the parameterized suite covers it.
 
 ---
@@ -170,4 +170,4 @@ Once the user picks a gap:
 - **Do not edit `bootstrap.md` or shared skills as part of parity work.** Those are cross-cutting; changes need their own PRs with their own evidence.
 - **Do not fabricate features that don't exist in any harness yet.** Parity means "catch up to Claude," not "invent something new."
 - **Do not guess at harness-specific details.** If your harness's docs don't confirm something, ask the user before proceeding.
-- **Keep this file evergreen.** If you add a new feature category to Superslow, add a row to the Step 4 table here and to the tier table in `README.md` in the same PR.
+- **Keep this file evergreen.** If you add a new feature category to Slow-powers, add a row to the Step 4 table here and to the tier table in `README.md` in the same PR.

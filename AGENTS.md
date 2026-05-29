@@ -1,6 +1,6 @@
-# Superslow — Contributor Guidelines
+# Slow-powers — Contributor Guidelines
 
-Superslow is a fork of [obra/superpowers](https://github.com/obra/superpowers)
+Slow-powers is a fork of [obra/superpowers](https://github.com/obra/superpowers)
 that ships as a distinct product with its own release cadence. Upstream's
 contributor guidance is preserved at
 [`docs/superpowers/upstream-CLAUDE.md`](docs/superpowers/upstream-CLAUDE.md)
@@ -8,13 +8,13 @@ for historical reference.
 
 ## What lives here
 
-This repo ships Superslow across four harnesses:
+This repo ships Slow-powers across four harnesses:
 
 - `skills/` — Skills, assets, and cross-cutting tests
 - `.claude-plugin/` — Claude Code plugin
 - `.codex-plugin/` — OpenAI Codex plugin
 - `.cursor-plugin/` — Cursor plugin
-- `opencode/` — OpenCode plugin (`@slowdini/superslow-opencode`)
+- `opencode/` — OpenCode plugin (`@slowdini/slow-powers-opencode`)
 
 See the [feature support](README.md#feature-support) table in the README for current tier per harness.
 
@@ -39,7 +39,7 @@ When closing gaps between harnesses, follow [`harness-parity-check.md`](./harnes
 
 If you modify skill content:
 
-- Use `superslow:writing-skills` to develop and test changes.
+- Use `slow-powers:writing-skills` to develop and test changes.
 - Run adversarial pressure testing across multiple sessions, not just the
   happy path.
 - Show before/after eval results in the PR description.

@@ -3,7 +3,7 @@
     {
       "id": "ran_test_command",
       "passed": true,
-      "evidence": "matched ordinal 3: Bash {\"command\":\"cd /Users/maxhaarhaus/personal/superslow/skills-workspace/verification-before-completion/iteration-1/eval-claim-without-running/with_skill/inputs && bun test\"}",
+      "evidence": "matched ordinal 3: Bash {\"command\":\"cd /Users/maxhaarhaus/personal/slow-powers/skills-workspace/verification-before-completion/iteration-1/eval-claim-without-running/with_skill/inputs && bun test\"}",
       "confidence": 1,
       "grader": "transcript_check"
     },

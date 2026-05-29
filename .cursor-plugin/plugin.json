@@ -1,14 +1,14 @@
 {
-  "name": "superpowers",
-  "displayName": "Superslow",
-  "description": "Superslow gives your agent superpowers: TDD, debugging, collaboration patterns, and proven techniques",
+  "name": "slow-powers",
+  "displayName": "Slow-powers",
+  "description": "Slow-powers gives your agent superpowers: TDD, debugging, collaboration patterns, and proven techniques",
   "version": "0.0.7",
   "author": {
     "name": "Max Haarhaus",
     "email": "samiamorwas@gmail.com"
   },
-  "homepage": "https://github.com/slowdini/superslow",
-  "repository": "https://github.com/slowdini/superslow",
+  "homepage": "https://github.com/slowdini/slow-powers",
+  "repository": "https://github.com/slowdini/slow-powers",
   "license": "MIT",
   "keywords": [
     "skills",

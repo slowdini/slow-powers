@@ -13,7 +13,8 @@ import type { ToolInvocation } from "./types";
 
 describe("checkSkillInvokedFromTranscript", () => {
   test("returns true when transcript contains a Skill call with input.skill matching the slug", () => {
-    const slug = "superslow-eval-1-with_skill__verification-before-completion";
+    const slug =
+      "slow-powers-eval-1-with_skill__verification-before-completion";
     const invocations: ToolInvocation[] = [
       { name: "Bash", args: { command: "ls" }, ordinal: 0 },
       { name: "Skill", args: { skill: slug }, ordinal: 1 },
@@ -30,22 +31,23 @@ describe("checkSkillInvokedFromTranscript", () => {
     expect(
       checkSkillInvokedFromTranscript(
         invocations,
-        "superslow-eval-1-with_skill__foo",
+        "slow-powers-eval-1-with_skill__foo",
       ),
     ).toBe(false);
   });
 
   test("returns false when Skill call references a different slug", () => {
-    const slug = "superslow-eval-1-with_skill__verification-before-completion";
+    const slug =
+      "slow-powers-eval-1-with_skill__verification-before-completion";
     const invocations: ToolInvocation[] = [
       {
         name: "Skill",
-        args: { skill: "superslow:writing-skills" },
+        args: { skill: "slow-powers:writing-skills" },
         ordinal: 0,
       },
       {
         name: "Skill",
-        args: { skill: "superslow-eval-2-old_skill__other" },
+        args: { skill: "slow-powers-eval-2-old_skill__other" },
         ordinal: 1,
       },
     ];
@@ -57,7 +59,7 @@ describe("checkSkillInvokedFromTranscript", () => {
   });
 
   test("tolerates Skill invocations whose args are missing or malformed", () => {
-    const slug = "superslow-eval-1-with_skill__foo";
+    const slug = "slow-powers-eval-1-with_skill__foo";
     const invocations: ToolInvocation[] = [
       { name: "Skill", ordinal: 0 },
       { name: "Skill", args: "not-an-object", ordinal: 1 },
@@ -69,7 +71,7 @@ describe("checkSkillInvokedFromTranscript", () => {
 
 const GRADE_FIXTURE_ROOT = join(
   tmpdir(),
-  `superslow-grade-test-${process.pid}`,
+  `slow-powers-grade-test-${process.pid}`,
 );
 const GRADE_TS = join(import.meta.dir, "grade.ts");
 

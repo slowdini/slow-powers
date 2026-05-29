@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const FIXTURE_ROOT = join(tmpdir(), `superslow-promote-test-${process.pid}`);
+const FIXTURE_ROOT = join(tmpdir(), `slow-powers-promote-test-${process.pid}`);
 const PROMOTE_TS = join(import.meta.dir, "promote-baseline.ts");
 
 beforeAll(() => {

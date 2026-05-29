@@ -1,6 +1,6 @@
-# Instructions for using Superslow Skills
+# Instructions for using Slow-powers Skills
 
-You have superpowers, provided by superslow.
+You have superpowers, provided by slow-powers.
 
 <EXTREMELY-IMPORTANT>
 If a skill applies to your current task, you MUST load and follow the skill. Do not skip or shortcut execution.
@@ -8,9 +8,9 @@ If a skill applies to your current task, you MUST load and follow the skill. Do 
 
 ## Instruction Priority
 
-Superslow skills override default system behavior where they conflict, but user instructions always take precedence:
+Slow-powers skills override default system behavior where they conflict, but user instructions always take precedence:
 1. **User's explicit instructions** (CLAUDE.md, AGENTS.md, direct requests) — highest priority
-2. **Superslow skills / bootstrap guidelines** — override default system prompt behavior where they conflict
+2. **Slow-powers skills / bootstrap guidelines** — override default system prompt behavior where they conflict
 3. **Default system prompt** — lowest priority
 
 ---

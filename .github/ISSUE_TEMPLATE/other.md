@@ -7,4 +7,4 @@ labels: ''
 ## Description
 
 <!-- Describe your issue, question, or feedback. Include environment details
-     (Superslow version, harness, model) if relevant. -->
+     (Slow-powers version, harness, model) if relevant. -->

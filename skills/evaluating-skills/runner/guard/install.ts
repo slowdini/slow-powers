@@ -8,8 +8,8 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-export const GUARD_MARKER = ".superslow-eval-guard.json";
-export const GUARD_MANIFEST = ".superslow-eval-guard-manifest.json";
+export const GUARD_MARKER = ".slow-powers-eval-guard.json";
+export const GUARD_MANIFEST = ".slow-powers-eval-guard-manifest.json";
 const GUARD_TTL_MS = 6 * 60 * 60 * 1000; // 6h — bounds a crashed run's lingering hook
 
 const HOOK_MATCHER = "Write|Edit|MultiEdit|NotebookEdit|Bash";

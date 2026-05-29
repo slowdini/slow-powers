@@ -21,7 +21,7 @@ if (import.meta.main) {
   try {
     const markerPath =
       Bun.argv[2] ??
-      join(process.cwd(), ".claude", "skills", ".superslow-eval-guard.json");
+      join(process.cwd(), ".claude", "skills", ".slow-powers-eval-guard.json");
     const payload = JSON.parse((await Bun.stdin.text()) || "{}") as {
       tool_name?: string;
       tool_input?: unknown;

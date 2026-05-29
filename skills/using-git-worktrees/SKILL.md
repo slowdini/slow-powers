@@ -34,7 +34,7 @@ If the user consents and no native platform isolation tool is present, create a 
 ### 1. Directory Selection & Safety
 Select the worktree directory path by priority:
 1. Local directory: `.worktrees/` (preferred) or `worktrees/` at the project root.
-2. Global legacy directory: `~/.config/superslow/worktrees/<project-name>/`
+2. Global legacy directory: `~/.config/slow-powers/worktrees/<project-name>/`
 3. Fallback: Default to `.worktrees/`
 
 **Safety Guard (for local directories):** Verify the worktree directory is ignored in `.gitignore`:
