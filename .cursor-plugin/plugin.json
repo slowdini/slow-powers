@@ -2,7 +2,7 @@
   "name": "slow-powers",
   "displayName": "Slow-powers",
   "description": "Slow-powers gives your agent superpowers: TDD, debugging, collaboration patterns, and proven techniques",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "author": {
     "name": "Max Haarhaus",
     "email": "samiamorwas@gmail.com"

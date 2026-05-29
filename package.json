@@ -1,7 +1,7 @@
 {
   "name": "@slowdini/slow-powers-opencode",
   "private": true,
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Slow-powers — a fork of obra/superpowers, rebranded as its own product",
   "type": "module",
   "main": "./opencode/plugins/slow-powers.js",
