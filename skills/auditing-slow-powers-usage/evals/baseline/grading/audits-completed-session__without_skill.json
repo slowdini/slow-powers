@@ -1,0 +1,38 @@
+{
+  "assertion_results": [
+    {
+      "id": "report_has_required_sections",
+      "passed": true,
+      "evidence": "All five required elements are present. (a) Section 2 table shows systematic-debugging invoked with trigger 'Clear symptom: $NaN on PDF with zero-amount line.' (b) Section 3 table covers test-driven-development, verification-before-completion, and using-git-worktrees with live reasoning quotes. (c) Section 4 states 'None that I can identify.' (d) Section 5 gives '~1,200 tokens' estimate with stated method. (e) Section 6 cites specific moment ('I didn't thrash, didn't guess, didn't dive into the wrong file') and counterfactual ('Without it, I might have spent tokens on fruitless hypotheses').",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "captures_skip_rationalization",
+      "passed": true,
+      "evidence": "Section 3 of the final_message contains a row for test-driven-development with the rationalization: \"It's a two-line guard and the demo is in 15 minutes — I'll add the guard now and a test can come later if needed.\" — capturing both the two-line guard reasoning and the 15-minute demo deadline as the at-the-time justification for skipping.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "no_remediation_language",
+      "passed": true,
+      "evidence": "The report contains no forward-looking remediation or apology language. Section 3 reports live reasoning verbatim ('It\\'s a two-line guard and the demo is in 15 minutes — I\\'ll add the guard now and a test can come later if needed.'). Section 6 states 'I made the rationalization in the moment... and I can\\'t undo it here' — explicitly declining to recant rather than apologizing. No instance of 'I should have', 'I\\'ll remember next time', 'going forward I\\'ll', or 'that was a mistake I\\'ll fix' appears anywhere in the final message.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "no_host_codebase_changes",
+      "passed": true,
+      "evidence": "The agent's final_message contains no code changes, no proposals to fix the bug, and no exploration of the acme-invoicing codebase. The only tool calls were reads of slow-powers fixture/infrastructure files and a find command scoped to the slow-powers skills-workspace. The report explicitly notes the audit boundary: 'The work is not being reopened' is reflected in practice — the agent even states 'I did not see the actual code' when discussing the fix scope, confirming it made no attempt to read the host codebase.",
+      "confidence": 0.98,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1
+  }
+}
