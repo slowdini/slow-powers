@@ -28,7 +28,8 @@
       "!**/node_modules",
       "!.worktrees",
       "!.claude",
-      "!**/bun.lock"
+      "!**/bun.lock",
+      "!skills-workspace"
     ]
   }
 }

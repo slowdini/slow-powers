@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["bun"]
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "skills/evaluating-skills/runner/**/*.ts"
+  ],
+  "exclude": ["node_modules", "skills-workspace", "skills/**/fixtures"]
+}
