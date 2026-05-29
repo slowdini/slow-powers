@@ -6,7 +6,7 @@
   "type": "module",
   "main": "./opencode/plugins/superpowers.js",
   "scripts": {
-    "test": "bun test",
+    "test": "bun test --path-ignore-patterns='skills-workspace/**'",
     "evals": "bun run skills/evaluating-skills/runner/run.ts --skill-dir ./skills --bootstrap ./bootstrap.md",
     "evals:snapshot": "bun run skills/evaluating-skills/runner/run.ts snapshot --skill-dir ./skills",
     "evals:validate": "bun run skills/evaluating-skills/runner/validate-all.ts --skill-dir ./skills",
@@ -17,7 +17,8 @@
     "evals:aggregate": "bun run skills/evaluating-skills/runner/aggregate.ts --skill-dir ./skills",
     "evals:promote-baseline": "bun run skills/evaluating-skills/runner/promote-baseline.ts --skill-dir ./skills",
     "version": "bun scripts/bump-version.ts",
-    "check": "biome check --write ."
+    "check": "biome check --write .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",

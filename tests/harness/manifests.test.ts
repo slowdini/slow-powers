@@ -56,9 +56,9 @@ describe("shared assets (delivered by every harness)", () => {
 });
 
 describe("version lockstep", () => {
-  test.each(
-    VERSION_LOCKED_MANIFESTS,
-  )("%s version matches package.json (%s)", (relPath) => {
+  test.each([
+    ...VERSION_LOCKED_MANIFESTS,
+  ])("%s version matches package.json (%s)", (relPath) => {
     const manifest = readJson(relPath) as {
       version?: string;
       plugins?: { version?: string }[];
