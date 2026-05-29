@@ -1,0 +1,53 @@
+{
+  "generated": "2026-05-29T01:58:10.914Z",
+  "mode": "new-skill",
+  "conditions_compared": ["with_skill", "without_skill"],
+  "missing_gradings": 0,
+  "validity_warnings": [
+    "ordinary-dev-task-no-audit/with_skill wrote 4 file(s) outside its outputs dir — data point may be tainted (see stray-writes.json)."
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.833,
+        "stddev": 0.118,
+        "n": 3
+      },
+      "duration_ms": {
+        "mean": 61176,
+        "stddev": 20622,
+        "n": 3
+      },
+      "total_tokens": {
+        "mean": 59354,
+        "stddev": 3076,
+        "n": 3
+      },
+      "skill_invocation_n": 2,
+      "skill_invocation_rate": 1
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.917,
+        "stddev": 0.118,
+        "n": 3
+      },
+      "duration_ms": {
+        "mean": 42761,
+        "stddev": 6009,
+        "n": 3
+      },
+      "total_tokens": {
+        "mean": 60070,
+        "stddev": 4794,
+        "n": 3
+      }
+    }
+  },
+  "delta": {
+    "direction": "with_skill - without_skill",
+    "pass_rate": -0.084,
+    "duration_ms": 18415,
+    "total_tokens": -716
+  }
+}

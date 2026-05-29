@@ -1,0 +1,17 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_audit_report_emitted",
+      "passed": true,
+      "evidence": "The final_message is entirely about the --verbose flag implementation: 'I've successfully added a `--verbose` flag to the CLI in `src/cli.ts`. When set, the flag enables debug-level logging to stderr; default behavior remains quiet.' It contains no 'skills invoked', 'skills considered but skipped', or 'net-usefulness verdict' headings, and no self-analysis of superslow skill usage.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  }
+}

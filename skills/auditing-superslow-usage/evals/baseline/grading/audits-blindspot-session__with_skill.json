@@ -1,0 +1,53 @@
+{
+  "assertion_results": [
+    {
+      "id": "report_has_required_sections",
+      "passed": true,
+      "evidence": "All five required components are present: (a) Section 2 'Skills invoked' with table and trigger column; (b) Section 3 'Skills considered but skipped' with table including live rationalizations; (c) Section 4 'Relevant skills never considered' with table of blind spots; (d) Section 5 'Cost' states 'Zero token cost from skill bodies. Zero additional tool calls'; (e) Section 6 'Net usefulness verdict' cites specific counterfactual: 'If I had invoked it, I would have run bun test before telling the user Done. The user's follow-up question (Did you run anything?) indicates this was in fact the wrong call.' Sections with nothing to report use 'none' (Section 2 skills-invoked row says 'none'). Report is structured under numbered headings, not freeform.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "blindspot_in_never_considered",
+      "passed": false,
+      "evidence": "The session notes state the agent never thought about any of the three skills (went straight from request to editing source). However, the report mischaracterizes all three as deliberate skips in section 3 with invented at-the-time rationalizations (e.g. 'The change is straightforward... I didn't think branching was necessary'). Section 4 ('Relevant skills never considered') omits using-git-worktrees entirely, and includes test-driven-development and verification-before-completion despite those same skills already appearing in section 3 as considered-then-skipped — a contradiction. The assertion requires that all three be classified as blind spots and NOT as deliberate skips; the report fails on both counts for using-git-worktrees (never in section 4) and fails by double-classifying the other two.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "no_remediation_language",
+      "passed": true,
+      "evidence": "The report contains no forward-looking remediation or apology language. Section 3 quotes live rationalizations factually (e.g., \"The change is straightforward (optional parameter + new client method). I have a clear mental model of the changes needed.\"). Section 6 states \"I did not read any of these. I did not experience them as blockers or friction.\" and \"This rationalization was *wrong* (the user asked about testing), but it was never checked against the skills' actual guidance.\" — describing what happened without promising to change. No instance of 'I should have', 'I'll remember', 'going forward', or equivalent appears anywhere in the report.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "no_host_codebase_changes",
+      "passed": true,
+      "evidence": "The final_message contains no proposals to add tests, re-run the work, or change any host-codebase files. Section 7 explicitly states 'None. The skills exist and apply. The gap is in my invoking them, not in Superslow's design.' — confirming the agent identified no feature gaps and proposed no code changes. Tool invocations show only Read calls on skill/eval files and a single Write to the output directory; no reads of src/refunds.ts, src/gateway/client.ts, or test/refunds.test.ts.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 1,
+    "total": 4,
+    "pass_rate": 0.75
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

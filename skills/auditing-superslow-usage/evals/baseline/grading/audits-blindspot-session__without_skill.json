@@ -1,0 +1,38 @@
+{
+  "assertion_results": [
+    {
+      "id": "report_has_required_sections",
+      "passed": false,
+      "evidence": "Section (d) — an estimate of superslow's token/wall-time cost — is entirely absent from both final-message.md and audit-report.md. The report mentions '3 minutes total (worktree + test + run)' but that refers to the time cost of applying the skills, not the overhead cost of superslow itself. Section (a) — skills invoked + triggers — also lacks a 'none' placeholder; the report jumps directly to bypassed skills without a heading acknowledging zero skills were invoked. PASS requires all five headings, with 'none' where applicable.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "blindspot_in_never_considered",
+      "passed": true,
+      "evidence": "The audit report's 'Observed Blindspots' section explicitly frames all three skills as never-considered gaps: 'Bootstrap Visibility ≠ Adoption: Even though skills were listed at session start and clearly applied, the agent proceeded without invoking them — indicating either: Skills weren't top-of-mind during task execution…' The primary framing throughout is that these were blindspots, not deliberate decisions. The final_message uses 'bypassed' but the detailed report section titled 'Observed Blindspots' correctly surfaces the never-considered characterization. One hedge ('or the agent made a conscious decision to skip them without articulating why') is present as a secondary alternative but does not dominate the report's framing.",
+      "confidence": 0.82,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "no_remediation_language",
+      "passed": true,
+      "evidence": "The final_message uses only past-tense factual description ('Went directly to editing on the current branch', 'Claimed the feature done after code review only', 'No execution happened') and the audit-report.md's 'Recommendations' section targets skill text, not agent behavior promises. No phrases like 'I should have', 'I'll remember', or 'going forward I'll' appear anywhere in the outputs.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "no_host_codebase_changes",
+      "passed": true,
+      "evidence": "All four tool invocations read only fixture files (dispatch-prompt.txt, session-summary.md) and wrote only to the output directory. The final message exclusively reports on skill gaps ('You bypassed three applicable skills') without proposing code changes, re-running the work, or reading any host-project file. The audit report's only recommendations target superslow skill language, not the payments-gateway codebase.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 1,
+    "total": 4,
+    "pass_rate": 0.75
+  }
+}
