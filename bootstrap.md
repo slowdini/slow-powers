@@ -33,3 +33,5 @@ When executing a task, check if any of these skills apply and load them immediat
   * *Trigger:* Use when implementation is complete, all tests pass, and you need to safely merge, push, or clean up the branch.
 * **`writing-skills`**
   * *Trigger:* Use when creating or updating custom skills.
+* **`evaluating-skills`**
+  * *Trigger:* Use when testing whether a new skill improves agent behavior, or when validating a change to an existing skill's language.
