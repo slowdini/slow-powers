@@ -1,16 +1,16 @@
 {
-  "skill_name": "auditing-superslow-usage",
+  "skill_name": "auditing-slow-powers-usage",
   "evals": [
     {
       "id": "audits-completed-session",
-      "prompt": "We just wrapped a work session in another repo — the session notes are attached as session-summary.md. I'm working on superslow and want to see how the skill set actually performed. Run the post-session superslow usage audit on that session.",
-      "expected_output": "The agent produces a structured audit report covering, under clear headings: which superslow skills were invoked and what triggered each (systematic-debugging, triggered by the rendering bug); which skills were considered then skipped, with the actual at-the-time rationalization quoted (test-driven-development, skipped because it was 'a two-line guard' with a 15-minute demo deadline); relevant skills never considered (verification-before-completion — the agent claimed the fix worked without running the test suite); an estimate of superslow's token/wall-time cost; and a net-usefulness verdict citing specific counterfactual moments. The report states decisions and reasoning AS OF THE TIME with no forward-looking remediation or apology language ('I should have', 'I'll remember next time'), and it does not reopen, redo, or propose fixes to the host project's work.",
+      "prompt": "We just wrapped a work session in another repo — the session notes are attached as session-summary.md. I'm working on slow-powers and want to see how the skill set actually performed. Run the post-session slow-powers usage audit on that session.",
+      "expected_output": "The agent produces a structured audit report covering, under clear headings: which slow-powers skills were invoked and what triggered each (systematic-debugging, triggered by the rendering bug); which skills were considered then skipped, with the actual at-the-time rationalization quoted (test-driven-development, skipped because it was 'a two-line guard' with a 15-minute demo deadline); relevant skills never considered (verification-before-completion — the agent claimed the fix worked without running the test suite); an estimate of slow-powers's token/wall-time cost; and a net-usefulness verdict citing specific counterfactual moments. The report states decisions and reasoning AS OF THE TIME with no forward-looking remediation or apology language ('I should have', 'I'll remember next time'), and it does not reopen, redo, or propose fixes to the host project's work.",
       "files": ["fixtures/audits-completed-session/session-summary.md"],
       "assertions": [
         {
           "id": "report_has_required_sections",
           "type": "llm_judge",
-          "rubric": "Does the report cover all of these: (a) skills invoked + what triggered each, (b) skills considered but skipped, (c) relevant skills never considered, (d) an estimate of superslow's token/wall-time cost, and (e) a net-usefulness verdict that cites at least one specific moment/counterfactual? PASS only if all five are present. FAIL if any is missing or the output is an unstructured freeform reply."
+          "rubric": "Does the report cover all of these: (a) skills invoked + what triggered each, (b) skills considered but skipped, (c) relevant skills never considered, (d) an estimate of slow-powers's token/wall-time cost, and (e) a net-usefulness verdict that cites at least one specific moment/counterfactual? PASS only if all five are present. FAIL if any is missing or the output is an unstructured freeform reply."
         },
         {
           "id": "captures_skip_rationalization",
@@ -25,20 +25,20 @@
         {
           "id": "no_host_codebase_changes",
           "type": "llm_judge",
-          "rubric": "Did the agent stay within the audit's scope — NOT reopening, redoing, or proposing fixes to the acme-invoicing work, and NOT reading/exploring the host codebase to investigate? PASS if it only reports on superslow's influence. FAIL if it tries to fix the bug, re-run the work, or propose code changes to the host project."
+          "rubric": "Did the agent stay within the audit's scope — NOT reopening, redoing, or proposing fixes to the acme-invoicing work, and NOT reading/exploring the host codebase to investigate? PASS if it only reports on slow-powers's influence. FAIL if it tries to fix the bug, re-run the work, or propose code changes to the host project."
         }
       ]
     },
     {
       "id": "audits-blindspot-session",
-      "prompt": "Just finished a session over in the payments-gateway repo — notes are in session-summary.md. I'm working on superslow and want a read on how the skills did. Please run the post-session superslow usage audit on it.",
+      "prompt": "Just finished a session over in the payments-gateway repo — notes are in session-summary.md. I'm working on slow-powers and want a read on how the skills did. Please run the post-session slow-powers usage audit on it.",
       "expected_output": "The agent produces the structured audit report. The distinguishing feature of this session is that the agent went straight from the feature request to editing source on the current branch and NEVER considered the skills that applied — test-driven-development (a new branch of refund logic with an existing test suite), using-git-worktrees (a feature change made directly on the checked-out branch), and verification-before-completion (claimed done without running the ~12s suite). The report should classify these as 'relevant skills never considered' / blind spots (section 4), NOT as 'considered but skipped' (section 3), because the notes are explicit that they never came to mind. Sections that don't apply (e.g. skills invoked, skills considered-then-skipped) should be marked 'none' rather than fabricated. The report states decisions as of the time with no remediation/apology language, and does not reopen, redo, or propose fixes to the payments-gateway work.",
       "files": ["fixtures/audits-blindspot-session/session-summary.md"],
       "assertions": [
         {
           "id": "report_has_required_sections",
           "type": "llm_judge",
-          "rubric": "Does the report cover all of these under clear headings: (a) skills invoked + triggers, (b) skills considered but skipped, (c) relevant skills never considered, (d) an estimate of superslow's token/wall-time cost, and (e) a net-usefulness verdict citing at least one specific moment/counterfactual? Sections with nothing to report should say 'none' rather than be dropped. PASS only if all five headings are present (with 'none' where applicable). FAIL if any is missing or the output is an unstructured freeform reply."
+          "rubric": "Does the report cover all of these under clear headings: (a) skills invoked + triggers, (b) skills considered but skipped, (c) relevant skills never considered, (d) an estimate of slow-powers's token/wall-time cost, and (e) a net-usefulness verdict citing at least one specific moment/counterfactual? Sections with nothing to report should say 'none' rather than be dropped. PASS only if all five headings are present (with 'none' where applicable). FAIL if any is missing or the output is an unstructured freeform reply."
         },
         {
           "id": "blindspot_in_never_considered",
@@ -53,20 +53,20 @@
         {
           "id": "no_host_codebase_changes",
           "type": "llm_judge",
-          "rubric": "Did the agent stay within the audit's scope — NOT reopening, redoing, or proposing fixes to the payments-gateway work (the partial-refund feature), and NOT reading/exploring the host codebase to investigate? PASS if it only reports on superslow's influence. FAIL if it tries to add the missing tests, re-run the work, or propose code changes to the host project."
+          "rubric": "Did the agent stay within the audit's scope — NOT reopening, redoing, or proposing fixes to the payments-gateway work (the partial-refund feature), and NOT reading/exploring the host codebase to investigate? PASS if it only reports on slow-powers's influence. FAIL if it tries to add the missing tests, re-run the work, or propose code changes to the host project."
         }
       ]
     },
     {
       "id": "ordinary-dev-task-no-audit",
       "prompt": "Can you add a `--verbose` flag to our CLI in `src/cli.ts`? When set it should print debug-level logging to stderr; default stays quiet. The arg parsing is hand-rolled in the `parseArgs` function near the top of the file.",
-      "expected_output": "The agent treats this as an ordinary development task — it engages with adding the --verbose flag (reads/edits src/cli.ts, or asks clarifying questions about the implementation, or does the work). It does NOT produce a 'superslow usage audit' report, does not enumerate which superslow skills were invoked/skipped, and does not analyze its own skill usage. The auditing-superslow-usage skill is explicitly scoped to fire only when a superslow developer asks for a post-session audit; this prompt is a normal feature request and must not trigger it.",
+      "expected_output": "The agent treats this as an ordinary development task — it engages with adding the --verbose flag (reads/edits src/cli.ts, or asks clarifying questions about the implementation, or does the work). It does NOT produce a 'slow-powers usage audit' report, does not enumerate which slow-powers skills were invoked/skipped, and does not analyze its own skill usage. The auditing-slow-powers-usage skill is explicitly scoped to fire only when a slow-powers developer asks for a post-session audit; this prompt is a normal feature request and must not trigger it.",
       "skill_should_trigger": false,
       "assertions": [
         {
           "id": "no_audit_report_emitted",
           "type": "llm_judge",
-          "rubric": "Did the agent treat this as a normal development task (adding a --verbose flag) WITHOUT emitting a superslow-usage-audit report? PASS if the response is about implementing/discussing the CLI flag and contains NO audit structure (no 'skills invoked' / 'skills considered but skipped' / 'net-usefulness verdict' headings, no self-analysis of which superslow skills it used). FAIL if the agent produces a usage-audit report or otherwise analyzes its own superslow skill usage instead of doing the dev task."
+          "rubric": "Did the agent treat this as a normal development task (adding a --verbose flag) WITHOUT emitting a slow-powers-usage-audit report? PASS if the response is about implementing/discussing the CLI flag and contains NO audit structure (no 'skills invoked' / 'skills considered but skipped' / 'net-usefulness verdict' headings, no self-analysis of which slow-powers skills it used). FAIL if the agent produces a usage-audit report or otherwise analyzes its own slow-powers skill usage instead of doing the dev task."
         }
       ]
     }

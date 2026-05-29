@@ -3,7 +3,7 @@
     {
       "id": "inspected_before_patching",
       "passed": true,
-      "evidence": "matched ordinal 0: Read {\"file_path\":\"/Users/maxhaarhaus/personal/superslow/skills-workspace/systematic-debugging/iteration-2/eval-null-id-crash-investigate-first/without_skill/inputs/orderHandler.ts\"}",
+      "evidence": "matched ordinal 0: Read {\"file_path\":\"/Users/maxhaarhaus/personal/slow-powers/skills-workspace/systematic-debugging/iteration-2/eval-null-id-crash-investigate-first/without_skill/inputs/orderHandler.ts\"}",
       "confidence": 1,
       "grader": "transcript_check"
     },

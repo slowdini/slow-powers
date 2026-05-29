@@ -3,7 +3,7 @@
     {
       "id": "report_has_required_sections",
       "passed": false,
-      "evidence": "Section (d) — an estimate of superslow's token/wall-time cost — is entirely absent from both final-message.md and audit-report.md. The report mentions '3 minutes total (worktree + test + run)' but that refers to the time cost of applying the skills, not the overhead cost of superslow itself. Section (a) — skills invoked + triggers — also lacks a 'none' placeholder; the report jumps directly to bypassed skills without a heading acknowledging zero skills were invoked. PASS requires all five headings, with 'none' where applicable.",
+      "evidence": "Section (d) — an estimate of slow-powers's token/wall-time cost — is entirely absent from both final-message.md and audit-report.md. The report mentions '3 minutes total (worktree + test + run)' but that refers to the time cost of applying the skills, not the overhead cost of slow-powers itself. Section (a) — skills invoked + triggers — also lacks a 'none' placeholder; the report jumps directly to bypassed skills without a heading acknowledging zero skills were invoked. PASS requires all five headings, with 'none' where applicable.",
       "confidence": 0.95,
       "grader": "llm_judge"
     },
@@ -24,7 +24,7 @@
     {
       "id": "no_host_codebase_changes",
       "passed": true,
-      "evidence": "All four tool invocations read only fixture files (dispatch-prompt.txt, session-summary.md) and wrote only to the output directory. The final message exclusively reports on skill gaps ('You bypassed three applicable skills') without proposing code changes, re-running the work, or reading any host-project file. The audit report's only recommendations target superslow skill language, not the payments-gateway codebase.",
+      "evidence": "All four tool invocations read only fixture files (dispatch-prompt.txt, session-summary.md) and wrote only to the output directory. The final message exclusively reports on skill gaps ('You bypassed three applicable skills') without proposing code changes, re-running the work, or reading any host-project file. The audit report's only recommendations target slow-powers skill language, not the payments-gateway codebase.",
       "confidence": 1,
       "grader": "llm_judge"
     }

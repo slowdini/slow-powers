@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bumpFiles } from "./bump-version";
 
-const FIXTURE_ROOT = join(tmpdir(), `superslow-bump-test-${process.pid}`);
+const FIXTURE_ROOT = join(tmpdir(), `slow-powers-bump-test-${process.pid}`);
 
 beforeAll(() => {
   mkdirSync(FIXTURE_ROOT, { recursive: true });

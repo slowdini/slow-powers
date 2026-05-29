@@ -73,7 +73,7 @@ function currentBranch(repo: string): string {
 function syncBranches(repo: string): string {
   return spawnSync(
     "git",
-    ["-C", repo, "branch", "--list", "sync/superpowers-*"],
+    ["-C", repo, "branch", "--list", "sync/slow-powers-*"],
     {
       encoding: "utf8",
     },
@@ -112,13 +112,13 @@ function writeUpstreamFixture(repo: string): void {
   write(path.join(repo, ".gitignore"), ".private-journal/\n");
   write(
     path.join(repo, ".codex-plugin/plugin.json"),
-    `{\n  "name": "superpowers",\n  "version": "${MANIFEST_VERSION}"\n}\n`,
+    `{\n  "name": "slow-powers",\n  "version": "${MANIFEST_VERSION}"\n}\n`,
   );
   write(path.join(repo, "hooks/hooks.json"), HOOKS_JSON);
   write(path.join(repo, "hooks/session-start"), "#!/usr/bin/env bash\n");
   write(path.join(repo, "hooks/run-hook.cmd"), "@echo off\n");
   write(
-    path.join(repo, "assets/superpowers-small.svg"),
+    path.join(repo, "assets/slow-powers-small.svg"),
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>\n',
   );
   write(path.join(repo, "assets/app-icon.png"), "png fixture\n");
@@ -132,7 +132,7 @@ function writeUpstreamFixture(repo: string): void {
     ".codex-plugin/plugin.json",
     ".gitignore",
     "assets/app-icon.png",
-    "assets/superpowers-small.svg",
+    "assets/slow-powers-small.svg",
     "hooks/hooks.json",
     "hooks/run-hook.cmd",
     "hooks/session-start",
@@ -146,55 +146,55 @@ function writeUpstreamFixture(repo: string): void {
 
 /** Destination as it looks before a first sync (pre-synced layout, no plugin files yet). */
 function writeDestinationFixture(repo: string): void {
-  write(path.join(repo, "plugins/superpowers/.fixture-keep"), "fixture keep\n");
+  write(path.join(repo, "plugins/slow-powers/.fixture-keep"), "fixture keep\n");
   write(
-    path.join(repo, "plugins/superpowers/skills/example/SKILL.md"),
+    path.join(repo, "plugins/slow-powers/skills/example/SKILL.md"),
     SKILL_MD,
   );
   write(
-    path.join(repo, "plugins/superpowers/skills/example/agents/openai.yaml"),
+    path.join(repo, "plugins/slow-powers/skills/example/agents/openai.yaml"),
     OPENAI_YAML,
   );
-  git(repo, "add", "plugins/superpowers");
+  git(repo, "add", "plugins/slow-powers");
   git(repo, "commit", "-q", "-m", "Initial destination fixture");
 }
 
 /** Destination already in sync with upstream (used for apply scenarios). */
 function writeSyncedDestinationFixture(repo: string): void {
   write(
-    path.join(repo, "plugins/superpowers/.codex-plugin/plugin.json"),
-    `{\n  "name": "superpowers",\n  "version": "${MANIFEST_VERSION}"\n}\n`,
+    path.join(repo, "plugins/slow-powers/.codex-plugin/plugin.json"),
+    `{\n  "name": "slow-powers",\n  "version": "${MANIFEST_VERSION}"\n}\n`,
   );
-  write(path.join(repo, "plugins/superpowers/hooks/hooks.json"), HOOKS_JSON);
+  write(path.join(repo, "plugins/slow-powers/hooks/hooks.json"), HOOKS_JSON);
   write(
-    path.join(repo, "plugins/superpowers/hooks/session-start"),
+    path.join(repo, "plugins/slow-powers/hooks/session-start"),
     "#!/usr/bin/env bash\n",
   );
   write(
-    path.join(repo, "plugins/superpowers/hooks/run-hook.cmd"),
+    path.join(repo, "plugins/slow-powers/hooks/run-hook.cmd"),
     "@echo off\n",
   );
   write(
-    path.join(repo, "plugins/superpowers/assets/superpowers-small.svg"),
+    path.join(repo, "plugins/slow-powers/assets/slow-powers-small.svg"),
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>\n',
   );
   write(
-    path.join(repo, "plugins/superpowers/assets/app-icon.png"),
+    path.join(repo, "plugins/slow-powers/assets/app-icon.png"),
     "png fixture\n",
   );
   write(
-    path.join(repo, "plugins/superpowers/skills/example/SKILL.md"),
+    path.join(repo, "plugins/slow-powers/skills/example/SKILL.md"),
     SKILL_MD,
   );
   write(
-    path.join(repo, "plugins/superpowers/skills/example/agents/openai.yaml"),
+    path.join(repo, "plugins/slow-powers/skills/example/agents/openai.yaml"),
     OPENAI_YAML,
   );
   write(
-    path.join(repo, "plugins/superpowers/.private-journal/keep.txt"),
+    path.join(repo, "plugins/slow-powers/.private-journal/keep.txt"),
     "tracked keep\n",
   );
-  git(repo, "add", "plugins/superpowers");
+  git(repo, "add", "plugins/slow-powers");
   git(repo, "commit", "-q", "-m", "Initial synced destination fixture");
 }
 
@@ -235,7 +235,7 @@ describe("dry-run preview", () => {
     git(dest(), "checkout", "-q", "-b", "fixture/preview-target");
     // Locally modify a tracked file so the preview must reflect it.
     write(
-      path.join(dest(), "plugins/superpowers/skills/example/SKILL.md"),
+      path.join(dest(), "plugins/slow-powers/skills/example/SKILL.md"),
       "# Example Skill\n\nLocally modified fixture content.\n",
     );
 
@@ -252,7 +252,7 @@ describe("dry-run preview", () => {
   });
   test("preview includes the manifest, assets, and hooks", () => {
     expect(section).toContain(".codex-plugin/plugin.json");
-    expect(section).toContain("assets/superpowers-small.svg");
+    expect(section).toContain("assets/slow-powers-small.svg");
     expect(section).toContain("assets/app-icon.png");
     expect(section).toContain("hooks/hooks.json");
   });
@@ -295,14 +295,14 @@ describe("bootstrap preview", () => {
   test("exits successfully and describes bootstrap mode", () => {
     expect(result.status).toBe(0);
     expect(result.output).toContain(
-      "Mode:     BOOTSTRAP (creating plugins/superpowers/ when absent)",
+      "Mode:     BOOTSTRAP (creating plugins/slow-powers/ when absent)",
     );
   });
   test("stays dry-run only and does not create the destination plugin dir", () => {
     expect(result.output).toContain(
       "Dry run only. Nothing was changed or pushed.",
     );
-    expect(fs.existsSync(path.join(dest(), "plugins/superpowers"))).toBe(false);
+    expect(fs.existsSync(path.join(dest(), "plugins/slow-powers"))).toBe(false);
   });
 });
 
@@ -318,7 +318,7 @@ describe("apply guards", () => {
     git(dest, "checkout", "-q", "-b", "fixture/dirty-apply-target");
     const skill = path.join(
       dest,
-      "plugins/superpowers/skills/example/SKILL.md",
+      "plugins/slow-powers/skills/example/SKILL.md",
     );
     write(skill, "# Example Skill\n\nLocally modified fixture content.\n");
 
@@ -326,7 +326,7 @@ describe("apply guards", () => {
 
     expect(result.status).toBe(1);
     expect(result.output).toContain(
-      "ERROR: local checkout has uncommitted changes under 'plugins/superpowers'",
+      "ERROR: local checkout has uncommitted changes under 'plugins/slow-powers'",
     );
     expect(currentBranch(dest)).toBe("fixture/dirty-apply-target");
     expect(syncBranches(dest)).toBe("");
@@ -353,7 +353,7 @@ describe("apply guards", () => {
     );
     expect(currentBranch(dest)).toBe("fixture/noop-apply-target");
     const yaml = fs.readFileSync(
-      path.join(dest, "plugins/superpowers/skills/example/agents/openai.yaml"),
+      path.join(dest, "plugins/slow-powers/skills/example/agents/openai.yaml"),
       "utf8",
     );
     expect(yaml).toBe(OPENAI_YAML);

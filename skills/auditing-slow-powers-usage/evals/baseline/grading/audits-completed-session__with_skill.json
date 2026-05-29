@@ -3,7 +3,7 @@
     {
       "id": "report_has_required_sections",
       "passed": false,
-      "evidence": "Element (d) — an estimate of superslow's token/wall-time cost — is entirely absent from both audit-report.md and the final_message. The other four elements are present: (a) systematic-debugging coverage with trigger; (b) test-driven-development explicitly considered and skipped with quoted reasoning; (c) using-git-worktrees and writing-plans listed as never loaded; (e) verdict 'The superslow framework partially succeeded' with counterfactual 'reproduce → debug → fix → test (6 sec) → visual check (30 sec) → ship. Total overhead: ~10 seconds.'",
+      "evidence": "Element (d) — an estimate of slow-powers's token/wall-time cost — is entirely absent from both audit-report.md and the final_message. The other four elements are present: (a) systematic-debugging coverage with trigger; (b) test-driven-development explicitly considered and skipped with quoted reasoning; (c) using-git-worktrees and writing-plans listed as never loaded; (e) verdict 'The slow-powers framework partially succeeded' with counterfactual 'reproduce → debug → fix → test (6 sec) → visual check (30 sec) → ship. Total overhead: ~10 seconds.'",
       "confidence": 0.97,
       "grader": "llm_judge"
     },
@@ -24,7 +24,7 @@
     {
       "id": "no_host_codebase_changes",
       "passed": true,
-      "evidence": "Tool invocations show only reads of eval fixture files (dispatch-prompt.txt, session-summary.md) and writes to the output directory. No tool calls to acme-invoicing source files appear. The final message and audit-report.md report only on superslow skill adherence; the audit-report's recommendations section targets the superslow skills themselves ('Strengthen the verification-before-completion skill'), not the host codebase.",
+      "evidence": "Tool invocations show only reads of eval fixture files (dispatch-prompt.txt, session-summary.md) and writes to the output directory. No tool calls to acme-invoicing source files appear. The final message and audit-report.md report only on slow-powers skill adherence; the audit-report's recommendations section targets the slow-powers skills themselves ('Strengthen the verification-before-completion skill'), not the host codebase.",
       "confidence": 1,
       "grader": "llm_judge"
     }

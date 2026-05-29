@@ -6,7 +6,7 @@ import {
 } from "../sandbox-policy";
 
 /**
- * The marker file (`<stageRoot>/.claude/skills/.superslow-eval-guard.json`)
+ * The marker file (`<stageRoot>/.claude/skills/.slow-powers-eval-guard.json`)
  * that arms the guard. The guard is a no-op unless this file exists, is active,
  * and has not expired — so a crashed run that never tore the hook down can't
  * silently block writes in the user's next interactive session.

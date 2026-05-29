@@ -5,7 +5,7 @@
   },
   "plugins": [
     {
-      "name": "superslow",
+      "name": "slow-powers",
       "version": "0.0.7",
       "source": {
         "source": "url",

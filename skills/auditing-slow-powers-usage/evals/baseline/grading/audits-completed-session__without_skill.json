@@ -24,7 +24,7 @@
     {
       "id": "no_host_codebase_changes",
       "passed": true,
-      "evidence": "The agent's final_message contains no code changes, no proposals to fix the bug, and no exploration of the acme-invoicing codebase. The only tool calls were reads of superslow fixture/infrastructure files and a find command scoped to the superslow skills-workspace. The report explicitly notes the audit boundary: 'The work is not being reopened' is reflected in practice — the agent even states 'I did not see the actual code' when discussing the fix scope, confirming it made no attempt to read the host codebase.",
+      "evidence": "The agent's final_message contains no code changes, no proposals to fix the bug, and no exploration of the acme-invoicing codebase. The only tool calls were reads of slow-powers fixture/infrastructure files and a find command scoped to the slow-powers skills-workspace. The report explicitly notes the audit boundary: 'The work is not being reopened' is reflected in practice — the agent even states 'I did not see the actual code' when discussing the fix scope, confirming it made no attempt to read the host codebase.",
       "confidence": 0.98,
       "grader": "llm_judge"
     }

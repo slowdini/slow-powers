@@ -1,7 +1,7 @@
 /**
- * Superpowers plugin for OpenCode.ai
+ * Slow-powers plugin for OpenCode.ai
  *
- * Injects superpowers bootstrap context via system prompt transform.
+ * Injects slow-powers bootstrap context via system prompt transform.
  * Auto-registers skills directory via config hook (no symlinks needed).
  */
 
@@ -10,19 +10,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const superpowersSkillsDir = path.resolve(__dirname, "../../skills");
+const slowPowersSkillsDir = path.resolve(__dirname, "../../skills");
 const bootstrapPath = path.resolve(__dirname, "../../bootstrap.md");
 // First line of bootstrap.md — used as an idempotency check so we don't
 // re-inject when OpenCode reruns the transform on an already-transformed
 // message array. Specific enough that user prompts won't accidentally match.
-const bootstrapLeadingPhrase = "# Instructions for using Superslow Skills";
+const bootstrapLeadingPhrase = "# Instructions for using Slow-powers Skills";
 
 // Module-level cache for bootstrap content.
 // The bootstrap.md file does not change during a session, so reading it
 // once eliminates redundant fs work on every agent step.
 let _bootstrapCache; // undefined = not yet loaded, null = file missing
 
-export const SuperpowersPlugin = async ({
+export const SlowPowersPlugin = async ({
   client: _client,
   directory: _directory,
 }) => {
@@ -41,7 +41,7 @@ export const SuperpowersPlugin = async ({
   };
 
   return {
-    // Inject skills path into live config so OpenCode discovers superpowers skills
+    // Inject skills path into live config so OpenCode discovers slow-powers skills
     // without requiring manual symlinks or config file edits.
     // This works because Config.get() returns a cached singleton — modifications
     // here are visible when skills are lazily discovered later.
@@ -49,10 +49,10 @@ export const SuperpowersPlugin = async ({
       config.skills = config.skills || {};
       config.skills.paths = config.skills.paths || [];
       if (
-        fs.existsSync(superpowersSkillsDir) &&
-        !config.skills.paths.includes(superpowersSkillsDir)
+        fs.existsSync(slowPowersSkillsDir) &&
+        !config.skills.paths.includes(slowPowersSkillsDir)
       ) {
-        config.skills.paths.push(superpowersSkillsDir);
+        config.skills.paths.push(slowPowersSkillsDir);
       }
     },
 

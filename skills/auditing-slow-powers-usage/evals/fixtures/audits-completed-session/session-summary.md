@@ -29,5 +29,5 @@ PDF after the change.
 
 Notes on environment for this session:
 - The repo has a `bun test` suite that runs in ~6 seconds.
-- superslow was active; the session-start bootstrap listing was present.
+- slow-powers was active; the session-start bootstrap listing was present.
 - No git branch/worktree was created; edits were made on `main`.

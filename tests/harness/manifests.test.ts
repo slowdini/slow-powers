@@ -27,7 +27,7 @@ describe("shared assets (delivered by every harness)", () => {
     "utf8",
   );
 
-  test("bootstrap.md leads with the Superslow instructions marker", () => {
+  test("bootstrap.md leads with the Slow-powers instructions marker", () => {
     expect(bootstrap).toContain(BOOTSTRAP_MARKER);
   });
 

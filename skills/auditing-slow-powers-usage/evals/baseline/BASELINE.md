@@ -1,7 +1,7 @@
-# Baseline — auditing-superslow-usage
+# Baseline — auditing-slow-powers-usage
 
 Committed reference output from a canonical eval run. Regenerate with
-`bun run evals:promote-baseline -- --skill auditing-superslow-usage --iteration <N>` after aggregating. The ephemeral workspace (run records, timing,
+`bun run evals:promote-baseline -- --skill auditing-slow-powers-usage --iteration <N>` after aggregating. The ephemeral workspace (run records, timing,
 dispatch files, produced outputs) stays gitignored under `skills-workspace/`.
 
 | Field | Value |

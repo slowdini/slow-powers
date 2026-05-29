@@ -1,4 +1,4 @@
-# Baseline notes — auditing-superslow-usage (iteration-1, v1-haiku-sonnet)
+# Baseline notes — auditing-slow-powers-usage (iteration-1, v1-haiku-sonnet)
 
 Forward-looking observations from the run that produced this baseline. Provenance is in
 `BASELINE.md`; numbers are in `benchmark.json`. This file is the "what a future iterator should

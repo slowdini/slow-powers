@@ -19,7 +19,7 @@ import {
   stageSkillForCC,
 } from "./run";
 
-const FIXTURE_ROOT = join(tmpdir(), `superslow-run-test-${process.pid}`);
+const FIXTURE_ROOT = join(tmpdir(), `slow-powers-run-test-${process.pid}`);
 
 beforeAll(() => {
   mkdirSync(FIXTURE_ROOT, { recursive: true });
@@ -269,7 +269,7 @@ describe("buildDispatchTask bootstrap injection", () => {
     evalId: "e1",
     condition: "with_skill",
     skillPath: null,
-    stagedSkillSlug: "superslow-eval-1-with_skill__foo" as string | null,
+    stagedSkillSlug: "slow-powers-eval-1-with_skill__foo" as string | null,
     userPrompt: "do the thing",
     fixtures: [] as string[],
     outputsDir: "/tmp/out",
@@ -381,7 +381,7 @@ describe("buildDispatchTask bootstrap injection", () => {
       ...baseOpts,
       condition: "with_skill",
       skillPath: null,
-      stagedSkillSlug: "superslow-eval-1-with_skill__test-driven-development",
+      stagedSkillSlug: "slow-powers-eval-1-with_skill__test-driven-development",
       skillName: "test-driven-development",
       bootstrapContent: SAMPLE_DIRECTORY,
     });
@@ -393,7 +393,9 @@ describe("buildDispatchTask bootstrap injection", () => {
       ...baseOpts,
       bootstrapContent: "BOOT-LOADED",
     });
-    expect(task.dispatch_prompt).toContain("superslow-eval-1-with_skill__foo");
+    expect(task.dispatch_prompt).toContain(
+      "slow-powers-eval-1-with_skill__foo",
+    );
   });
 
   test("without-skill condition under realistic env reflects 'this skill removed, others available' rather than 'no skill loaded'", () => {
@@ -481,7 +483,7 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     const entries = readdirSync(stagedSkillsDir).filter(
       (e) => e !== STAGED_SIBLING_MANIFEST,
     );
-    expect(entries).toEqual(["superslow-eval-1-with_skill__mr-review"]);
+    expect(entries).toEqual(["slow-powers-eval-1-with_skill__mr-review"]);
   });
 
   test("dispatch prompt lists only the skill-under-test, no other skills, and no product framing without --bootstrap", () => {

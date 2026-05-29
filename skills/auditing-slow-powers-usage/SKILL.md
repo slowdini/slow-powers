@@ -1,29 +1,29 @@
 ---
-name: auditing-superslow-usage
-description: Use only when a superslow developer explicitly asks for a post-session audit of how superslow skills were used during the session just completed. A manual diagnostic for people working ON superslow — never relevant to ordinary development tasks; do not auto-invoke.
+name: auditing-slow-powers-usage
+description: Use only when a slow-powers developer explicitly asks for a post-session audit of how slow-powers skills were used during the session just completed. A manual diagnostic for people working ON slow-powers — never relevant to ordinary development tasks; do not auto-invoke.
 ---
 
-# Auditing Superslow Usage
+# Auditing Slow-powers Usage
 
 ## Why you're being asked this
 
-A superslow developer is running a deliberate, manual diagnostic. The session you just spent
-working, likely in **some other codebase** is the subject. They want to know how the superslow
+A slow-powers developer is running a deliberate, manual diagnostic. The session you just spent
+working, likely in **some other codebase** is the subject. They want to know how the slow-powers
 skill set actually performed in a long, realistic, multi-turn session, something that's otherwise
 difficult to measure.
 
-This is a check on **superslow**, not on your work. You are not in trouble, the work is not being
+This is a check on **slow-powers**, not on your work. You are not in trouble, the work is not being
 reopened, and there is no "right answer" you're being graded against. Report honestly and
 specifically. Your report seeds new pressure tests and live spot-checks of the plugin.
 
 ## Scope — stay inside these lines
 
 **Do:**
-- Report only on how superslow influenced the session that has already happened.
+- Report only on how slow-powers influenced the session that has already happened.
 - Draw entirely on what's already in this conversation — your own decisions, what you read, what you skipped.
 
 **Don't:**
-- Read, explore, or grep the host codebase to "investigate" — the audit is about superslow, not the project.
+- Read, explore, or grep the host codebase to "investigate" — the audit is about slow-powers, not the project.
 - Make any change, fix, or commit. Touch nothing.
 - Re-open, redo, second-guess, or "improve" the work you just delivered.
 - Propose changes to the host project. That's out of scope even if you spot something.
@@ -38,7 +38,7 @@ These rules are the point of the audit. Follow them exactly.
   remember next time", "going forward I'll…", "good catch, I'll fix my approach." You cannot
   remember anything next session; that text is pure noise and it pollutes the data. If you skipped a
   skill, state the rationalization you actually had — don't recant it.
-- **Be honest about superslow's downsides.** Where a skill added friction, wasted tokens, was
+- **Be honest about slow-powers's downsides.** Where a skill added friction, wasted tokens, was
   ignored, or wasn't worth its cost, say so plainly. A glowing report that hides cost is useless.
 - **Mark uncertainty instead of fabricating.** If you can't reliably recall whether you read a skill
   in full or what triggered an invocation, say "uncertain" and why — never invent a clean specific.
@@ -53,7 +53,7 @@ One or two lines to orient the reader: what the work was, roughly how many turns
 Orientation only — no analysis here.
 
 ### 2. Skills invoked
-A table, one row per superslow skill you actually loaded:
+A table, one row per slow-powers skill you actually loaded:
 
 | Skill | What inspired invoking it (the signal at the time) | Read in full? | Followed authentically? |
 |-------|----------------------------------------------------|---------------|-------------------------|
@@ -77,7 +77,7 @@ Skills that arguably applied to this session but never came to mind while you wo
 section 3 — these are blind spots, not deliberate skips. Best effort; mark uncertainty.
 
 ### 5. Cost
-Tokens and wall time attributable to superslow specifically: skill bodies loaded into context, plus
+Tokens and wall time attributable to slow-powers specifically: skill bodies loaded into context, plus
 extra steps a skill made you take that you otherwise wouldn't have.
 
 > Cross-harness note: if your harness exposes real token/timing figures, use them and say so. If it
@@ -85,7 +85,7 @@ extra steps a skill made you take that you otherwise wouldn't have.
 > ≈Y tokens each; +Z tool calls for the worktree setup").
 
 ### 6. Net usefulness verdict
-Given that cost, was superslow worth it **for this session**? Don't hand-wave. Cite **specific
+Given that cost, was slow-powers worth it **for this session**? Don't hand-wave. Cite **specific
 moments** where a skill steered you away from breaking one of its own requirements — state the
 counterfactual: what you would have done without it. Then call out the neutral or net-negative
 moments too. Land on a clear verdict.

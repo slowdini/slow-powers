@@ -4,7 +4,7 @@
     {
       "id": "capture-reusable-technique",
       "prompt": "We've worked out a solid, reusable way to flush pending async test timers — I keep re-deriving it across projects. Capture it so it sticks.",
-      "expected_output": "The agent drafts a skill with correct frontmatter (a third-person `description` written as triggering conditions — 'Use when…' — with no workflow summary, and a hyphenated name), keeps to one focused example, and treats drafting as incomplete until validated, pointing at superslow:evaluating-skills rather than declaring the skill finished.",
+      "expected_output": "The agent drafts a skill with correct frontmatter (a third-person `description` written as triggering conditions — 'Use when…' — with no workflow summary, and a hyphenated name), keeps to one focused example, and treats drafting as incomplete until validated, pointing at slow-powers:evaluating-skills rather than declaring the skill finished.",
       "assertions": [
         {
           "id": "references_evaluating_skills",
@@ -20,7 +20,7 @@
         {
           "id": "handoff_to_evaluation",
           "type": "llm_judge",
-          "rubric": "Did the agent treat the draft as unverified until measured — pointing to validating it with evals (superslow:evaluating-skills) — rather than presenting the skill as finished and ready to use? PASS if a validation/eval step is referenced. FAIL if the skill is declared done with no evaluation step."
+          "rubric": "Did the agent treat the draft as unverified until measured — pointing to validating it with evals (slow-powers:evaluating-skills) — rather than presenting the skill as finished and ready to use? PASS if a validation/eval step is referenced. FAIL if the skill is declared done with no evaluation step."
         }
       ]
     },

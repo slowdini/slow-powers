@@ -8,7 +8,7 @@ labels: bug, workflow
 
 | Field | Value |
 |-------|-------|
-| Superslow version | |
+| Slow-powers version | |
 | Harness (Claude Code, Cursor, Codex CLI, OpenCode) | |
 | Harness version | |
 | Model | |
