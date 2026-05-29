@@ -1,0 +1,17 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_audit_report_emitted",
+      "passed": true,
+      "evidence": "The final_message is titled '# CLI --verbose Flag Implementation Complete' and contains only implementation details, test results, and requirement checkboxes (e.g. '✅ Argument Parsing', '✅ Debug Logging'). It contains no 'skills invoked', 'skills considered but skipped', 'net-usefulness verdict', or any self-analysis of slow-powers skill usage.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "assertion_results": [
+    {
+      "id": "report_has_required_sections",
+      "passed": false,
+      "evidence": "Element (d) — an estimate of slow-powers's token/wall-time cost — is entirely absent from both audit-report.md and the final_message. The other four elements are present: (a) systematic-debugging coverage with trigger; (b) test-driven-development explicitly considered and skipped with quoted reasoning; (c) using-git-worktrees and writing-plans listed as never loaded; (e) verdict 'The slow-powers framework partially succeeded' with counterfactual 'reproduce → debug → fix → test (6 sec) → visual check (30 sec) → ship. Total overhead: ~10 seconds.'",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "captures_skip_rationalization",
+      "passed": true,
+      "evidence": "final_message: \"Skipped `test-driven-development` when writing the fix — Your reasoning: 'It's a two-line guard and the demo is in 15 minutes.'\" — the skip is named, and the original at-the-time rationalization is quoted verbatim without recanting or correcting it.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "no_remediation_language",
+      "passed": true,
+      "evidence": "The final_message and audit-report.md use only factual, diagnostic language. The closest thing to forward-looking language is 'A better approach: reproduce → debug → fix → test (6 sec) → visual check (30 sec) → ship' — but this is framed as a general principle for the framework, not a personal apology or self-correction promise. No 'I should have', 'I'll remember next time', 'going forward I'll', or similar remediation language appears anywhere in the outputs.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "no_host_codebase_changes",
+      "passed": true,
+      "evidence": "Tool invocations show only reads of eval fixture files (dispatch-prompt.txt, session-summary.md) and writes to the output directory. No tool calls to acme-invoicing source files appear. The final message and audit-report.md report only on slow-powers skill adherence; the audit-report's recommendations section targets the slow-powers skills themselves ('Strengthen the verification-before-completion skill'), not the host codebase.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 1,
+    "total": 4,
+    "pass_rate": 0.75
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

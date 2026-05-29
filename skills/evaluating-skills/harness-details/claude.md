@@ -6,18 +6,18 @@ Use this when a user, working from their own skill folder, asks to run an eval (
 
 ## Step 1 — Resolve the bundled runner
 
-The runner ships inside the installed superslow plugin. Resolve its path once per session and reuse it. Use `find` rather than a shell glob so the command behaves the same under bash and zsh (a bare glob with no match errors under zsh):
+The runner ships inside the installed slow-powers plugin. Resolve its path once per session and reuse it. Use `find` rather than a shell glob so the command behaves the same under bash and zsh (a bare glob with no match errors under zsh):
 
 ```bash
-SUPERSLOW_RUNNER_ROOT="$(find ~/.claude/plugins/cache -maxdepth 6 -type d -path '*/superslow/*/skills/evaluating-skills/runner' 2>/dev/null | sort | tail -1)"
+SLOW_POWERS_RUNNER_ROOT="$(find ~/.claude/plugins/cache -maxdepth 6 -type d -path '*/slow-powers/*/skills/evaluating-skills/runner' 2>/dev/null | sort | tail -1)"
 # Fallback for dev/marketplace installs:
-[ -z "$SUPERSLOW_RUNNER_ROOT" ] && SUPERSLOW_RUNNER_ROOT="$(find ~/.claude/plugins/marketplaces -maxdepth 6 -type d -path '*/superslow/*/skills/evaluating-skills/runner' 2>/dev/null | sort | tail -1)"
-echo "$SUPERSLOW_RUNNER_ROOT"
+[ -z "$SLOW_POWERS_RUNNER_ROOT" ] && SLOW_POWERS_RUNNER_ROOT="$(find ~/.claude/plugins/marketplaces -maxdepth 6 -type d -path '*/slow-powers/*/skills/evaluating-skills/runner' 2>/dev/null | sort | tail -1)"
+echo "$SLOW_POWERS_RUNNER_ROOT"
 ```
 
 (`sort | tail -1` prefers the lexically-latest version directory when several are installed.)
 
-If this is empty, the plugin isn't installed at the canonical path. Tell the user to clone the superslow repo and run from there (`bun run evals -- --skill <name> --mode <mode>`), or to reinstall the plugin.
+If this is empty, the plugin isn't installed at the canonical path. Tell the user to clone the slow-powers repo and run from there (`bun run evals -- --skill <name> --mode <mode>`), or to reinstall the plugin.
 
 ## Step 2 — Check the prerequisite
 
@@ -27,7 +27,7 @@ bun --version
 
 If `bun` is missing, the runner can't execute. Tell the user to install it: `curl -fsSL https://bun.sh/install | bash` (or `brew install bun`), then retry.
 
-The runner depends on one package, `ajv` (runtime schema validation). `bun` auto-installs it on first run, so no manual step is normally needed. In an offline/airgapped environment where auto-install can't reach the registry, run `bun install` once (in the superslow repo, or wherever `package.json` lives) before the first eval.
+The runner depends on one package, `ajv` (runtime schema validation). `bun` auto-installs it on first run, so no manual step is normally needed. In an offline/airgapped environment where auto-install can't reach the registry, run `bun install` once (in the slow-powers repo, or wherever `package.json` lives) before the first eval.
 
 ## Step 3 — Detect the skill folder
 
@@ -47,11 +47,11 @@ ls SKILL.md evals/evals.json 2>/dev/null
 - `--skill` = the basename of the current directory (e.g. `mr-review`)
 - `--skill-dir` = the parent directory
 
-Confirm these with the user before running. Remember: every skill inside `--skill-dir` is staged as a sibling. If the user wants their skill evaluated in isolation, `--skill-dir` should contain only that one skill (the common case). If they want superslow skills available as siblings, they must copy or symlink them into `--skill-dir` first.
+Confirm these with the user before running. Remember: every skill inside `--skill-dir` is staged as a sibling. If the user wants their skill evaluated in isolation, `--skill-dir` should contain only that one skill (the common case). If they want slow-powers skills available as siblings, they must copy or symlink them into `--skill-dir` first.
 
 ## Step 5 — Author `evals/evals.json` (only if missing)
 
-Read the template at `${SUPERSLOW_RUNNER_ROOT}/../templates/evals.json.example` and walk the user through writing 2–3 realistic prompts, following the "Designing test cases" guidance in `../SKILL.md`. Save it to `<skill-folder>/evals/evals.json`. Don't write assertions yet — see the methodology.
+Read the template at `${SLOW_POWERS_RUNNER_ROOT}/../templates/evals.json.example` and walk the user through writing 2–3 realistic prompts, following the "Designing test cases" guidance in `../SKILL.md`. Save it to `<skill-folder>/evals/evals.json`. Don't write assertions yet — see the methodology.
 
 ## Step 6 — Gitignore the workspace
 
@@ -70,20 +70,20 @@ Run from the skill folder (so `CWD` is the eval root and staging lands at `<CWD>
 New-skill mode (with vs without):
 
 ```bash
-bun run "$SUPERSLOW_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode new-skill
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode new-skill
 ```
 
 Revision mode (test a change to an existing skill):
 
 ```bash
-bun run "$SUPERSLOW_RUNNER_ROOT/run.ts" snapshot --skill-dir <skill-dir> --skill <name> --label baseline
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" snapshot --skill-dir <skill-dir> --skill <name> --label baseline
 # ...edit the SKILL.md...
-bun run "$SUPERSLOW_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode revision --baseline baseline
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode revision --baseline baseline
 ```
 
 Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built staged-skills inventory.
 
-Add `--guard` to arm the write guard: the runner stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. It's opt-in and Claude-Code-only. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove it immediately, run `bun run "$SUPERSLOW_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the superslow repo). Without `--guard`, rely on the post-hoc `detect-stray-writes` step in Step 9 instead.
+Add `--guard` to arm the write guard: the runner stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. It's opt-in and Claude-Code-only. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove it immediately, run `bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the slow-powers repo). Without `--guard`, rely on the post-hoc `detect-stray-writes` step in Step 9 instead.
 
 ## Step 8 — Drive the dispatches
 
@@ -97,17 +97,17 @@ Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task 
 Claude Code persists subagent transcripts under `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/`. Find that directory for the current session, then:
 
 ```bash
-bun run "$SUPERSLOW_RUNNER_ROOT/fill-transcripts.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> \
+bun run "$SLOW_POWERS_RUNNER_ROOT/fill-transcripts.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
 
 # Optional: flag any subagent writes/installs that escaped the outputs/ dir.
-bun run "$SUPERSLOW_RUNNER_ROOT/detect-stray-writes.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
+bun run "$SLOW_POWERS_RUNNER_ROOT/detect-stray-writes.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 
-bun run "$SUPERSLOW_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
+bun run "$SLOW_POWERS_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 # Dispatch a fresh judge subagent for each emitted judge task — prompt it with `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (the prompt tells the judge where to write its response). Then:
-bun run "$SUPERSLOW_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> --finalize
+bun run "$SLOW_POWERS_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> --finalize
 
-bun run "$SUPERSLOW_RUNNER_ROOT/aggregate.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
+bun run "$SLOW_POWERS_RUNNER_ROOT/aggregate.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 ```
 
 ## Step 10 — Present results

@@ -2,7 +2,7 @@
 #
 # sync-to-codex-plugin.sh
 #
-# Sync this superpowers checkout → prime-radiant-inc/openai-codex-plugins.
+# Sync this slow-powers checkout → prime-radiant-inc/openai-codex-plugins.
 # Clones the fork fresh into a temp dir, rsyncs tracked upstream plugin content
 # (including the committed Codex manifest, skills, hooks, and assets), preserves
 # OpenAI-owned marketplace metadata already in the destination plugin, commits,
@@ -21,7 +21,7 @@
 #   ./scripts/sync-to-codex-plugin.sh --bootstrap                  # create plugin dir if missing
 #
 # Bootstrap mode: skips the "plugin must exist on base" requirement and creates
-# plugins/superpowers/ when absent, then copies the tracked plugin files from
+# plugins/slow-powers/ when absent, then copies the tracked plugin files from
 # upstream just like a normal sync.
 #
 # Requires: bash, rsync, git, gh (authenticated), python3.
@@ -34,7 +34,7 @@ set -euo pipefail
 
 FORK="prime-radiant-inc/openai-codex-plugins"
 DEFAULT_BASE="main"
-DEST_REL="plugins/superpowers"
+DEST_REL="plugins/slow-powers"
 
 # Paths in upstream that should NOT land in the embedded plugin.
 # All patterns use a leading "/" to anchor them to the source root.
@@ -300,9 +300,9 @@ prepare_preview_checkout
 
 TIMESTAMP="$(date -u +%Y%m%d-%H%M%S)"
 if [[ $BOOTSTRAP -eq 1 ]]; then
-  SYNC_BRANCH="bootstrap/superpowers-${UPSTREAM_SHORT}-${TIMESTAMP}"
+  SYNC_BRANCH="bootstrap/slow-powers-${UPSTREAM_SHORT}-${TIMESTAMP}"
 else
-  SYNC_BRANCH="sync/superpowers-${UPSTREAM_SHORT}-${TIMESTAMP}"
+  SYNC_BRANCH="sync/slow-powers-${UPSTREAM_SHORT}-${TIMESTAMP}"
 fi
 
 # =============================================================================
@@ -355,7 +355,7 @@ echo "Fork:     $FORK"
 echo "Base:     $BASE"
 echo "Branch:   $SYNC_BRANCH"
 if [[ $BOOTSTRAP -eq 1 ]]; then
-  echo "Mode:     BOOTSTRAP (creating plugins/superpowers/ when absent)"
+  echo "Mode:     BOOTSTRAP (creating plugins/slow-powers/ when absent)"
 fi
 echo ""
 echo "=== Preview (rsync --dry-run) ==="
@@ -412,18 +412,18 @@ fi
 git add "$DEST_REL"
 
 if [[ $BOOTSTRAP -eq 1 ]]; then
-  COMMIT_TITLE="bootstrap superpowers v$UPSTREAM_VERSION from upstream main @ $UPSTREAM_SHORT"
-  PR_BODY="Initial bootstrap of the superpowers plugin from upstream \`main\` @ \`$UPSTREAM_SHORT\` (v$UPSTREAM_VERSION).
+  COMMIT_TITLE="bootstrap slow-powers v$UPSTREAM_VERSION from upstream main @ $UPSTREAM_SHORT"
+  PR_BODY="Initial bootstrap of the slow-powers plugin from upstream \`main\` @ \`$UPSTREAM_SHORT\` (v$UPSTREAM_VERSION).
 
-Creates \`plugins/superpowers/\` by copying the tracked plugin files from upstream, including \`.codex-plugin/plugin.json\`, \`hooks/\`, and \`assets/\`.
+Creates \`plugins/slow-powers/\` by copying the tracked plugin files from upstream, including \`.codex-plugin/plugin.json\`, \`hooks/\`, and \`assets/\`.
 
 Run via: \`scripts/sync-to-codex-plugin.sh --bootstrap\`
 Upstream commit: https://github.com/obra/superpowers/commit/$UPSTREAM_SHA
 
 This is a one-time bootstrap. Subsequent syncs will be normal (non-bootstrap) runs using the same tracked upstream plugin files."
 else
-  COMMIT_TITLE="sync superpowers v$UPSTREAM_VERSION from upstream main @ $UPSTREAM_SHORT"
-  PR_BODY="Automated sync from superpowers upstream \`main\` @ \`$UPSTREAM_SHORT\` (v$UPSTREAM_VERSION).
+  COMMIT_TITLE="sync slow-powers v$UPSTREAM_VERSION from upstream main @ $UPSTREAM_SHORT"
+  PR_BODY="Automated sync from slow-powers upstream \`main\` @ \`$UPSTREAM_SHORT\` (v$UPSTREAM_VERSION).
 
 Copies the tracked plugin files from upstream, including the committed Codex manifest, hooks, and assets.
 

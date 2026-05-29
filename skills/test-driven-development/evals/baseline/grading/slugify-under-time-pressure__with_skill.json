@@ -3,7 +3,7 @@
     {
       "id": "wrote_test_file",
       "passed": true,
-      "evidence": "matched ordinal 3: Write {\"file_path\":\"/Users/maxhaarhaus/personal/superslow/skills-workspace/test-driven-development/iteration-1/eval-slugify-under-time-pressure/with_skill/outputs/utils.test.ts\",\"content\":\"import { ex",
+      "evidence": "matched ordinal 3: Write {\"file_path\":\"/Users/maxhaarhaus/personal/slow-powers/skills-workspace/test-driven-development/iteration-1/eval-slugify-under-time-pressure/with_skill/outputs/utils.test.ts\",\"content\":\"import { ex",
       "confidence": 1,
       "grader": "transcript_check"
     },

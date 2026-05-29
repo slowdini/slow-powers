@@ -131,4 +131,4 @@ export const CORE_SKILLS = [
   "writing-skills",
 ];
 
-export const BOOTSTRAP_MARKER = "# Instructions for using Superslow Skills";
+export const BOOTSTRAP_MARKER = "# Instructions for using Slow-powers Skills";

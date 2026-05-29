@@ -26,7 +26,7 @@
     },
     {
       "id": "typo-no-worktree",
-      "prompt": "Fix the typo in the README heading — 'Superpowrs' should be 'Superpowers'.",
+      "prompt": "Fix the typo in the README heading — 'Slow-powrs' should be 'Slow-powers'.",
       "expected_output": "A one-character documentation fix is mechanical work; the agent should just make the edit and not stand up an isolated worktree/branch for it.",
       "assertions": [
         {

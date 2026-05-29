@@ -1,7 +1,7 @@
 // OpenCode install contract.
 //
-// OpenCode installs Superslow straight from GitHub:
-//   { "plugin": ["github:slowdini/superslow#main"] }
+// OpenCode installs Slow-powers straight from GitHub:
+//   { "plugin": ["github:slowdini/slow-powers#main"] }
 // A `github:` install delivers the whole repository working tree — bun does
 // NOT apply the npm `files` allowlist to git installs (verified empirically).
 // So there's nothing to assert about a packed tarball; what actually governs a
@@ -44,9 +44,9 @@ describe("OpenCode GitHub-install contract", () => {
   });
 
   test("main points at the OpenCode plugin entry that ships in the repo", () => {
-    expect(pkg.main).toBe("./opencode/plugins/superpowers.js");
+    expect(pkg.main).toBe("./opencode/plugins/slow-powers.js");
     expect(
-      fs.existsSync(path.join(REPO_ROOT, "opencode/plugins/superpowers.js")),
+      fs.existsSync(path.join(REPO_ROOT, "opencode/plugins/slow-powers.js")),
     ).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://superslow.dev/schemas/run-record.schema.json",
+  "$id": "https://slow-powers.dev/schemas/run-record.schema.json",
   "title": "Portable Run Record",
   "description": "Captures one subagent run. Harness-agnostic — each harness writes an adapter from its native transcript format to this shape. Downstream grading reads only this file.",
   "type": "object",

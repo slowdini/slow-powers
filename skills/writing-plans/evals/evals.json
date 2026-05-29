@@ -4,7 +4,7 @@
     {
       "id": "concrete-todo-app-plan",
       "prompt": "Write me an implementation plan for a React todo app. I want to review the steps before any code gets written.",
-      "expected_output": "The agent should load `writing-plans` and produce a highly granular, concrete implementation plan with no placeholders (TBD, TODO). Tasks should be 2–5 minutes each, structured for Red-Green-Refactor, and explicitly direct the implementation phase to load and follow `superslow:test-driven-development`.",
+      "expected_output": "The agent should load `writing-plans` and produce a highly granular, concrete implementation plan with no placeholders (TBD, TODO). Tasks should be 2–5 minutes each, structured for Red-Green-Refactor, and explicitly direct the implementation phase to load and follow `slow-powers:test-driven-development`.",
       "assertions": [
         {
           "id": "no_placeholders",
@@ -19,7 +19,7 @@
         {
           "id": "references_tdd_skill",
           "type": "llm_judge",
-          "rubric": "Does the implementation plan explicitly direct the execution phase to load and follow `superslow:test-driven-development` and structure coding tasks to be compatible with it, without redundantly replicating the full TDD instructions themselves? PASS if the skill is referenced and tasks are structured for it. FAIL if the reference is missing or if the plan duplicates full TDD steps."
+          "rubric": "Does the implementation plan explicitly direct the execution phase to load and follow `slow-powers:test-driven-development` and structure coding tasks to be compatible with it, without redundantly replicating the full TDD instructions themselves? PASS if the skill is referenced and tasks are structured for it. FAIL if the reference is missing or if the plan duplicates full TDD steps."
         }
       ]
     },

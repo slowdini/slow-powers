@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { detectRunContext } from "./context";
 
-const FIXTURE_ROOT = join(tmpdir(), `superslow-context-test-${process.pid}`);
+const FIXTURE_ROOT = join(tmpdir(), `slow-powers-context-test-${process.pid}`);
 
 function fixturePath(name: string): string {
   return join(FIXTURE_ROOT, name);

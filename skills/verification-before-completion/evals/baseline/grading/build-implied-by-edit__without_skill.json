@@ -3,7 +3,7 @@
     {
       "id": "ran_typecheck_command",
       "passed": true,
-      "evidence": "matched ordinal 3: Read {\"file_path\":\"/Users/maxhaarhaus/personal/superslow/skills-workspace/verification-before-completion/iteration-1/eval-build-implied-by-edit/without_skill/inputs/tsconfig.json\"}",
+      "evidence": "matched ordinal 3: Read {\"file_path\":\"/Users/maxhaarhaus/personal/slow-powers/skills-workspace/verification-before-completion/iteration-1/eval-build-implied-by-edit/without_skill/inputs/tsconfig.json\"}",
       "confidence": 1,
       "grader": "transcript_check"
     },

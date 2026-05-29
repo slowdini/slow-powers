@@ -1,15 +1,15 @@
 ---
 name: writing-skills
-description: Use when creating new skills or editing existing skills. Drafting only; see superslow:evaluating-skills for measuring whether the draft works.
+description: Use when creating new skills or editing existing skills. Drafting only; see slow-powers:evaluating-skills for measuring whether the draft works.
 ---
 
 # Writing Skills
 
 ## Overview
 
-Skill development has two phases: **drafting** (this skill) and **evaluation** (`superslow:evaluating-skills`). Drafting covers naming, structure, vocabulary, anti-patterns, and rationalization-proofing. Evaluation covers measuring whether the words on the page actually shift agent behavior under realistic prompts.
+Skill development has two phases: **drafting** (this skill) and **evaluation** (`slow-powers:evaluating-skills`). Drafting covers naming, structure, vocabulary, anti-patterns, and rationalization-proofing. Evaluation covers measuring whether the words on the page actually shift agent behavior under realistic prompts.
 
-A draft you didn't measure is a claim you didn't verify. The rule that `superslow:evaluating-skills` enforces — no skill shipped without passing evals — applies equally to new skills and to edits of existing skills. After drafting, hand off to that skill for the with/without comparison and iteration loop.
+A draft you didn't measure is a claim you didn't verify. The rule that `slow-powers:evaluating-skills` enforces — no skill shipped without passing evals — applies equally to new skills and to edits of existing skills. After drafting, hand off to that skill for the with/without comparison and iteration loop.
 
 **Personal skills** live in your harness's user-skills directory. The path differs per harness; consult the harness's docs.
 
@@ -132,8 +132,8 @@ Techniques:
 
 Use the skill's qualified name with an explicit requirement marker:
 
-- ✅ `**REQUIRED SUB-SKILL:** Use superslow:test-driven-development`
-- ✅ `**REQUIRED BACKGROUND:** You must understand superslow:systematic-debugging`
+- ✅ `**REQUIRED SUB-SKILL:** Use slow-powers:test-driven-development`
+- ✅ `**REQUIRED BACKGROUND:** You must understand slow-powers:systematic-debugging`
 - ❌ `See skills/testing/test-driven-development` — unclear if required, harness-specific path
 - ❌ `@skills/testing/test-driven-development/SKILL.md` — force-loads, burns context
 
@@ -247,7 +247,7 @@ These tables and lists come *from* the eval iteration loop — they're not somet
 All of these mean: delete code. Start over with TDD.
 ```
 
-See `superslow:evaluating-skills` and its `pressure-scenarios.md` for the pressure-type taxonomy and how to write prompts that actually stress the rule (rather than letting the agent recite the skill and "pass" without proving anything).
+See `slow-powers:evaluating-skills` and its `pressure-scenarios.md` for the pressure-type taxonomy and how to write prompts that actually stress the rule (rather than letting the agent recite the skill and "pass" without proving anything).
 
 ## Anti-patterns
 
@@ -285,9 +285,9 @@ Use your persistent task tracker — one task per item.
 - [ ] Description is third person and contains NO workflow summary
 - [ ] Body keeps to one excellent example per concept, not many mediocre ones
 - [ ] Heavy reference and reusable tools live in separate files; principles stay inline
-- [ ] Cross-references use `superslow:<skill-name>`, not file paths or `@` imports
+- [ ] Cross-references use `slow-powers:<skill-name>`, not file paths or `@` imports
 
-**Validate** (handoff to `superslow:evaluating-skills`):
+**Validate** (handoff to `slow-powers:evaluating-skills`):
 - [ ] Author `evals/evals.json` with 2–3 realistic prompts
 - [ ] For discipline-enforcing skills, write pressure prompts with multiple combined pressures (see `pressure-scenarios.md` in that skill)
 - [ ] Run the eval. Iterate until the with-skill pass rate is materially higher than the without-skill baseline.
@@ -298,7 +298,7 @@ Use your persistent task tracker — one task per item.
 
 ## Further reading
 
-- `superslow:evaluating-skills` — phase 2: measuring whether the draft works
+- `slow-powers:evaluating-skills` — phase 2: measuring whether the draft works
 - `persuasion-principles.md` (in this skill) — research foundation for discipline-enforcing language
 - `graphviz-conventions.dot` (in this skill) — flowchart style rules
 - [agentskills.io/skill-creation/best-practices](https://agentskills.io/skill-creation/best-practices) — harness-agnostic best-practices reference; read when you want more depth than this skill provides

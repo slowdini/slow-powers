@@ -9,7 +9,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const FIXTURE_ROOT = join(tmpdir(), `superslow-aggregate-test-${process.pid}`);
+const FIXTURE_ROOT = join(
+  tmpdir(),
+  `slow-powers-aggregate-test-${process.pid}`,
+);
 const AGGREGATE_TS = join(import.meta.dir, "aggregate.ts");
 
 beforeAll(() => {

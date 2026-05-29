@@ -1,18 +1,18 @@
-# Superslow
+# Slow-powers
 
-Superslow gives your agent superpowers. It's a complete software development
+Slow-powers gives your agent superpowers. It's a complete software development
 methodology for coding agents — a set of composable skills plus a bootstrap
 that ensures the agent reaches for them at the right moments.
 
 ## About this fork
 
-Superslow is a fork of [obra/superpowers](https://github.com/obra/superpowers)
+Slow-powers is a fork of [obra/superpowers](https://github.com/obra/superpowers)
 at v5.1.0. We preserve the overall workflow of superpowers, while fixing bugs
 and clarifying skill content.
 
 ## Quickstart
 
-Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode). Support varies per harness — see the [feature support](#feature-support) table.
+Give your agent superpowers with slow-powers: [Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode). Support varies per harness — see the [feature support](#feature-support) table.
 
 ## Feature support
 
@@ -23,31 +23,31 @@ Give your agent superpowers with superslow: [Claude Code](#claude-code) · [Code
 | Cursor          | Partial  | Plugin manifest + dedicated hooks; no eval transcript adapter  |
 | OpenCode        | Partial  | JS plugin with bootstrap injection; no eval transcript adapter |
 
-Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md): it audits which Superslow features are wired up for a given harness and preps an agent to close one gap.
+Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md): it audits which Slow-powers features are wired up for a given harness and preps an agent to close one gap.
 
 ## How it works
 
-Superslow integrates directly into your agent's session, providing a highly disciplined set of technical execution utilities. It enforces strict test-driven development (TDD), systematic scientific debugging, rigorous verification checks, safe workspace isolation via git worktrees, and clean branch-finishing hygiene. It also enhances native agent planning phases with strict rules: banning placeholders, enforcing atomic task granularity, and requiring TDD-first checklists.
+Slow-powers integrates directly into your agent's session, providing a highly disciplined set of technical execution utilities. It enforces strict test-driven development (TDD), systematic scientific debugging, rigorous verification checks, safe workspace isolation via git worktrees, and clean branch-finishing hygiene. It also enhances native agent planning phases with strict rules: banning placeholders, enforcing atomic task granularity, and requiring TDD-first checklists.
 
 ## Installation
 
 Installation differs by harness. If you use more than one, install
-Superslow separately for each.
+Slow-powers separately for each.
 
 ### Claude Code
 
 ```
-/plugin marketplace add slowdini/superslow
-/plugin install superpowers@superslow
+/plugin marketplace add slowdini/slow-powers
+/plugin install slow-powers@slow-powers
 ```
 
 ### Codex CLI
 
 ```bash
-codex plugin marketplace add slowdini/superslow
+codex plugin marketplace add slowdini/slow-powers
 ```
 
-Then install the `superpowers` plugin from the `superslow` marketplace
+Then install the `slow-powers` plugin from the `slow-powers` marketplace
 through Codex's plugin interface.
 
 To enable automatic `SessionStart` bootstrap in current Codex releases, add this to `~/.codex/config.toml` and restart Codex:
@@ -59,27 +59,27 @@ plugin_hooks = true
 
 ### Cursor
 
-Cursor has no native git-install path. The Superslow installer clones the
+Cursor has no native git-install path. The Slow-powers installer clones the
 repo (or reuses an existing checkout) and symlinks the plugin into Cursor's
 local plugin directory.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/slowdini/superslow/main/.cursor-plugin/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/slowdini/slow-powers/main/.cursor-plugin/install.sh | sh
 ```
 
 ### OpenCode
 
-Add Superslow to the `plugin` array in your `opencode.json` (global or project-level):
+Add Slow-powers to the `plugin` array in your `opencode.json` (global or project-level):
 
 ```json
 {
-  "plugin": ["github:slowdini/superslow#main"]
+  "plugin": ["github:slowdini/slow-powers#main"]
 }
 ```
 
 ## The Core Execution Utilities
 
-Superslow provides a set of highly focused, execution-level skills that ensure your agent operates with maximum discipline:
+Slow-powers provides a set of highly focused, execution-level skills that ensure your agent operates with maximum discipline:
 
 1. **`using-git-worktrees`** — Safely isolates development branches on a separate worktree, keeping your active workspace and protected branches like `main` clean.
 2. **`test-driven-development`** — Enforces a strict RED-GREEN-REFACTOR cycle, ensuring all production code is backed by failing test verification first.
@@ -109,7 +109,7 @@ Superslow provides a set of highly focused, execution-level skills that ensure y
 
 Flat layout — skills and assets live at root, harness-specific integration lives in top-level directories:
 
-- `skills/` — All superpowers skills
+- `skills/` — All slow-powers skills
 - `assets/` — Icons and images shared across harnesses
 - `tests/` — Cross-cutting and harness-specific tests
 - `.claude-plugin/` — Claude Code plugin manifest and hooks
