@@ -87,6 +87,37 @@ What "stresses the skill" depends on what kind of skill it is. The four types fr
 - **Pattern skills** (flatten-with-flags, information-hiding). Test recognition: include prompts where the pattern applies and prompts where it doesn't. Success = the agent applies the pattern when warranted and refrains when it isn't.
 - **Reference skills** (API docs, syntax guides). Test retrieval: ask questions whose answers are in the reference, including a few that hit gaps you suspect. Success = the agent finds the right section and uses it correctly.
 
+## Pre-flight gate (required)
+
+An eval run is not free. Each test case dispatches a fresh subagent **per condition** — an N-case suite is `2N` full agent sessions, plus a judge dispatch for every `llm_judge` assertion. That is real wall-clock time and real tokens, and a subagent under test can write outside its sandbox and pollute the real workspace. **Never kick off a run silently.**
+
+Before building the workspace and dispatching anything, STOP and present the user a run summary, then wait for explicit confirmation:
+
+- **Skill under test** — name and path
+- **Mode** — `new-skill` (with vs without) or `revision` (old vs new), plus the baseline label for revision mode
+- **Eval cases** — the count and a one-line list of the prompts (from `evals.json`)
+- **Models** — the model that will run each subagent under test, and the judge model for `llm_judge` assertions. The runner never dispatches these itself, so it can't observe them — state them explicitly so the user can correct a wrong choice before tokens are spent.
+- **Cost** — `2N` agent dispatches plus judge dispatches; call out that this is time- and token-intensive
+- **Sandbox** — the guard status (see below)
+
+Do not dispatch until the user confirms *this summary*. An earlier "run the eval" is not confirmation — the summary may reveal a wrong mode, the wrong model, or a missing guard the user never intended.
+
+### Sandbox decision
+
+A subagent under test runs the real skill, and some skills write to disk — the skill that triggered this gate, `using-git-worktrees`, creates git worktrees in whatever repo it's pointed at. Without active enforcement those writes land in your working directory.
+
+- **Guard available (Claude Code):** arming `--guard` is the default. If you are about to run without it, STOP. Proceed unguarded **only** when the user actively opts out — and warn them that stray writes will then only be **detected after the fact** by `detect-stray-writes`, never blocked or reverted, so anything a subagent writes outside its `outputs/` dir (worktrees, installed packages, edited repo files) persists and is theirs to clean up.
+- **Guard unavailable (other harnesses):** there is no active write enforcement. Tell the user plainly: stray writes are detected and reported by `detect-stray-writes` but **not auto-cleaned** — they must review the report and remove anything that escaped. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.
+
+## Red Flags — STOP before dispatching
+
+- About to dispatch subagents without showing the user the run summary first
+- Running on a guard-capable harness without `--guard` and without an explicit opt-out from the user
+- "The user already said run it" — they said it before seeing the cost, models, and guard status
+- Spending tokens to "just see what happens" before the cases, mode, or models are confirmed
+
+All of these mean: STOP. Present the pre-flight summary and wait for confirmation.
+
 ## Running evals
 
 For each test case, dispatch fresh general-purpose subagents — one per condition. Each subagent receives:
@@ -133,10 +164,10 @@ Design your assertions accordingly. For maximally portable evals, lean on `llm_j
 
 ## Sandboxing eval subagents
 
-The dispatch prompt tells each subagent to write only inside its `outputs/` dir, but nothing in the portable contract *enforces* that — a misbehaving subagent can edit the real repo or run `npm install` against the repo root, silently corrupting the very runner it's being measured by. Two layers guard against this; both are opt-in so they never surprise a run:
+The dispatch prompt tells each subagent to write only inside its `outputs/` dir, but nothing in the portable contract *enforces* that — a misbehaving subagent can edit the real repo or run `npm install` against the repo root, silently corrupting the very runner it's being measured by. Two layers guard against this:
 
-- **Detection (all harnesses).** After `fill-transcripts` populates `tool_invocations`, run `bun run evals:detect-stray-writes --skill <name> --iteration <N>`. It reads each task's `outputs_dir` from `dispatch.json` and scans the invocations for **violations** (`Write`/`Edit`/`MultiEdit`/`NotebookEdit` whose path resolves outside the run's `outputs/`) and **warnings** (Bash commands matching install/`git`/`sed -i`/redirection patterns that don't reference `outputs/`). Findings land in `stray-writes.json`; the aggregator turns each run with violations into a `validity_warnings` entry, so a tainted data point is flagged the same way a missed skill invocation is. This is portable because it works off the same transcripts the adapters already parse — but it only *reports*, after the fact.
-- **Hard guard (Claude Code only, opt-in).** Pass `--guard` to the runner to additionally stage a `PreToolUse` hook that actively *blocks* out-of-bounds writes and installs while the subagents run. It's Claude-Code-specific and off by default; see `harness-details/claude.md`. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.
+- **Detection (all harnesses).** After `fill-transcripts` populates `tool_invocations`, run `bun run evals:detect-stray-writes --skill <name> --iteration <N>`. It reads each task's `outputs_dir` from `dispatch.json` and scans the invocations for **violations** (`Write`/`Edit`/`MultiEdit`/`NotebookEdit` whose path resolves outside the run's `outputs/`) and **warnings** (Bash commands matching install/`git`/`sed -i`/redirection patterns that don't reference `outputs/`). Findings land in `stray-writes.json`; the aggregator turns each run with violations into a `validity_warnings` entry, so a tainted data point is flagged the same way a missed skill invocation is. This is portable because it works off the same transcripts the adapters already parse — but it only *reports*, after the fact; it never reverts what a subagent wrote.
+- **Hard guard (Claude Code, default posture).** `--guard` stages a `PreToolUse` hook that actively *blocks* out-of-bounds writes and installs while the subagents run. On Claude Code it is the default — the *Pre-flight gate* requires you to arm it unless the user explicitly opts out. It's Claude-Code-specific; see `harness-details/claude.md`. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.
 
 ## Workspace layout
 

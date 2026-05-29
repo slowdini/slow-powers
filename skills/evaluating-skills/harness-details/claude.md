@@ -63,14 +63,30 @@ grep -qxF 'skills-workspace/' .gitignore 2>/dev/null || echo 'skills-workspace/'
 
 If the folder isn't a git repo, skip this and warn the user that artifacts will accumulate under `skills-workspace/`.
 
-## Step 7 — Run the workspace build
+## Step 7 — Pre-flight confirmation & sandbox decision
+
+This is a required gate (see *Pre-flight gate* in `../SKILL.md`). Do not run the build or dispatch anything until the user has confirmed.
+
+1. Read `<skill-folder>/evals/evals.json` and assemble the run summary:
+   - **Skill under test** — `<name>` and its path
+   - **Mode** — `new-skill` or `revision` (+ baseline label)
+   - **Eval cases** — count and a one-line list of the prompts
+   - **Models** — the model you'll dispatch each subagent under test with (Step 9) and the judge model for `llm_judge` assertions (Step 10). State them explicitly; the runner can't observe them, so this is the user's chance to correct a wrong choice before tokens are spent.
+   - **Cost** — `2 × <case count>` agent dispatches plus a judge dispatch per `llm_judge` assertion; flag it as time- and token-intensive.
+   - **Sandbox** — you will arm `--guard` (the default on Claude Code).
+2. Present the summary and **wait for explicit confirmation.** An earlier "run the eval" doesn't count — the summary may surface a wrong mode, model, or a guard the user didn't intend.
+3. Default to `--guard`. Drop it **only** if the user actively opts out, and then warn them: without the guard, stray writes (e.g. worktrees a skill-under-test creates in this repo) are only *detected* post-hoc by `detect-stray-writes` in Step 10 — never blocked or reverted — and are theirs to clean up.
+
+## Step 8 — Run the workspace build
 
 Run from the skill folder (so `CWD` is the eval root and staging lands at `<CWD>/.claude/skills/`).
+
+`--guard` is on in the commands below because it's the default posture (Step 7). It stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove it immediately, run `bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the slow-powers repo).
 
 New-skill mode (with vs without):
 
 ```bash
-bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode new-skill
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode new-skill --guard
 ```
 
 Revision mode (test a change to an existing skill):
@@ -78,21 +94,21 @@ Revision mode (test a change to an existing skill):
 ```bash
 bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" snapshot --skill-dir <skill-dir> --skill <name> --label baseline
 # ...edit the SKILL.md...
-bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode revision --baseline baseline
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode revision --baseline baseline --guard
 ```
 
 Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built staged-skills inventory.
 
-Add `--guard` to arm the write guard: the runner stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. It's opt-in and Claude-Code-only. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove it immediately, run `bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the slow-powers repo). Without `--guard`, rely on the post-hoc `detect-stray-writes` step in Step 9 instead.
+Only when the user has opted out of the guard, drop `--guard` from the command above and rely on the post-hoc `detect-stray-writes` step in Step 10 instead — it reports stray writes but does not clean them up.
 
-## Step 8 — Drive the dispatches
+## Step 9 — Drive the dispatches
 
 Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task object:
 
-1. Dispatch a fresh subagent via the **Task tool** with the prompt `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (substituting the task's `dispatch_prompt_path`), and pass `agent_description` verbatim as the description. The full prompt lives in that file rather than inline in `dispatch.json`, so you never reproduce ~KB of text per dispatch. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 9 without cross-matching an agent from another iteration.
+1. Dispatch a fresh subagent via the **Task tool** with the prompt `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (substituting the task's `dispatch_prompt_path`), and pass `agent_description` verbatim as the description. The full prompt lives in that file rather than inline in `dispatch.json`, so you never reproduce ~KB of text per dispatch. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 10 without cross-matching an agent from another iteration.
 2. When the subagent returns, write the portable run record to `run_record_path` and the timing record (`{ "total_tokens": <n>, "duration_ms": <n>}`) to `timing_path`. Capture tokens/duration from the task completion event — they may not be persisted elsewhere. The run record must satisfy `schema/run-record.schema.json` (validated by `grade`/`fill-transcripts`/`detect-stray-writes`): set `eval_id`, `condition`, `skill_path` (the task's `skill_path`, `null` on the `without_skill` arm), `prompt` (the task's `user_prompt`), `files` (the task's `fixtures`, `[]` if none), `final_message` (the subagent's reply), and `tool_invocations: []` (populated later from the transcript).
 
-## Step 9 — Fill transcripts, grade, aggregate
+## Step 10 — Fill transcripts, grade, aggregate
 
 Claude Code persists subagent transcripts under `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/`. Find that directory for the current session, then:
 
@@ -110,7 +126,7 @@ bun run "$SLOW_POWERS_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <nam
 bun run "$SLOW_POWERS_RUNNER_ROOT/aggregate.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 ```
 
-## Step 10 — Present results
+## Step 11 — Present results
 
 Read `<CWD>/skills-workspace/<name>/iteration-<N>/benchmark.json`. Surface to the user:
 
