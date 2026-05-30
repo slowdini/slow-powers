@@ -1,13 +1,13 @@
 ---
-name: writing-plans
-description: Use when drafting or revising an implementation plan — e.g. in a harness plan mode, or when the user explicitly asks for a written plan before code is written
+name: hardening-plans
+description: Use when you've committed to producing or revising a plan, task breakdown, or design doc before any code is written — e.g. you're in a harness plan mode, or the user asked to see the steps first
 ---
 
-# Writing Concrete Plans
+# Hardening Plan Task Lists
 
-A plan is a concrete, atomic blueprint of verified actions — not a checklist of vague intentions.
+A plan's task list is a concrete, atomic blueprint of verified actions — not a checklist of vague intentions. This skill hardens that task list to executable discipline; it does not decide whether or how to plan.
 
-This skill applies **once you're committed to writing a plan**. It does not push you into planning when the user wants direct action.
+This skill applies **once you're committed to a plan**. It does not push you into planning when the user wants direct action.
 
 ---
 

@@ -1,0 +1,68 @@
+{
+  "skill_name": "hardening-plans",
+  "evals": [
+    {
+      "id": "concrete-todo-app-plan",
+      "prompt": "Write me an implementation plan for a React todo app. I want to review the steps before any code gets written.",
+      "expected_output": "The agent should load `hardening-plans` and produce a highly granular, concrete implementation plan with no placeholders (TBD, TODO). Tasks should be 2–5 minutes each, structured for Red-Green-Refactor, and explicitly direct the implementation phase to load and follow `slow-powers:test-driven-development`.",
+      "assertions": [
+        {
+          "id": "no_placeholders",
+          "type": "llm_judge",
+          "rubric": "Does the generated implementation plan completely avoid any placeholders such as 'TBD', 'TODO', 'later', 'if needed', or other unspecified implementation items? PASS if all tasks are concrete. FAIL if any placeholder is present."
+        },
+        {
+          "id": "atomic_granularity",
+          "type": "llm_judge",
+          "rubric": "Are the tasks in the implementation plan broken down into highly granular, atomic actions that would take 2-to-5 minutes to execute individually, rather than large monolithic blocks? PASS if all steps are atomic. FAIL if there are large, vague steps that represent significant chunks of work."
+        },
+        {
+          "id": "references_tdd_skill",
+          "type": "llm_judge",
+          "rubric": "Does the implementation plan explicitly direct the execution phase to load and follow `slow-powers:test-driven-development` and structure coding tasks to be compatible with it, without redundantly replicating the full TDD instructions themselves? PASS if the skill is referenced and tasks are structured for it. FAIL if the reference is missing or if the plan duplicates full TDD steps."
+        }
+      ]
+    },
+    {
+      "id": "oauth-task-breakdown-cold",
+      "prompt": "I've decided to add OAuth2 login to our existing Express app. Before I write any code, break the work into a task list I can hand off to an engineer.",
+      "expected_output": "The agent should load `hardening-plans` and produce a concrete, atomic task list with no placeholders (TBD, TODO), tasks sized at roughly 2–5 minutes each, structured for Red-Green-Refactor, and explicitly directing the implementation phase to load and follow `slow-powers:test-driven-development`. This is a colder trigger: the request frames the agent as already planning, so a skill named for 'how to write a plan' reads as redundant — the hardening discipline should still fire.",
+      "assertions": [
+        {
+          "id": "no_placeholders",
+          "type": "llm_judge",
+          "rubric": "Does the generated task list completely avoid any placeholders such as 'TBD', 'TODO', 'later', 'if needed', or other unspecified implementation items? PASS if all tasks are concrete. FAIL if any placeholder is present."
+        },
+        {
+          "id": "atomic_granularity",
+          "type": "llm_judge",
+          "rubric": "Are the tasks in the task list broken down into highly granular, atomic actions that would take 2-to-5 minutes to execute individually, rather than large monolithic blocks? PASS if all steps are atomic. FAIL if there are large, vague steps that represent significant chunks of work."
+        },
+        {
+          "id": "references_tdd_skill",
+          "type": "llm_judge",
+          "rubric": "Does the task list explicitly direct the execution phase to load and follow `slow-powers:test-driven-development` and structure coding tasks to be compatible with it, without redundantly replicating the full TDD instructions themselves? PASS if the skill is referenced and tasks are structured for it. FAIL if the reference is missing or if the plan duplicates full TDD steps."
+        }
+      ]
+    },
+    {
+      "id": "csv-parser-bug-no-plan",
+      "prompt": "Our users are reporting that the CSV parser is skipping rows with empty email fields instead of using the fallback 'anonymous' label. Can we fix this issue in csv-parser.ts?",
+      "expected_output": "The agent should immediately trigger `systematic-debugging` (root-cause analysis) rather than loading `hardening-plans` or writing an implementation plan.",
+      "skill_should_trigger": false,
+      "assertions": [
+        {
+          "id": "loads_systematic_debugging_skill",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "(Skill.*systematic-debugging|view_file.*systematic-debugging)"
+        },
+        {
+          "id": "invokes_debugging_only",
+          "type": "llm_judge",
+          "rubric": "Did the agent identify that this is a systematic debugging task and load the `systematic-debugging` skill, while completely bypassing the `hardening-plans` skill and avoiding writing a full implementation plan? PASS if the agent focused on debugging and did not load planning guidelines. FAIL if the agent attempted to load `hardening-plans` or write a general implementation plan before debugging the root cause."
+        }
+      ]
+    }
+  ]
+}

@@ -21,8 +21,8 @@ When executing a task, check if any of these skills apply and load them immediat
 
 * **`using-git-worktrees`**
   * *Trigger:* Use when starting any new feature development or bugfix to set up a safe, isolated worktree.
-* **`writing-plans`**
-  * *Trigger:* Use when drafting or revising an implementation plan — e.g. in a harness plan mode, or when the user explicitly asks for a written plan before code is written.
+* **`hardening-plans`**
+  * *Trigger:* Use when you've committed to producing or revising a plan, task breakdown, or design doc before any code is written — e.g. you're in a harness plan mode, or the user asked to see the steps first.
 * **`test-driven-development`**
   * *Trigger:* Use whenever implementing code changes, refactoring, or bug fixes.
 * **`systematic-debugging`**
