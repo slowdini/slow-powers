@@ -29,7 +29,7 @@ specifically. Your report seeds new pressure tests and live spot-checks of the p
 - Propose changes to the host project. That's out of scope even if you spot something.
 
 **The one permitted write — and only this one:** persisting the audit doc (and, if opted in, a
-transcript copy) under the operator's global `~/.super-slow-audits/` folder, as described in
+transcript copy) under the operator's global `~/.slow-powers-audits/` folder, as described in
 *The report* below. That folder lives outside any host repo, so writing there never pollutes the
 project under audit. Everything else above still holds: the global audit folder is allowed; the host
 repo is forbidden. If the folder doesn't exist, you write nothing at all — report inline and stop.
@@ -59,14 +59,14 @@ doesn't apply rather than dropping the heading.
 These audits are most valuable when they accumulate as durable artifacts, so the report can be
 persisted — but only when the operator has opted in, and never inside the host repo.
 
-Probe (read-only) whether the global folder `~/.super-slow-audits/` exists. **Do not create it** —
+Probe (read-only) whether the global folder `~/.slow-powers-audits/` exists. **Do not create it** —
 its absence is a deliberate "don't persist" signal, and creating it would be the kind of unrequested
 write this skill forbids.
 
 - **Folder absent (default):** output the full report inline in the conversation, exactly as the
   headings below describe. Write nothing to disk.
 - **Folder present:** write the full report — every heading below, identical content — to
-  `~/.super-slow-audits/audit-<YYYYMMDD-HHMMSS>-<repo-basename>.md` (use the host repo's directory
+  `~/.slow-powers-audits/audit-<YYYYMMDD-HHMMSS>-<repo-basename>.md` (use the host repo's directory
   name for `<repo-basename>`). Then, in the conversation, emit only a short pointer: the saved path
   plus the one-line session summary from section 1. Don't reprint the whole report inline — the doc
   is the artifact.
@@ -80,11 +80,11 @@ slow-powers actually competed for your attention. Capturing it is a **second, se
 because a real transcript contains host-codebase content that is otherwise outside this audit's scope
 (slow-powers, not the host repo). Only do this when **both** of these are true:
 
-1. `~/.super-slow-audits/` exists (report persistence is on), **and**
-2. `~/.super-slow-audits/transcripts/` also exists (the operator has separately opted in to transcripts).
+1. `~/.slow-powers-audits/` exists (report persistence is on), **and**
+2. `~/.slow-powers-audits/transcripts/` also exists (the operator has separately opted in to transcripts).
 
 When both hold, **copy** your current session's transcript file as-is into
-`~/.super-slow-audits/transcripts/audit-<YYYYMMDD-HHMMSS>-<repo-basename>.transcript.jsonl`, matching
+`~/.slow-powers-audits/transcripts/audit-<YYYYMMDD-HHMMSS>-<repo-basename>.transcript.jsonl`, matching
 the report doc's timestamp and repo name.
 
 - **Copy the file on disk — never read it into your context.** A real transcript can be hundreds of
