@@ -20,7 +20,7 @@
         {
           "id": "handoff_to_evaluation",
           "type": "llm_judge",
-          "rubric": "Did the agent treat the draft as unverified until measured — pointing to validating it with evals (slow-powers:evaluating-skills) — rather than presenting the skill as finished and ready to use? PASS if a validation/eval step is referenced. FAIL if the skill is declared done with no evaluation step."
+          "rubric": "Did the agent treat the draft as unverified rather than finished — routing to slow-powers:evaluating-skills to decide whether and how to measure it (an eval for behavior-shaping work, or a declared skip for deterministic work)? PASS if the agent hands off to the evaluation/eval-decision step instead of presenting the skill as done and ready to use. FAIL if the skill is declared finished with no validation or eval-decision step at all."
         }
       ]
     },

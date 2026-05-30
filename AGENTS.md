@@ -42,7 +42,10 @@ If you modify skill content:
 - Use `slow-powers:writing-skills` to develop and test changes.
 - Run adversarial pressure testing across multiple sessions, not just the
   happy path.
-- Show before/after eval results in the PR description.
+- For behavior-shaping changes, show before/after eval results in the PR
+  description. For deterministic changes (instruction-following the agent
+  reliably does anyway), state the decision and reasoning to skip the eval
+  instead — see "Choosing to test with evals" in `slow-powers:evaluating-skills`.
 - Ensure skills are cross-harness compatible: avoid harness-specific tool or feature names.
 
 ## Local development

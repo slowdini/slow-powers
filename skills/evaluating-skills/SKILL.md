@@ -359,18 +359,37 @@ Feed all three plus the current SKILL.md to an LLM using `templates/revise-skill
 - Iteration deltas have plateaued (no meaningful improvement between iterations)
 - You've identified a more fundamental issue (skill scope is wrong, prompts don't represent real use)
 
+## Choosing to test with evals
+
+Before you build an eval, decide whether this change needs one. An eval measures whether words on a page shift **contingent** behavior — what the agent does when the outcome is genuinely in doubt: under pressure, with ambiguity, or against a competing goal. That is where measurement earns its cost.
+
+A **deterministic** change doesn't move that needle. Removing a one-line "announce out loud that you're using this skill" instruction, fixing a typo, or shipping a manually-invoked, testing-only procedure changes what the agent is told, not whether it complies under pressure. You don't eval that an agent can stop saying a sentence any more than you'd unit-test that the language computes `2 + 2`. Following an unambiguous instruction is the runtime contract; evals test the contingent logic built on top of it.
+
+**The question for every skill change:** does it alter contingent behavior, or is it deterministic instruction-following?
+
+- **Contingent → eval (this is the default).** Renaming `writing-plans` so its trigger fires reliably, editing a discipline-enforcing skill's rationalization table, changing the wording that decides a pressured choice — the agent might behave differently, and you can't know which way without measuring.
+- **Deterministic → declare and skip.** State the decision and your reasoning to the user, then skip the eval. The reasoning is not optional: a silent skip is indistinguishable from dodging the work.
+
+**Either way, announce the decision and why** — "deterministic instruction removal, no eval" or "this changes pressured compliance, I'll run an eval." A visible decision is one the user can override; a silent one is a rationalization waiting to happen. **The door stays open:** if the user wants an eval anyway, run a worthwhile one — design real cases, don't phone it in to confirm a foregone conclusion.
+
+**Skill type is a fast read, not a verdict.** Reference and manually-invoked procedural changes *often* land deterministic; discipline, technique, and pattern changes *often* carry contingency (`pressure-scenarios.md` draws the same line under "When to use" / "Don't use them for"). Use type to orient your first guess — never as the answer. The decision is per *change*, not per type: a deterministic typo fix in a discipline-enforcing skill still skips, and restructuring a reference doc because the agent kept missing a section is contingent and earns an eval.
+
 ## The Iron Law
 
-**No skill shipped without passing evals. No language change landed without a positive revision delta.**
+**No skill shipped without passing evals. No behavior-shaping change landed without a positive revision delta.**
+
+Once you've judged a change behavior-shaping, the law is absolute — these are not exemptions:
 
 - Not for "simple additions"
 - Not for "just adding a section"
 - Not for "documentation updates"
 - Not for "obviously the same as before"
 
-If you can't measure the change, you don't know if it's an improvement. Tuning skill language without a benchmark drifts the skill — sometimes silently — toward worse behavior under pressure.
+If you can't measure a behavioral change, you don't know if it's an improvement. Tuning behavior-shaping language without a benchmark drifts the skill — sometimes silently — toward worse behavior under pressure. (The narrow, declared exception for deterministic changes is above; "deterministic" is a judgment you announce and defend, not a backdoor around this law.)
 
 ## Common rationalizations
+
+Excuses for skipping an eval on a change you've already judged behavior-shaping. None of them hold.
 
 | Excuse | Reality |
 |--------|---------|
@@ -380,6 +399,7 @@ If you can't measure the change, you don't know if it's an improvement. Tuning s
 | "It's just rewording" | Wording IS the skill. Reword = changed skill. Run the eval. |
 | "Eval results are noisy" | Then add runs, not skip the eval. |
 | "Pass rate was already 100%" | Then the assertion is too easy. Replace it. |
+| "I'll just call it deterministic" | Deterministic means the agent's compliance isn't in doubt — not that you'd rather not measure. If the wording could change a pressured choice, it's behavioral. Run the eval. |
 
 ## Bundled assets
 
