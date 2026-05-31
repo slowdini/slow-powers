@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,10 +87,18 @@ jobs:
             --title "Slow-powers ${{ steps.version.outputs.tag }}" \
             --notes-file /tmp/release-notes.md
 
+      - name: Set up Node for npm publish
+        if: steps.tag-check.outputs.exists == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+
+      # Publishes via npm trusted publishing (OIDC) — no token needed.
+      # Auth comes from the job's id-token: write permission; provenance is
+      # generated automatically. Requires npm >= 11.5.1, so refresh the CLI.
       - name: Publish to npm
         if: steps.tag-check.outputs.exists == 'false'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN }}
         run: |
-          npm config set registry https://registry.npmjs.org/
+          npm install -g npm@latest
           npm publish --access public --tag latest
