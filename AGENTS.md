@@ -52,9 +52,17 @@ If you modify skill content:
 
 ```bash
 bun install
+bun run setup   # one-time: installs git hooks (husky)
 bun test
 bun run check
 ```
+
+Run `bun run setup` once after cloning to activate the git hooks (pre-commit
+runs typecheck + lint-staged; pre-push runs the test suite).
+We can't auto-run it via a `prepare` script: OpenCode installs this repo
+straight from GitHub, and install-time lifecycle scripts would execute on the
+consumer's machine where devDependencies (husky) aren't present — see
+`tests/opencode/install-contract.test.ts`.
 
 `bun scripts/bump-version.ts <version>` updates every manifest in lockstep.
 See `docs/superpowers/specs/` for design history.

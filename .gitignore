@@ -5,7 +5,6 @@
 node_modules/
 inspo
 triage/
-bun.lock
 # Ephemeral eval run output. Curated baselines are promoted into
 # skills/<skill>/evals/baseline/ (tracked) via `bun run evals:promote-baseline`.
 skills-workspace/
