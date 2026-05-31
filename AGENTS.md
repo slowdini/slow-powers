@@ -69,17 +69,15 @@ If you modify skill content:
 ## Local development
 
 ```bash
-bun install
-bun run setup   # one-time: installs git hooks (husky)
+bun install   # also activates git hooks via the `prepare` script
 bun test
 bun run check
 ```
 
-Run `bun run setup` once after cloning to activate the git hooks (pre-commit
-runs typecheck + lint-staged; pre-push runs the test suite).
-We can't auto-run it via a `prepare` script: OpenCode installs this repo
-straight from GitHub, and install-time lifecycle scripts would execute on the
-consumer's machine where devDependencies (husky) aren't present — see
+`bun install` runs the `prepare` script, which installs the git hooks
+(pre-commit runs typecheck + lint-staged; pre-push runs the test suite). This is
+safe for OpenCode consumers because we ship to OpenCode only as a published npm
+package, and `prepare` never runs on a registry-tarball install — see
 `tests/opencode/install-contract.test.ts`.
 
 `bun scripts/bump-version.ts <version>` updates every manifest in lockstep.
