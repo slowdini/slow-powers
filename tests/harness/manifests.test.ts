@@ -39,6 +39,12 @@ describe("shared assets (delivered by every harness)", () => {
     expect(skillFiles.length).toBeGreaterThan(0);
   });
 
+  test("Codex-discoverable skills are only top-level skill folders", () => {
+    for (const rel of skillFiles) {
+      expect(rel.split(/[\\/]/)).toEqual([expect.any(String), "SKILL.md"]);
+    }
+  });
+
   test.each(skillFiles)("%s declares name + description frontmatter", (rel) => {
     const content = fs.readFileSync(
       path.join(REPO_ROOT, "skills", rel),
