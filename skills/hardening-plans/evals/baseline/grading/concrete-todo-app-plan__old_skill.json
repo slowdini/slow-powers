@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_placeholders",
+      "passed": true,
+      "evidence": "Every task in the plan names a specific file, function, and observable outcome. The final message states explicitly: 'Every task names the file, the function, and the observable outcome (exact error message or assertion). No placeholders.' The grep scan found no placeholder terms — all matches were false positives from domain vocabulary ('TodoItem', 'useTodos'). No 'TBD', 'TODO' (as a placeholder), 'later', 'if needed', or 'etc.' appear as unresolved items anywhere in the plan.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "hands_off_to_tdd",
+      "passed": true,
+      "evidence": "\"Implementation follows Red→Green→Refactor — load `slow-powers:test-driven-development` when you start coding.\" (final_message, last line)",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
