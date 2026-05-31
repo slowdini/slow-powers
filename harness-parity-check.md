@@ -29,7 +29,7 @@ Read these files in order. Each one teaches you something specific you will need
 |------|------------------|
 | `AGENTS.md` (or `CLAUDE.md`, which symlinks to it) | The Cross-Harness Compatibility rule, the canonical list of supported harnesses, the PR-scoping rule |
 | `README.md` | Per-harness install instructions, the feature-support tier table |
-| `bootstrap.md` | The universal payload every harness must deliver into a session (instruction priority + Active Skills Directory) |
+| `bootstrap.md` | The universal payload every harness must deliver into a session (instruction priority + the gate-wrapping framing for skills) |
 | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Claude's reference manifest shape — what fields a harness manifest typically carries |
 | `hooks/hooks.json` | Claude's `SessionStart` hook that injects `bootstrap.md`. Compare with `hooks/hooks-cursor.json` for the Cursor variant |
 | `skills/evaluating-skills/runner/README.md` | Contains explicit **Cross-harness breadcrumbs** — sketches of how Codex, Cursor, OpenCode would implement environment parity. Treat these as starting points, not specifications |

@@ -121,14 +121,4 @@ export const HARNESSES: HarnessSpec[] = [
   },
 ];
 
-/** Core skills that bootstrap.md advertises in its Active Skills Directory. */
-export const CORE_SKILLS = [
-  "using-git-worktrees",
-  "test-driven-development",
-  "systematic-debugging",
-  "verification-before-completion",
-  "finishing-a-development-branch",
-  "writing-skills",
-];
-
 export const BOOTSTRAP_MARKER = "# Instructions for using Slow-powers Skills";
