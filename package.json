@@ -20,7 +20,7 @@
     "check": "biome check --write .",
     "check:ci": "biome check --error-on-warnings .",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky"
+    "setup": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
