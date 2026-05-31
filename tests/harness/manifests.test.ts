@@ -54,6 +54,36 @@ describe("shared assets (delivered by every harness)", () => {
     expect(content).toMatch(/\nname:\s*\S/);
     expect(content).toMatch(/\ndescription:\s*\S/);
   });
+
+  const evalConfigs = fs
+    .readdirSync(path.join(REPO_ROOT, "skills"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => ({
+      skill: entry.name,
+      path: path.join(REPO_ROOT, "skills", entry.name, "evals", "evals.json"),
+    }))
+    .filter((entry) => fs.existsSync(entry.path));
+
+  test.each(
+    evalConfigs,
+  )("$skill/evals/evals.json references existing fixture files", ({
+    path: evalsPath,
+  }) => {
+    const config = JSON.parse(fs.readFileSync(evalsPath, "utf8")) as {
+      evals?: Array<{ files?: string[]; id?: string }>;
+    };
+    const missing: string[] = [];
+
+    for (const ev of config.evals ?? []) {
+      for (const file of ev.files ?? []) {
+        if (!fs.existsSync(path.join(path.dirname(evalsPath), file))) {
+          missing.push(`${ev.id ?? "(unknown eval)"}: ${file}`);
+        }
+      }
+    }
+
+    expect(missing).toEqual([]);
+  });
 });
 
 describe("version lockstep", () => {
