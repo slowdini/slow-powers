@@ -14,6 +14,21 @@ This repo ships Slow-powers across three harnesses:
 
 See the [feature support](README.md#feature-support) table in the README for current tier per harness.
 
+## Editing the right files
+
+Two file-confusion traps are common in this repo. Avoid both:
+
+- **Write memory-file changes to `AGENTS.md`, the only real file.** `CLAUDE.md`
+  (and any future harness-specific memory files) are symlinks to `AGENTS.md`.
+  Edit `AGENTS.md` directly; the symlinks reflect it automatically. Never try to
+  "fix up" the other names — there's nothing to fix.
+- **Read and edit only files inside this repository, never the installed
+  slow-powers plugin.** Your environment almost always has the slow-powers
+  plugin installed (a stable release, e.g. under `~/.claude/plugins/`), while
+  this repo is the bleeding-edge `dev` source. The two trees diverge, so an
+  installed skill file is *not* the file you want. Every read and edit belongs to
+  a path under this project directory.
+
 ## Cross-Harness Compatibility
 
 Ensure all features work across supported harnesses, with at least a minimum level of compatibility. If a feature isn't supported in a harness, or has reduced or limited functionality, this should be clearly communicated. A feature MUST NOT break or degrade any harness functionality.
