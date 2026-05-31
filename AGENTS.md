@@ -57,7 +57,8 @@ bun test
 bun run check
 ```
 
-Run `bun run setup` once after cloning to activate the pre-commit hook.
+Run `bun run setup` once after cloning to activate the git hooks (pre-commit
+runs typecheck + lint-staged; pre-push runs the test suite).
 We can't auto-run it via a `prepare` script: OpenCode installs this repo
 straight from GitHub, and install-time lifecycle scripts would execute on the
 consumer's machine where devDependencies (husky) aren't present — see
