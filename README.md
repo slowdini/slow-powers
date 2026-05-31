@@ -73,6 +73,14 @@ Add Slow-powers to the `plugin` array in your `opencode.json` (global or project
 
 ```json
 {
+  "plugin": ["@slowdini/slow-powers-opencode"]
+}
+```
+
+This installs the latest version from npm. To track the `main` branch instead, use the GitHub install path:
+
+```json
+{
   "plugin": ["github:slowdini/slow-powers#main"]
 }
 ```
