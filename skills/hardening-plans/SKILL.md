@@ -1,94 +1,65 @@
 ---
 name: hardening-plans
-description: Use when you've committed to producing or revising a plan, task breakdown, or design doc before any code is written — e.g. you're in a harness plan mode, or the user asked to see the steps first
+description: Use right after you've drafted or revised an implementation plan and before you present it or start coding — a fresh-eyes review that catches placeholders, hallucinated file references, irrelevant steps, and coverage gaps before the user has to
 ---
 
-# Hardening Plan Task Lists
+# Hardening a Drafted Plan
 
-A plan's task list is a concrete, atomic blueprint of verified actions — not a checklist of vague intentions. This skill hardens that task list to executable discipline; it does not decide whether or how to plan.
+A drafted plan is a hypothesis, not a deliverable. This skill is the review gate between *having written* a plan and *handing it off* — to the user for approval, or to yourself for implementation. Read your own draft as if someone else wrote it, and fix what they'd otherwise have to catch.
 
-This skill applies **once you're committed to a plan**. It does not push you into planning when the user wants direct action.
+Trust your plan mode to produce the plan and to scope its tasks at the right altitude. This skill does not re-plan and does not govern task size — it makes sure you don't hand over a plan the reader has to debug.
+
+This skill applies **once a plan draft exists**. It does not push you into planning when the user wants direct action.
 
 ---
 
 ## When to Use
 
-* You're in a harness plan mode (you've been told the user wants a plan before changes).
-* The user explicitly asks for a plan, task breakdown, or design doc.
-* You're updating an existing plan file (`implementation.md`, `implementation_plan.md`, `task.md`, or equivalent).
+* You've drafted a plan in a harness plan mode and are about to present it for review.
+* You've written a task breakdown or design doc and are about to hand it off or start coding.
+* You're revising an existing plan file (`implementation.md`, `implementation_plan.md`, `task.md`, or equivalent) before acting on it.
 
 ## When NOT to Use
 
 * The user asked to "just build", "go fix", or "implement" something — trust the intent.
-* You're investigating, reading code, or gathering context.
+* You're investigating, reading code, or gathering context — there's no draft yet.
 * The change is mechanical (typo, rename, single-line config tweak).
 * The task is debugging — load `slow-powers:systematic-debugging` instead.
 
 ---
 
-## Map File Structure First
+## The Fresh-Eyes Review
 
-Before decomposing into tasks, list the files that will be created or modified and what each is responsible for. Decomposition decisions get locked in here — fix them now, not mid-task.
+Before the plan leaves your hands, re-read the whole draft once, top to bottom, as a skeptical reviewer who will have to *execute* it. Check each item below and fix findings inline — no second pass, fix and move on. The bar: the user should never be the one to discover a problem you could have caught.
 
-* Each file should have one clear responsibility.
-* Files that change together should live together.
-* In existing codebases, follow established patterns. Don't unilaterally restructure.
-
----
-
-## Core Pattern: Concrete, Atomic Tasks
-
-### ❌ BAD (vague, placeholder-ridden, non-atomic)
-```markdown
-1. Write checkout logic (TBD)
-2. Add some tests
-3. Implement error handling later
-```
-*Why it fails:* defers design to coding time, uses placeholders, no verification.
-
-### ✅ GOOD (concrete, atomic, TDD-ready)
-```markdown
-1. Create `checkout.test.ts` asserting `processCheckout()` throws on empty cart
-2. Run test, verify failure with "function not defined"
-3. Add empty-check in `checkout.ts` to pass the test
-4. Create test asserting `processCheckout()` returns a transaction ID on success
-5. Run test, verify failure with "transaction ID undefined"
-6. Implement success path in `checkout.ts` to pass the test
-```
-*Why it works:* zero placeholders, each step is 2–5 minutes, Red-Green-Refactor is visible to the engineer reading the plan.
+* **Spec coverage.** Every requirement in the request maps to at least one task. List any gaps and add tasks for them. A plan that silently drops a requirement is worse than one that flags it open.
+* **No hallucinations.** Every file the plan references must actually exist (for files it modifies) or have a real, named home (for files it creates) — *verify, don't assume*. If a task says "update `src/auth/session.ts`", confirm that path is real before the reader finds out it isn't. This is the most important check: a plan built on a file that isn't there wastes the reader's time and burns trust.
+* **Every step earns its place.** Each step must be a real, relevant part of accomplishing the plan's goal. Cut steps that are invented, vacuous, restate the obvious, or belong to some other task. If you can't say what a step contributes to the goal, it doesn't belong in the plan.
+* **No placeholders.** Search the draft for "TBD", "TODO", "later", "if needed", "appropriate error handling", "handle edge cases", "etc." Each one defers a decision to coding time, where it gets made worse and under pressure. Decide it now.
+* **Internal consistency.** A function `clearLayers()` in one task and `clearFullLayers()` in another is a bug, not a typo. Names, signatures, and data shapes must agree across tasks. Never back-reference ("similar to Task 3") — the reader may read tasks out of order; restate the relevant detail.
+* **Structural coherence.** Each file the plan touches should have one clear responsibility, and files that change together should live together. In an existing codebase, follow established patterns — don't let the plan unilaterally restructure.
 
 ---
 
-## Discipline Rules
+## The Next Gate: Implementation
 
-1. **No Placeholders.** All tasks are fully concrete. No "TBD", "TODO", "implement error handling later", "details to follow". The engineer reads the plan, not your mind — decide the design now.
-2. **Atomic Granularity.** Each task is 2–5 minutes of execution. Larger → decompose.
-3. **Concrete, not prescriptive.** Each task names the file(s), the function or symbol involved, and the observable outcome — error message, return shape, command output. Include code snippets or example output only when prose can't carry the intent (e.g. an exact error format, a tricky regex, a non-obvious config value). Trust the implementer to write idiomatic code from a clear contract. Never back-reference ("similar to Task 3") — the engineer may read tasks out of order; restate the relevant detail.
-4. **Reference TDD, Don't Duplicate It.** For features and bugfixes, structure each task list as Red-Green-Refactor. Don't restate TDD steps inline — point at the skill.
-   * **REQUIRED SUB-SKILL:** Use `slow-powers:test-driven-development`
+When the plan is approved, implementation begins — and implementation has its own gate.
 
----
+> **REQUIRED NEXT SKILL:** Use `slow-powers:test-driven-development` for the implementation phase.
 
-## Self-Review Before Approval
-
-Before handing the plan off, scan your own draft:
-
-* **Spec coverage:** Every requirement in the spec maps to at least one task. List any gaps and add tasks for them.
-* **Placeholder scan:** Search the plan for "TBD", "TODO", "later", "if needed", "appropriate error handling", "handle edge cases", "etc."
-* **Name consistency:** A function `clearLayers()` in Task 3 and `clearFullLayers()` in Task 7 is a bug, not a typo.
-
-Fix any findings inline. No re-review pass — fix and move on.
+The plan should carry a tests section so the reader can see *what* will be verified. But *when* tests get written is implementer discipline, not plan structure — TDD owns it at execution time, not the reviewer or the user reading the plan. Don't bake Red-Green-Refactor into every plan task; hand off to the skill that owns it.
 
 ---
 
-## Red Flags — Stop and Rewrite
+## Red Flags — Stop and Fix
 
+* The plan references a file you never confirmed exists.
+* A step doesn't map to the plan's goal — you can't say what it contributes.
 * The plan contains "TBD", "TODO", "later", "if needed", "appropriate", or "etc."
-* A single task represents more than 10 minutes of execution.
-* You did not explicitly checklist Red-Green-Refactor for code-writing tasks.
-* You wrote "similar to Task N" instead of repeating the content.
+* The same thing is named two different ways across tasks.
+* You wrote "similar to Task N" instead of restating the content.
 
-If you hit a Red Flag: stop and rewrite. Approval comes from concreteness, not optimism.
+If you hit a Red Flag: stop and fix it before the plan leaves your hands. Approval comes from a plan that holds up to scrutiny, not from optimism.
 
 ---
 
@@ -97,5 +68,6 @@ If you hit a Red Flag: stop and rewrite. Approval comes from concreteness, not o
 | Excuse | Reality |
 |--------|---------|
 | "I'll decide the details while coding." | Decisions under coding pressure are worse. Decide now; write later. |
-| "I don't need to specify tests — I'll write them anyway." | Omitting test steps makes them easy to skip when rushed. |
-| "Repeating context across similar tasks is wasteful." | The engineer may read tasks out of order. Restate the relevant detail. |
+| "That file is probably where I said it is." | "Probably" isn't verified. Check it before the user does. |
+| "The plan reads fine — I don't need to re-review it." | You wrote it, so you're blind to its gaps. Re-read it as someone who has to execute it. |
+| "Repeating context across similar tasks is wasteful." | The reader may read tasks out of order. Restate the relevant detail. |
