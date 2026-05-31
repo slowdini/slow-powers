@@ -124,10 +124,20 @@ Releases are cut from `dev` and tagged from `main`:
    version number. It bumps every manifest via `scripts/bump-version.ts`,
    commits to `dev`, and opens a `dev → main` PR.
 3. Review the release PR (full test matrix runs on it) and merge.
-4. Merging to `main` automatically tags `vX.Y.Z` and creates the GitHub
-   release. Notes come from the release PR body, or auto-generated if empty.
+4. Merging to `main` automatically tags `vX.Y.Z`, creates the GitHub release,
+   and publishes `@slowdini/slow-powers-opencode` to npm.
+   Notes come from the release PR body, or auto-generated if empty.
 
 See `.github/workflows/` for the workflow definitions.
+
+### Required secrets
+
+Only one secret is needed. Configure it in **Settings → Secrets and variables →
+Actions**:
+
+| Secret | Type | Used by | Scope / permissions |
+|--------|------|---------|---------------------|
+| `RELEASE_PR_TOKEN` | GitHub PAT (fine-grained or classic) | `release-pr.yml` | Push to `dev` (Contents: write) and open PRs (Pull requests: write). Required so the release PR triggers CI — PRs opened by the default `GITHUB_TOKEN` do not. |
 
 ## License
 
