@@ -82,7 +82,7 @@ Tips for writing good prompts:
 
 What "stresses the skill" depends on what kind of skill it is. The four types from `slow-powers:writing-skills` each need a different style of prompt:
 
-- **Discipline-enforcing skills** (TDD, verification-before-completion). Test with pressure — academic prompts ("explain how TDD works") will pass without measuring anything useful. Combine multiple pressures (time + sunk cost + authority + exhaustion) and force a choice. See `pressure-scenarios.md` for the taxonomy. Success = the rule holds under maximum pressure.
+- **Discipline-enforcing skills** (TDD, verification-before-completion). Test with pressure — academic prompts ("explain how TDD works") will pass without measuring anything useful. Combine multiple pressures (time + sunk cost + authority + exhaustion) and force a choice. See `pressure-scenarios.md` for the taxonomy. The wild failure for these skills is almost always *mid-session* — the agent is already committed to a skill-free approach when the trigger arrives — so a cold prompt under-measures them; pair each cold case with a **seeded** one (see *Seeding conversation context* below). Success = the rule holds under maximum pressure.
 - **Technique skills** (condition-based-waiting, root-cause-tracing). Test application: hand the agent a new scenario where the technique applies and check it gets used correctly. Include at least one edge-case variation. Success = the technique transfers to a situation the skill didn't explicitly describe.
 - **Pattern skills** (flatten-with-flags, information-hiding). Test recognition: include prompts where the pattern applies and prompts where it doesn't. Success = the agent applies the pattern when warranted and refrains when it isn't.
 - **Reference skills** (API docs, syntax guides). Test retrieval: ask questions whose answers are in the reference, including a few that hit gaps you suspect. Success = the agent finds the right section and uses it correctly.
@@ -90,6 +90,26 @@ What "stresses the skill" depends on what kind of skill it is. The four types fr
 ### Seeding conversation context (and its ceiling)
 
 A cold prompt measures trigger-recognition *in isolation*. The harder, more realistic failure is trigger-recognition *under a competing attractor* — an agent already mid-session, committed to a skill-free approach, where loading the skill reads as redundant. Approximate that by **seeding**: embed prior `User:` / `Assistant:` turns directly in the `prompt` string (it is wrapped verbatim as the user request, so a multi-line transcript needs no schema change). Seed an `Assistant:` turn that has already produced work in a native, skill-free style, then a final `User:` turn carrying the real request. A seed can reproduce prior commitment / in-flight momentum, redundancy framing, sunk cost, and — usefully — a prior plan that *name-drops* a skill (e.g. a parenthetical "TDD — tests first") without actually following it, so you can test whether the agent makes the discipline load-bearing or treats the label as compliance. For a worked example, see the seeded cases in `hardening-plans/evals/`.
+
+**When to seed.** Seed when the skill's real-world failure happens *mid-session under a competing attractor* — prior commitment to a skill-free approach, redundancy framing ("I'm already doing this"), sunk cost, exhaustion, or an in-flight workflow/mode that makes loading the skill feel like ceremony. A cold prompt is enough when all you need to know is whether the *description* triggers from a clean start. Discipline-enforcing skills almost always warrant at least one seeded case kept alongside a cold contrast case (the cold one isolates the description; the seeded one stresses the trigger under momentum). Technique, pattern, and reference skills usually don't need seeding unless their failure, too, is specifically a mid-session one.
+
+Reusable seed scaffold — adapt the turns to your skill's attractor:
+
+```
+[The following is the conversation so far in this session. You are the
+assistant; continue from the final user turn.]
+
+User: <the original request that kicked off the work>
+
+Assistant: <work already produced in a native, skill-free style — the
+approach the skill is supposed to correct, optionally name-dropping the
+skill's discipline as a label without following it>
+
+User: <the turn that should trigger the skill — phrased so loading it now
+reads as redundant or as duplicated effort>
+```
+
+Keep the seeded turns short and concrete; the point is to establish momentum, not to write a full session.
 
 **The ceiling — state it plainly.** A seed is *text the subagent reads*, not a state it operates under. It cannot place the agent in a harness-injected mode — a real plan mode, an enforced multi-phase workflow, genuine context-window pressure — it can only *describe* one. So when the wild failure you're chasing was *caused* by such a mode (the documented case: an agent in plan mode that invoked **zero** skills because the mode's own procedure made loading them feel redundant), a text seed cannot fully reproduce it — the causal layer is exactly the one a prompt string can't inject. A seeded **pass is therefore necessary but not sufficient** — it under-estimates real-session difficulty — and a seed that *fails* to reproduce a known wild failure is usually hitting this ceiling, not testing a bad seed. Treat seeded results as a stronger-than-cold signal, not as ground truth, and don't let downstream work over-trust them. Faithfully reproducing a mode-caused failure needs a real harness mode the runner can't inject today — track that as a parity goal.
 
