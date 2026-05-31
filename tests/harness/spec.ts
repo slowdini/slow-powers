@@ -62,9 +62,8 @@ export interface HookSpec {
   /**
    * "matcher" — Claude/Codex hooks.json: SessionStart groups with a "|"-joined
    *   matcher that must include startup/resume/clear.
-   * "list" — Cursor hooks-cursor.json: a sessionStart array of commands.
    */
-  format: "matcher" | "list";
+  format: "matcher";
 }
 
 export interface HarnessSpec {
@@ -99,16 +98,6 @@ export const HARNESSES: HarnessSpec[] = [
       { field: "interface.logo", kind: "file" },
     ],
     hooks: { path: "hooks/hooks.json", format: "matcher" },
-  },
-  {
-    name: "Cursor",
-    manifest: ".cursor-plugin/plugin.json",
-    requiredFields: ["name", "version", "skills", "hooks"],
-    pathFields: [
-      { field: "skills", kind: "dir" },
-      { field: "hooks", kind: "file" },
-    ],
-    hooks: { path: "hooks/hooks-cursor.json", format: "list" },
   },
   {
     name: "OpenCode",

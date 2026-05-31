@@ -15,7 +15,7 @@ Name the harness you are running in. You almost certainly already know — confi
 - Any session-start context block injected at the top of the conversation
 - Top-level files or directories matching your harness (e.g. `.<harness>-plugin/`, `<harness>-instructions.md`)
 
-The intended supported harnesses are: **Claude Code, Codex CLI, Cursor, OpenCode**.
+The intended supported harnesses are: **Claude Code, Codex CLI, OpenCode**.
 
 If the harness you are running in is not in that list, stop and ask the user before continuing.
 
@@ -31,8 +31,8 @@ Read these files in order. Each one teaches you something specific you will need
 | `README.md` | Per-harness install instructions, the feature-support tier table |
 | `bootstrap.md` | The universal payload every harness must deliver into a session (instruction priority + the gate-wrapping framing for skills) |
 | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Claude's reference manifest shape — what fields a harness manifest typically carries |
-| `hooks/hooks.json` | Claude's `SessionStart` hook that injects `bootstrap.md`. Compare with `hooks/hooks-cursor.json` for the Cursor variant |
-| `skills/evaluating-skills/runner/README.md` | Contains explicit **Cross-harness breadcrumbs** — sketches of how Codex, Cursor, OpenCode would implement environment parity. Treat these as starting points, not specifications |
+| `hooks/hooks.json` | Claude's `SessionStart` hook that injects `bootstrap.md`. Codex reuses this same matcher-style manifest |
+| `skills/evaluating-skills/runner/README.md` | Contains explicit **Cross-harness breadcrumbs** — sketches of how Codex and OpenCode would implement environment parity. Treat these as starting points, not specifications |
 | `skills/evaluating-skills/runner/adapters/claude-code-transcript.ts` | The reference transcript adapter. A second harness would add its own adapter alongside this, translating that harness's transcript shape into the same `ToolInvocation[]` format |
 | `skills/evaluating-skills/harness-details/claude.md` | The reference per-harness operator walkthrough. Other harnesses would each get their own file alongside this |
 | `scripts/manifest-files.ts` | The list of manifest files kept in version lockstep (consumed by `scripts/bump-version.ts` and the harness test suite) — every harness with its own manifest needs an entry here |
@@ -64,7 +64,7 @@ For each category below, compare what Claude Code has against what your harness 
 
 | Category | What Claude Code does (reference) |
 |----------|-----------------------------------|
-| Plugin / extension manifest | `.claude-plugin/plugin.json` — pure metadata (name, version, author, license). Claude Code auto-discovers `skills/` and `hooks/hooks.json` at the plugin root by convention, so the manifest does not declare those paths. Other harnesses (Codex, Cursor) instead declare `"skills"` and `"hooks"` fields explicitly |
+| Plugin / extension manifest | `.claude-plugin/plugin.json` — pure metadata (name, version, author, license). Claude Code auto-discovers `skills/` and `hooks/hooks.json` at the plugin root by convention, so the manifest does not declare those paths. Other harnesses (Codex) instead declare `"skills"` and `"hooks"` fields explicitly |
 | Marketplace or distribution channel | `.claude-plugin/marketplace.json` registers the plugin; installed via `/plugin marketplace add` |
 | Bootstrap injection | `hooks/hooks.json` `SessionStart` hook runs `hooks/run-hook.cmd session-start`, which executes `hooks/session-start` (bash) — that script reads `bootstrap.md` and emits a JSON `additionalContext` payload Claude injects into the session |
 | Skill discovery | Auto-discovered: Claude Code scans the conventional `skills/` directory at the plugin root, no manifest field required. Harnesses without convention-based discovery declare the path in their manifest instead |
@@ -83,7 +83,7 @@ run's tool invocations (e.g. "a test command ran", "the sibling skill was
 loaded"). These only grade when a transcript adapter exists for your harness.
 A harness without one still functions: those assertions grade as *unverifiable*
 and the `llm_judge` assertions carry the substantive measurement, the same way
-Codex/Cursor/OpenCode work today. But adapter richness is now an explicit parity
+Codex/OpenCode work today. But adapter richness is now an explicit parity
 target, not optional polish — a harness that adds or extends an adapter under
 `skills/evaluating-skills/runner/adapters/` lets more of the baseline suite grade
 mechanically. Treat the transcript-adapter row below as a goal to aim at, not a

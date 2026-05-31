@@ -5,12 +5,11 @@ that ships as a distinct product with its own release cadence.
 
 ## What lives here
 
-This repo ships Slow-powers across four harnesses:
+This repo ships Slow-powers across three harnesses:
 
 - `skills/` — Skills, assets, and cross-cutting tests
 - `.claude-plugin/` — Claude Code plugin
 - `.codex-plugin/` — OpenAI Codex plugin
-- `.cursor-plugin/` — Cursor plugin
 - `opencode/` — OpenCode plugin (`@slowdini/slow-powers-opencode`)
 
 See the [feature support](README.md#feature-support) table in the README for current tier per harness.
