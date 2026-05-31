@@ -1,10 +1,7 @@
 # Slow-powers — Contributor Guidelines
 
 Slow-powers is a fork of [obra/superpowers](https://github.com/obra/superpowers)
-that ships as a distinct product with its own release cadence. Upstream's
-contributor guidance is preserved at
-[`docs/superpowers/upstream-CLAUDE.md`](docs/superpowers/upstream-CLAUDE.md)
-for historical reference.
+that ships as a distinct product with its own release cadence.
 
 ## What lives here
 
@@ -47,6 +44,13 @@ If you modify skill content:
   reliably does anyway), state the decision and reasoning to skip the eval
   instead — see "Choosing to test with evals" in `slow-powers:evaluating-skills`.
 - Ensure skills are cross-harness compatible: avoid harness-specific tool or feature names.
+- Our discipline-enforcing skills should carry at least one *seeded* eval case — one
+  that embeds a short prior transcript so the skill is met mid-session under a
+  competing attractor — because their real-world failures happen in-flight and a
+  cold prompt alone under-measures them (see "Seeding conversation context" in
+  `slow-powers:evaluating-skills`). `hardening-plans` is the reference example;
+  `test-driven-development`, `verification-before-completion`, and
+  `systematic-debugging` are currently cold-only and want seeded cases added.
 
 ## Local development
 
@@ -65,4 +69,3 @@ consumer's machine where devDependencies (husky) aren't present — see
 `tests/opencode/install-contract.test.ts`.
 
 `bun scripts/bump-version.ts <version>` updates every manifest in lockstep.
-See `docs/superpowers/specs/` for design history.
