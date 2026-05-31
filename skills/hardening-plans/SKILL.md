@@ -7,7 +7,7 @@ description: Use right after you've drafted or revised an implementation plan an
 
 A drafted plan is a hypothesis, not a deliverable. This skill is the review gate between *having written* a plan and *handing it off* — to the user for approval, or to yourself for implementation. Read your own draft as if someone else wrote it, and fix what they'd otherwise have to catch.
 
-Trust your plan mode to produce the plan and to scope its tasks at the right altitude. This skill does not re-plan and does not govern task size — it makes sure you don't hand over a plan the reader has to debug.
+Trust your plan mode to produce the plan and to scope its tasks at the right altitude. This skill does not re-plan — it makes sure you don't hand over a plan the reader has to debug.
 
 This skill applies **once a plan draft exists**. It does not push you into planning when the user wants direct action.
 
@@ -24,7 +24,6 @@ This skill applies **once a plan draft exists**. It does not push you into plann
 * The user asked to "just build", "go fix", or "implement" something — trust the intent.
 * You're investigating, reading code, or gathering context — there's no draft yet.
 * The change is mechanical (typo, rename, single-line config tweak).
-* The task is debugging — load `slow-powers:systematic-debugging` instead.
 
 ---
 
@@ -47,7 +46,7 @@ When the plan is approved, implementation begins — and implementation has its 
 
 > **REQUIRED NEXT SKILL:** Use `slow-powers:test-driven-development` for the implementation phase.
 
-The plan should carry a tests section so the reader can see *what* will be verified. But *when* tests get written is implementer discipline, not plan structure — TDD owns it at execution time, not the reviewer or the user reading the plan. Don't bake Red-Green-Refactor into every plan task; hand off to the skill that owns it.
+The plan should carry a tests section so the reader can see *what* will be verified. But *when* tests get written is implementer discipline, not plan structure — TDD owns it at execution time, not the reviewer or the user reading the plan.
 
 ---
 
