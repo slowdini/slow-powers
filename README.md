@@ -45,17 +45,16 @@ Slow-powers separately for each.
 
 ```bash
 codex plugin marketplace add slowdini/slow-powers
+codex plugin add slow-powers@slowdini
 ```
 
-Then install the `slow-powers` plugin from the `slow-powers` marketplace
-through Codex's plugin interface.
+You can also browse and install it interactively: run `codex`, open
+`/plugins`, choose the `slowdini` marketplace, and install `slow-powers`.
+Start a new Codex thread after installing so the bundled skills are loaded.
 
-To enable automatic `SessionStart` bootstrap in current Codex releases, add this to `~/.codex/config.toml` and restart Codex:
-
-```toml
-[features]
-plugin_hooks = true
-```
+Slow-powers includes a plugin-bundled `SessionStart` hook for bootstrap
+context. Codex hooks are stable, but plugin hooks must be reviewed and trusted
+before Codex runs them.
 
 ### Cursor
 

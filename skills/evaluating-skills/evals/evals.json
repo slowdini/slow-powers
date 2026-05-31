@@ -5,7 +5,7 @@
       "id": "did-my-revision-help",
       "prompt": "I just rewrote the Iron Law section of our test-driven-development skill to be more forceful. How do I know it's actually better?",
       "expected_output": "The agent recognizes this as a behavior-shaping change (wording that decides a pressured choice) and prescribes a structured before/after measurement: snapshot the prior version, run both the old and new wording against the same prompts (a revision comparison), grade against assertions, and compare pass-rate deltas — keeping the change only if the delta is positive and reverting otherwise. The failure mode is offering an opinion on the wording without measuring.",
-      "files": ["fixtures/iron-law/SKILL.md"],
+      "files": ["fixtures/iron-law/candidate-skill.md"],
       "assertions": [
         {
           "id": "prescribes_structured_comparison",
