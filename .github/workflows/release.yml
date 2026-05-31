@@ -85,3 +85,11 @@ jobs:
           gh release create "${{ steps.version.outputs.tag }}" \
             --title "Slow-powers ${{ steps.version.outputs.tag }}" \
             --notes-file /tmp/release-notes.md
+
+      - name: Publish to npm
+        if: steps.tag-check.outputs.exists == 'false'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN }}
+        run: |
+          npm config set registry https://registry.npmjs.org/
+          npm publish --access public --tag latest
