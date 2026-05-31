@@ -11,7 +11,7 @@ Skill development has two phases: **drafting** (`slow-powers:writing-skills`) an
 
 An eval is a structured measurement of whether a skill actually shifts behavior. Each test case is a realistic prompt; each run dispatches a fresh general-purpose subagent twice — once with the skill loaded, once without (or once with the prior version, once with the revised version) — and grades the outputs against assertions. Pass-rate deltas tell you whether the skill is worth shipping or the change is worth landing.
 
-This skill is harness-agnostic. Run records use a portable JSON schema so evals authored on one harness (Claude Code, Codex, Cursor, OpenCode) can be executed and graded on any other. See `schema/run-record.schema.json`.
+This skill is harness-agnostic. Run records use a portable JSON schema so evals authored on one harness (Claude Code, Codex, OpenCode) can be executed and graded on any other. See `schema/run-record.schema.json`.
 
 ## Two comparison modes
 
@@ -82,10 +82,67 @@ Tips for writing good prompts:
 
 What "stresses the skill" depends on what kind of skill it is. The four types from `slow-powers:writing-skills` each need a different style of prompt:
 
-- **Discipline-enforcing skills** (TDD, verification-before-completion). Test with pressure — academic prompts ("explain how TDD works") will pass without measuring anything useful. Combine multiple pressures (time + sunk cost + authority + exhaustion) and force a choice. See `pressure-scenarios.md` for the taxonomy. Success = the rule holds under maximum pressure.
+- **Discipline-enforcing skills** (TDD, verification-before-completion). Test with pressure — academic prompts ("explain how TDD works") will pass without measuring anything useful. Combine multiple pressures (time + sunk cost + authority + exhaustion) and force a choice. See `pressure-scenarios.md` for the taxonomy. The wild failure for these skills is almost always *mid-session* — the agent is already committed to a skill-free approach when the trigger arrives — so a cold prompt under-measures them; pair each cold case with a **seeded** one (see *Seeding conversation context* below). Success = the rule holds under maximum pressure.
 - **Technique skills** (condition-based-waiting, root-cause-tracing). Test application: hand the agent a new scenario where the technique applies and check it gets used correctly. Include at least one edge-case variation. Success = the technique transfers to a situation the skill didn't explicitly describe.
 - **Pattern skills** (flatten-with-flags, information-hiding). Test recognition: include prompts where the pattern applies and prompts where it doesn't. Success = the agent applies the pattern when warranted and refrains when it isn't.
 - **Reference skills** (API docs, syntax guides). Test retrieval: ask questions whose answers are in the reference, including a few that hit gaps you suspect. Success = the agent finds the right section and uses it correctly.
+
+### Seeding conversation context (and its ceiling)
+
+A cold prompt measures trigger-recognition *in isolation*. The harder, more realistic failure is trigger-recognition *under a competing attractor* — an agent already mid-session, committed to a skill-free approach, where loading the skill reads as redundant. Approximate that by **seeding**: embed prior `User:` / `Assistant:` turns directly in the `prompt` string (it is wrapped verbatim as the user request, so a multi-line transcript needs no schema change). Seed an `Assistant:` turn that has already produced work in a native, skill-free style, then a final `User:` turn carrying the real request. A seed can reproduce prior commitment / in-flight momentum, redundancy framing, sunk cost, and — usefully — a prior plan that *name-drops* a skill (e.g. a parenthetical "TDD — tests first") without actually following it, so you can test whether the agent makes the discipline load-bearing or treats the label as compliance. For a worked example, see the seeded cases in `hardening-plans/evals/`.
+
+**When to seed.** Seed when the skill's real-world failure happens *mid-session under a competing attractor* — prior commitment to a skill-free approach, redundancy framing ("I'm already doing this"), sunk cost, exhaustion, or an in-flight workflow/mode that makes loading the skill feel like ceremony. A cold prompt is enough when all you need to know is whether the *description* triggers from a clean start. Discipline-enforcing skills almost always warrant at least one seeded case kept alongside a cold contrast case (the cold one isolates the description; the seeded one stresses the trigger under momentum). Technique, pattern, and reference skills usually don't need seeding unless their failure, too, is specifically a mid-session one.
+
+Reusable seed scaffold — adapt the turns to your skill's attractor:
+
+```
+[The following is the conversation so far in this session. You are the
+assistant; continue from the final user turn.]
+
+User: <the original request that kicked off the work>
+
+Assistant: <work already produced in a native, skill-free style — the
+approach the skill is supposed to correct, optionally name-dropping the
+skill's discipline as a label without following it>
+
+User: <the turn that should trigger the skill — phrased so loading it now
+reads as redundant or as duplicated effort>
+```
+
+Keep the seeded turns short and concrete; the point is to establish momentum, not to write a full session.
+
+**The ceiling — state it plainly.** A seed is *text the subagent reads*, not a state it operates under. It cannot place the agent in a harness-injected mode — a real plan mode, an enforced multi-phase workflow, genuine context-window pressure — it can only *describe* one. So when the wild failure you're chasing was *caused* by such a mode (the documented case: an agent in plan mode that invoked **zero** skills because the mode's own procedure made loading them feel redundant), a text seed cannot fully reproduce it — the causal layer is exactly the one a prompt string can't inject. A seeded **pass is therefore necessary but not sufficient** — it under-estimates real-session difficulty — and a seed that *fails* to reproduce a known wild failure is usually hitting this ceiling, not testing a bad seed. Treat seeded results as a stronger-than-cold signal, not as ground truth, and don't let downstream work over-trust them. Faithfully reproducing a mode-caused failure needs a real harness mode the runner can't inject today — track that as a parity goal.
+
+## Pre-flight gate (required)
+
+An eval run is not free. Each test case dispatches a fresh subagent **per condition** — an N-case suite is `2N` full agent sessions, plus a judge dispatch for every `llm_judge` assertion. That is real wall-clock time and real tokens, and a subagent under test can write outside its sandbox and pollute the real workspace. **Never kick off a run silently.**
+
+Before building the workspace and dispatching anything, STOP and present the user a run summary, then wait for explicit confirmation:
+
+- **Skill under test** — name and path
+- **Mode** — `new-skill` (with vs without) or `revision` (old vs new), plus the baseline label for revision mode
+- **Eval cases** — the count and a one-line list of the prompts (from `evals.json`)
+- **Models** — the model that will run each subagent under test, and the judge model for `llm_judge` assertions. The runner never dispatches these itself, so it can't observe them — state them explicitly so the user can correct a wrong choice before tokens are spent.
+- **Cost** — `2N` agent dispatches plus judge dispatches; call out that this is time- and token-intensive
+- **Sandbox** — the guard status (see below)
+
+Do not dispatch until the user confirms *this summary*. An earlier "run the eval" is not confirmation — the summary may reveal a wrong mode, the wrong model, or a missing guard the user never intended.
+
+### Sandbox decision
+
+A subagent under test runs the real skill, and some skills write to disk — the skill that triggered this gate, `using-git-worktrees`, creates git worktrees in whatever repo it's pointed at. Without active enforcement those writes land in your working directory.
+
+- **Guard available (Claude Code):** arming `--guard` is the default. If you are about to run without it, STOP. Proceed unguarded **only** when the user actively opts out — and warn them that stray writes will then only be **detected after the fact** by `detect-stray-writes`, never blocked or reverted, so anything a subagent writes outside its `outputs/` dir (worktrees, installed packages, edited repo files) persists and is theirs to clean up.
+- **Guard unavailable (other harnesses):** there is no active write enforcement. Tell the user plainly: stray writes are detected and reported by `detect-stray-writes` but **not auto-cleaned** — they must review the report and remove anything that escaped. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.
+
+## Red Flags — STOP before dispatching
+
+- About to dispatch subagents without showing the user the run summary first
+- Running on a guard-capable harness without `--guard` and without an explicit opt-out from the user
+- "The user already said run it" — they said it before seeing the cost, models, and guard status
+- Spending tokens to "just see what happens" before the cases, mode, or models are confirmed
+
+All of these mean: STOP. Present the pre-flight summary and wait for confirmation.
 
 ## Running evals
 
@@ -133,10 +190,10 @@ Design your assertions accordingly. For maximally portable evals, lean on `llm_j
 
 ## Sandboxing eval subagents
 
-The dispatch prompt tells each subagent to write only inside its `outputs/` dir, but nothing in the portable contract *enforces* that — a misbehaving subagent can edit the real repo or run `npm install` against the repo root, silently corrupting the very runner it's being measured by. Two layers guard against this; both are opt-in so they never surprise a run:
+The dispatch prompt tells each subagent to write only inside its `outputs/` dir, but nothing in the portable contract *enforces* that — a misbehaving subagent can edit the real repo or run `npm install` against the repo root, silently corrupting the very runner it's being measured by. Two layers guard against this:
 
-- **Detection (all harnesses).** After `fill-transcripts` populates `tool_invocations`, run `bun run evals:detect-stray-writes --skill <name> --iteration <N>`. It reads each task's `outputs_dir` from `dispatch.json` and scans the invocations for **violations** (`Write`/`Edit`/`MultiEdit`/`NotebookEdit` whose path resolves outside the run's `outputs/`) and **warnings** (Bash commands matching install/`git`/`sed -i`/redirection patterns that don't reference `outputs/`). Findings land in `stray-writes.json`; the aggregator turns each run with violations into a `validity_warnings` entry, so a tainted data point is flagged the same way a missed skill invocation is. This is portable because it works off the same transcripts the adapters already parse — but it only *reports*, after the fact.
-- **Hard guard (Claude Code only, opt-in).** Pass `--guard` to the runner to additionally stage a `PreToolUse` hook that actively *blocks* out-of-bounds writes and installs while the subagents run. It's Claude-Code-specific and off by default; see `harness-details/claude.md`. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.
+- **Detection (all harnesses).** After `fill-transcripts` populates `tool_invocations`, run `bun run evals:detect-stray-writes --skill <name> --iteration <N>`. It reads each task's `outputs_dir` from `dispatch.json` and scans the invocations for **violations** (`Write`/`Edit`/`MultiEdit`/`NotebookEdit` whose path resolves outside the run's `outputs/`) and **warnings** (Bash commands matching install/`git`/`sed -i`/redirection patterns that don't reference `outputs/`). Findings land in `stray-writes.json`; the aggregator turns each run with violations into a `validity_warnings` entry, so a tainted data point is flagged the same way a missed skill invocation is. This is portable because it works off the same transcripts the adapters already parse — but it only *reports*, after the fact; it never reverts what a subagent wrote.
+- **Hard guard (Claude Code, default posture).** `--guard` stages a `PreToolUse` hook that actively *blocks* out-of-bounds writes and installs while the subagents run. On Claude Code it is the default — the *Pre-flight gate* requires you to arm it unless the user explicitly opts out. It's Claude-Code-specific; see `harness-details/claude.md`. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.
 
 ## Workspace layout
 
@@ -216,7 +273,7 @@ Why this matters: a run where the skill wasn't actually invoked is a non-data-po
 The check has two tiers, chosen automatically per run:
 
 - **Code-based (Claude Code).** On harnesses that persist subagent transcripts with discrete `Skill` tool calls, the framework parses the transcript and checks for a `Skill` invocation whose `input.skill` matches the eval-staged slug. This is deterministic, free, and cannot be fooled by superficial vocabulary in the response.
-- **LLM-judge fallback (other harnesses).** Where transcripts aren't available or the harness injects skills via system-prompt hooks rather than a tool call (Codex, Cursor, OpenCode), a judge subagent compares the agent's `final_message` against the SKILL.md content embedded in the run record, looking for behavioral fingerprints — distinctive vocabulary, named sections, procedural steps that mirror the skill's phrasing. It does **not** require the agent to explicitly cite the skill (that would taint the eval).
+- **LLM-judge fallback (other harnesses).** Where transcripts aren't available or the harness injects skills via system-prompt hooks rather than a tool call (Codex, OpenCode), a judge subagent compares the agent's `final_message` against the SKILL.md content embedded in the run record, looking for behavioral fingerprints — distinctive vocabulary, named sections, procedural steps that mirror the skill's phrasing. It does **not** require the agent to explicitly cite the skill (that would taint the eval).
 
 To enable the code-based check on Claude Code, the runner stages each condition's SKILL.md snapshot at `<repoRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md`. The unique slug prevents collisions with already-installed production skills (relevant when evaluating skills in a repo where the same skills are also installed) and is what the code-based check looks for in the transcript. The dispatch prompt deliberately omits any inline `<skill>...</skill>` block so the subagent must discover and invoke the staged skill naturally — this measures whether the skill's `description:` actually triggers it. Stale staged skills are swept at the start of each fresh run. Pass `--no-stage` to opt out (e.g., when running the same eval against a harness that doesn't support project-local skill discovery); the runner will fall back to inlining the SKILL.md text in the dispatch prompt, and the LLM-judge meta-check will be used.
 
@@ -328,18 +385,37 @@ Feed all three plus the current SKILL.md to an LLM using `templates/revise-skill
 - Iteration deltas have plateaued (no meaningful improvement between iterations)
 - You've identified a more fundamental issue (skill scope is wrong, prompts don't represent real use)
 
+## Choosing to test with evals
+
+Before you build an eval, decide whether this change needs one. An eval measures whether words on a page shift **contingent** behavior — what the agent does when the outcome is genuinely in doubt: under pressure, with ambiguity, or against a competing goal. That is where measurement earns its cost.
+
+A **deterministic** change doesn't move that needle. Removing a one-line "announce out loud that you're using this skill" instruction, fixing a typo, or shipping a manually-invoked, testing-only procedure changes what the agent is told, not whether it complies under pressure. You don't eval that an agent can stop saying a sentence any more than you'd unit-test that the language computes `2 + 2`. Following an unambiguous instruction is the runtime contract; evals test the contingent logic built on top of it.
+
+**The question for every skill change:** does it alter contingent behavior, or is it deterministic instruction-following?
+
+- **Contingent → eval (this is the default).** Renaming `writing-plans` so its trigger fires reliably, editing a discipline-enforcing skill's rationalization table, changing the wording that decides a pressured choice — the agent might behave differently, and you can't know which way without measuring.
+- **Deterministic → declare and skip.** State the decision and your reasoning to the user, then skip the eval. The reasoning is not optional: a silent skip is indistinguishable from dodging the work.
+
+**Either way, announce the decision and why** — "deterministic instruction removal, no eval" or "this changes pressured compliance, I'll run an eval." A visible decision is one the user can override; a silent one is a rationalization waiting to happen. **The door stays open:** if the user wants an eval anyway, run a worthwhile one — design real cases, don't phone it in to confirm a foregone conclusion.
+
+**Skill type is a fast read, not a verdict.** Reference and manually-invoked procedural changes *often* land deterministic; discipline, technique, and pattern changes *often* carry contingency (`pressure-scenarios.md` draws the same line under "When to use" / "Don't use them for"). Use type to orient your first guess — never as the answer. The decision is per *change*, not per type: a deterministic typo fix in a discipline-enforcing skill still skips, and restructuring a reference doc because the agent kept missing a section is contingent and earns an eval.
+
 ## The Iron Law
 
-**No skill shipped without passing evals. No language change landed without a positive revision delta.**
+**No skill shipped without passing evals. No behavior-shaping change landed without a positive revision delta.**
+
+Once you've judged a change behavior-shaping, the law is absolute — these are not exemptions:
 
 - Not for "simple additions"
 - Not for "just adding a section"
 - Not for "documentation updates"
 - Not for "obviously the same as before"
 
-If you can't measure the change, you don't know if it's an improvement. Tuning skill language without a benchmark drifts the skill — sometimes silently — toward worse behavior under pressure.
+If you can't measure a behavioral change, you don't know if it's an improvement. Tuning behavior-shaping language without a benchmark drifts the skill — sometimes silently — toward worse behavior under pressure. (The narrow, declared exception for deterministic changes is above; "deterministic" is a judgment you announce and defend, not a backdoor around this law.)
 
 ## Common rationalizations
+
+Excuses for skipping an eval on a change you've already judged behavior-shaping. None of them hold.
 
 | Excuse | Reality |
 |--------|---------|
@@ -349,6 +425,7 @@ If you can't measure the change, you don't know if it's an improvement. Tuning s
 | "It's just rewording" | Wording IS the skill. Reword = changed skill. Run the eval. |
 | "Eval results are noisy" | Then add runs, not skip the eval. |
 | "Pass rate was already 100%" | Then the assertion is too easy. Replace it. |
+| "I'll just call it deterministic" | Deterministic means the agent's compliance isn't in doubt — not that you'd rather not measure. If the wording could change a pressured choice, it's behavioral. Run the eval. |
 
 ## Bundled assets
 

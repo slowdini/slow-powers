@@ -22,7 +22,7 @@ export type GuardDecision = { allow: boolean; reason?: string };
 const ALLOW: GuardDecision = { allow: true };
 
 function armed(marker: GuardMarker | null, now: number): boolean {
-  if (!marker || marker.active !== true) return false;
+  if (marker?.active !== true) return false;
   if (marker.expiresAt && Date.parse(marker.expiresAt) <= now) return false;
   return true;
 }

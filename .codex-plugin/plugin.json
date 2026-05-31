@@ -1,6 +1,6 @@
 {
   "name": "slow-powers",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "description": "Slow-powers gives your agent superpowers: planning, TDD, debugging, and collaboration workflows.",
   "author": {
     "name": "Max Haarhaus",

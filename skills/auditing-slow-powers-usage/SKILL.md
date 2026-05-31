@@ -24,9 +24,15 @@ specifically. Your report seeds new pressure tests and live spot-checks of the p
 
 **Don't:**
 - Read, explore, or grep the host codebase to "investigate" — the audit is about slow-powers, not the project.
-- Make any change, fix, or commit. Touch nothing.
+- Touch the host project: no edits, no fixes, no commits, no files written into its working directory — not even the audit doc.
 - Re-open, redo, second-guess, or "improve" the work you just delivered.
 - Propose changes to the host project. That's out of scope even if you spot something.
+
+**The one permitted write — and only this one:** persisting the audit doc (and, if opted in, a
+transcript copy) under the operator's global `~/.slow-powers-audits/` folder, as described in
+*The report* below. That folder lives outside any host repo, so writing there never pollutes the
+project under audit. Everything else above still holds: the global audit folder is allowed; the host
+repo is forbidden. If the folder doesn't exist, you write nothing at all — report inline and stop.
 
 ## Reporting rules
 
@@ -45,8 +51,48 @@ These rules are the point of the audit. Follow them exactly.
 
 ## The report
 
-Output the report directly in the conversation under these exact headings, in this order. Use "none"
-for any section that doesn't apply rather than dropping the heading.
+Build the full report under these exact headings, in this order. Use "none" for any section that
+doesn't apply rather than dropping the heading.
+
+### Where the report goes
+
+These audits are most valuable when they accumulate as durable artifacts, so the report can be
+persisted — but only when the operator has opted in, and never inside the host repo.
+
+Probe (read-only) whether the global folder `~/.slow-powers-audits/` exists. **Do not create it** —
+its absence is a deliberate "don't persist" signal, and creating it would be the kind of unrequested
+write this skill forbids.
+
+- **Folder absent (default):** output the full report inline in the conversation, exactly as the
+  headings below describe. Write nothing to disk.
+- **Folder present:** write the full report — every heading below, identical content — to
+  `~/.slow-powers-audits/audit-<YYYYMMDD-HHMMSS>-<repo-basename>.md` (use the host repo's directory
+  name for `<repo-basename>`). Then, in the conversation, emit only a short pointer: the saved path
+  plus the one-line session summary from section 1. Don't reprint the whole report inline — the doc
+  is the artifact.
+
+Either way the report content is the same; only its destination changes.
+
+### Optionally attaching the session transcript
+
+A persisted report is a summary; the raw session transcript is the highest-fidelity record of how
+slow-powers actually competed for your attention. Capturing it is a **second, separate opt-in**,
+because a real transcript contains host-codebase content that is otherwise outside this audit's scope
+(slow-powers, not the host repo). Only do this when **both** of these are true:
+
+1. `~/.slow-powers-audits/` exists (report persistence is on), **and**
+2. `~/.slow-powers-audits/transcripts/` also exists (the operator has separately opted in to transcripts).
+
+When both hold, **copy** your current session's transcript file as-is into
+`~/.slow-powers-audits/transcripts/audit-<YYYYMMDD-HHMMSS>-<repo-basename>.transcript.jsonl`, matching
+the report doc's timestamp and repo name.
+
+- **Copy the file on disk — never read it into your context.** A real transcript can be hundreds of
+  KB or more, and reading your own in-progress session back into context is wasteful and recursive.
+  A filesystem copy moves it without loading it. Reading it would defeat the point.
+- **Harness-dependent; degrade gracefully.** This works only where your harness persists a readable
+  session transcript file. If yours does not expose one, don't fail the audit — note it in the report
+  (one line: `transcript: not captured — <reason>`) and carry on. The report itself is unaffected.
 
 ### 1. Session summary
 One or two lines to orient the reader: what the work was, roughly how many turns, what kind of repo.

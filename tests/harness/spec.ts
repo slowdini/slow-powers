@@ -62,9 +62,8 @@ export interface HookSpec {
   /**
    * "matcher" — Claude/Codex hooks.json: SessionStart groups with a "|"-joined
    *   matcher that must include startup/resume/clear.
-   * "list" — Cursor hooks-cursor.json: a sessionStart array of commands.
    */
-  format: "matcher" | "list";
+  format: "matcher";
 }
 
 export interface HarnessSpec {
@@ -101,16 +100,6 @@ export const HARNESSES: HarnessSpec[] = [
     hooks: { path: "hooks/hooks.json", format: "matcher" },
   },
   {
-    name: "Cursor",
-    manifest: ".cursor-plugin/plugin.json",
-    requiredFields: ["name", "version", "skills", "hooks"],
-    pathFields: [
-      { field: "skills", kind: "dir" },
-      { field: "hooks", kind: "file" },
-    ],
-    hooks: { path: "hooks/hooks-cursor.json", format: "list" },
-  },
-  {
     name: "OpenCode",
     // OpenCode has no standalone manifest; the npm package.json `main` field
     // points at the runtime plugin it loads.
@@ -119,16 +108,6 @@ export const HARNESSES: HarnessSpec[] = [
     pathFields: [{ field: "main", kind: "file" }],
     hooks: null,
   },
-];
-
-/** Core skills that bootstrap.md advertises in its Active Skills Directory. */
-export const CORE_SKILLS = [
-  "using-git-worktrees",
-  "test-driven-development",
-  "systematic-debugging",
-  "verification-before-completion",
-  "finishing-a-development-branch",
-  "writing-skills",
 ];
 
 export const BOOTSTRAP_MARKER = "# Instructions for using Slow-powers Skills";

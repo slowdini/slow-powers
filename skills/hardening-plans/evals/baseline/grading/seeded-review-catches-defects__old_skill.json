@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "catches_hallucinated_file",
+      "passed": false,
+      "evidence": "The file map states 'Already exists; verify signature covers generics.' and Task 2 says 'Open src/hooks/useLocalStorage.ts. Confirm the exported signature...' — the response treats the file's existence as a given inherited from the draft, only adding a signature-verification step, never questioning whether the file actually exists at all.",
+      "confidence": 0.92,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "catches_irrelevant_step",
+      "passed": true,
+      "evidence": "Redux introduced without justification. Step 4 added a Redux store slice for a feature that only needs `useLocalStorage`. Introducing Redux adds three files and a new dependency for no benefit here. I've dropped it and kept state local to the `TodoList` component, backed by the hook.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "hands_off_to_tdd",
+      "passed": true,
+      "evidence": "\"For all code-writing tasks below, follow `slow-powers:test-driven-development` (Red-Green-Refactor).\" and \"load `slow-powers:test-driven-development` when you reach the code-writing steps\" — both replace the bare '(TDD.)' label from the draft with an explicit named skill hand-off.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 1,
+    "total": 3,
+    "pass_rate": 0.6666666666666666
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

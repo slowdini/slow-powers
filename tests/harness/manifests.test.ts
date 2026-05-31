@@ -1,7 +1,7 @@
 // Standard, cross-harness parity checks. Every supported harness is held to
 // the same contract here; the per-harness specifics live in spec.ts. These
 // checks replace the retired tests/codex/test-plugin-layout.sh and extend
-// coverage to Claude Code, Cursor, and OpenCode which previously had no
+// coverage to Claude Code and OpenCode which previously had no
 // manifest tests.
 import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
@@ -9,7 +9,6 @@ import path from "node:path";
 import { VERSION_LOCKED_MANIFESTS } from "../../scripts/manifest-files";
 import {
   BOOTSTRAP_MARKER,
-  CORE_SKILLS,
   getByPath,
   HARNESSES,
   type HookSpec,
@@ -31,10 +30,6 @@ describe("shared assets (delivered by every harness)", () => {
     expect(bootstrap).toContain(BOOTSTRAP_MARKER);
   });
 
-  test.each(CORE_SKILLS)("bootstrap.md advertises the %s skill", (skill) => {
-    expect(bootstrap).toContain(skill);
-  });
-
   const skillFiles = fs
     .readdirSync(path.join(REPO_ROOT, "skills"), { recursive: true })
     .map(String)
@@ -42,6 +37,12 @@ describe("shared assets (delivered by every harness)", () => {
 
   test("skills/ is populated with discoverable SKILL.md files", () => {
     expect(skillFiles.length).toBeGreaterThan(0);
+  });
+
+  test("Codex-discoverable skills are only top-level skill folders", () => {
+    for (const rel of skillFiles) {
+      expect(rel.split(/[\\/]/)).toEqual([expect.any(String), "SKILL.md"]);
+    }
   });
 
   test.each(skillFiles)("%s declares name + description frontmatter", (rel) => {
@@ -52,6 +53,36 @@ describe("shared assets (delivered by every harness)", () => {
     expect(content.startsWith("---")).toBe(true);
     expect(content).toMatch(/\nname:\s*\S/);
     expect(content).toMatch(/\ndescription:\s*\S/);
+  });
+
+  const evalConfigs = fs
+    .readdirSync(path.join(REPO_ROOT, "skills"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => ({
+      skill: entry.name,
+      path: path.join(REPO_ROOT, "skills", entry.name, "evals", "evals.json"),
+    }))
+    .filter((entry) => fs.existsSync(entry.path));
+
+  test.each(
+    evalConfigs,
+  )("$skill/evals/evals.json references existing fixture files", ({
+    path: evalsPath,
+  }) => {
+    const config = JSON.parse(fs.readFileSync(evalsPath, "utf8")) as {
+      evals?: Array<{ files?: string[]; id?: string }>;
+    };
+    const missing: string[] = [];
+
+    for (const ev of config.evals ?? []) {
+      for (const file of ev.files ?? []) {
+        if (!fs.existsSync(path.join(path.dirname(evalsPath), file))) {
+          missing.push(`${ev.id ?? "(unknown eval)"}: ${file}`);
+        }
+      }
+    }
+
+    expect(missing).toEqual([]);
   });
 });
 
@@ -110,25 +141,16 @@ function assertHookWiring(hooks: HookSpec): void {
   const manifest = readJson(hooks.path) as {
     hooks?: {
       SessionStart?: { matcher?: string; hooks?: { command?: string }[] }[];
-      sessionStart?: { command?: string }[];
     };
   };
 
-  let command: string | undefined;
-
-  if (hooks.format === "matcher") {
-    const groups = manifest.hooks?.SessionStart;
-    expect(Array.isArray(groups) && groups.length > 0).toBe(true);
-    const matcher = (groups as NonNullable<typeof groups>)[0].matcher ?? "";
-    for (const event of ["startup", "resume", "clear"]) {
-      expect(matcher.split("|")).toContain(event);
-    }
-    command = (groups as NonNullable<typeof groups>)[0].hooks?.[0]?.command;
-  } else {
-    const list = manifest.hooks?.sessionStart;
-    expect(Array.isArray(list) && list.length > 0).toBe(true);
-    command = (list as NonNullable<typeof list>)[0].command;
+  const groups = manifest.hooks?.SessionStart;
+  expect(Array.isArray(groups) && groups.length > 0).toBe(true);
+  const matcher = (groups as NonNullable<typeof groups>)[0].matcher ?? "";
+  for (const event of ["startup", "resume", "clear"]) {
+    expect(matcher.split("|")).toContain(event);
   }
+  const command = (groups as NonNullable<typeof groups>)[0].hooks?.[0]?.command;
 
   expect(command ?? "").toContain("run-hook.cmd");
   expect(fs.existsSync(path.join(REPO_ROOT, "hooks/run-hook.cmd"))).toBe(true);

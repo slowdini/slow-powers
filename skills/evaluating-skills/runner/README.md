@@ -119,7 +119,7 @@ For the **`without_skill` / baseline condition** in this realistic environment, 
 
 **Cross-harness breadcrumbs.** Environment parity is implemented for Claude Code. Other harnesses have their own skill-discovery mechanisms; their maintainers know them best. Sketches:
 
-- **Codex / Cursor.** Both declare `"skills": "./skills/"` in their `plugin.json`, so the harness scans a directory at start-up. Sibling staging would write to whatever staging path that harness reads from — analogous to `stageSiblingSkills()` but pointed at the right directory. Bootstrap can be prepended to the dispatch prompt the same way.
+- **Codex.** Declares `"skills": "./skills/"` in its `plugin.json`, so the harness scans a directory at start-up. Sibling staging would write to whatever staging path that harness reads from — analogous to `stageSiblingSkills()` but pointed at the right directory. Bootstrap can be prepended to the dispatch prompt the same way.
 - **OpenCode.** Installed via npm package; the package's own directory is the discoverable surface. Sibling staging would copy into that directory, or — if the harness loads from `node_modules` directly — into a parallel staging path the harness is configured to scan.
 - **General fallback.** Harnesses without project-local discovery should keep using `--no-stage`; the inline `<skill>` block in the dispatch prompt is the only skill the subagent sees. Bootstrap is omitted in this mode because its references to other skills would mislead the agent.
 

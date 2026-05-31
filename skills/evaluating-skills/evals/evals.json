@@ -4,8 +4,8 @@
     {
       "id": "did-my-revision-help",
       "prompt": "I just rewrote the Iron Law section of our test-driven-development skill to be more forceful. How do I know it's actually better?",
-      "expected_output": "The agent prescribes a structured before/after measurement: snapshot the prior version, run both the old and new wording against the same prompts (a revision comparison), grade against assertions, and compare pass-rate deltas — keeping the change only if the delta is positive and reverting otherwise. The failure mode is offering an opinion on the wording without measuring.",
-      "files": ["fixtures/iron-law/SKILL.md"],
+      "expected_output": "The agent recognizes this as a behavior-shaping change (wording that decides a pressured choice) and prescribes a structured before/after measurement: snapshot the prior version, run both the old and new wording against the same prompts (a revision comparison), grade against assertions, and compare pass-rate deltas — keeping the change only if the delta is positive and reverting otherwise. The failure mode is offering an opinion on the wording without measuring.",
+      "files": ["fixtures/iron-law/candidate-skill.md"],
       "assertions": [
         {
           "id": "prescribes_structured_comparison",
@@ -22,12 +22,29 @@
     {
       "id": "is-new-skill-ready-to-ship",
       "prompt": "I wrote a brand-new skill for normalizing phone numbers — is it ready to ship?",
-      "expected_output": "The agent states that a skill is not ready until an eval shows it actually improves behavior — a with-skill vs without-skill comparison on realistic prompts with a positive delta — rather than approving it on inspection.",
+      "expected_output": "The agent does not green-light the skill on inspection alone. It either requires an eval that measures whether the skill actually improves behavior (a with-skill vs without-skill comparison on realistic prompts with a positive delta), or makes a reasoned judgment about whether the skill shapes contingent behavior worth measuring versus a deterministic procedure — and explains that judgment — rather than declaring it ready because the text reads well.",
       "assertions": [
         {
-          "id": "requires_eval_before_ship",
+          "id": "decides_rather_than_eyeballs",
           "type": "llm_judge",
-          "rubric": "Did the agent state that the skill must pass an eval before shipping — specifically a with-skill vs without-skill comparison on realistic prompts that shows the skill improves behavior — rather than green-lighting it based on reading the skill text? PASS if eval-before-ship (with/without comparison) is required. FAIL if the agent approves shipping without requiring a measured comparison."
+          "rubric": "Did the agent avoid approving the skill on inspection alone? PASS if it either (a) requires a measured comparison (with-skill vs without-skill on realistic prompts showing improvement) before shipping, or (b) makes an explicit, reasoned determination of whether the skill shapes contingent behavior worth an eval versus deterministic instruction-following — and announces that decision. FAIL if the agent green-lights shipping based only on reading the skill text, with no eval and no reasoned eval-vs-skip decision."
+        }
+      ]
+    },
+    {
+      "id": "deterministic-edit-skip",
+      "prompt": "I removed the one line in our using-git-worktrees skill that tells the agent to announce out loud that it's using the skill. Nothing else changed. Do I need to run an eval before I ship this?",
+      "expected_output": "The agent recognizes this as a deterministic instruction change — removing a one-line directive the agent reliably follows, not wording that decides a pressured or ambiguous choice — and concludes an eval is not warranted, stating that decision and its reasoning. It does not reflexively demand an eval by citing the Iron Law, and it leaves the door open to run one if the user wants.",
+      "assertions": [
+        {
+          "id": "declares_deterministic_and_skips",
+          "type": "llm_judge",
+          "rubric": "Did the agent judge this a deterministic instruction-following change (the agent will reliably do/not-do what it's told; compliance isn't in doubt) and conclude that an eval is not required, while stating that decision and its reasoning? PASS if the agent declares the change deterministic and skips the eval with a stated rationale. FAIL if the agent reflexively insists an eval is required (e.g. by citing the Iron Law) for what is plainly a deterministic instruction removal."
+        },
+        {
+          "id": "door_stays_open",
+          "type": "llm_judge",
+          "rubric": "Did the agent keep the option open to run an eval anyway if the user wants one, rather than refusing outright? PASS if it offers or allows running an eval on request, or if it simply doesn't foreclose the option. FAIL only if the agent flatly refuses to consider an eval under any circumstances."
         }
       ]
     }

@@ -9,7 +9,7 @@ description: Use when creating new skills or editing existing skills. Drafting o
 
 Skill development has two phases: **drafting** (this skill) and **evaluation** (`slow-powers:evaluating-skills`). Drafting covers naming, structure, vocabulary, anti-patterns, and rationalization-proofing. Evaluation covers measuring whether the words on the page actually shift agent behavior under realistic prompts.
 
-A draft you didn't measure is a claim you didn't verify. The rule that `slow-powers:evaluating-skills` enforces — no skill shipped without passing evals — applies equally to new skills and to edits of existing skills. After drafting, hand off to that skill for the with/without comparison and iteration loop.
+A behavioral draft you didn't measure is a claim you didn't verify. After drafting, hand off to `slow-powers:evaluating-skills` to decide whether the change is behavior-shaping (measure it — the with/without comparison and iteration loop) or deterministic instruction-following (declare the decision and reasoning, then skip). New skills and edits alike route through that decision — see "Choosing to test with evals" in that skill. Default to measuring; the skip is a narrow, announced exception, not an escape hatch.
 
 **Personal skills** live in your harness's user-skills directory. The path differs per harness; consult the harness's docs.
 
@@ -247,7 +247,7 @@ These tables and lists come *from* the eval iteration loop — they're not somet
 All of these mean: delete code. Start over with TDD.
 ```
 
-See `slow-powers:evaluating-skills` and its `pressure-scenarios.md` for the pressure-type taxonomy and how to write prompts that actually stress the rule (rather than letting the agent recite the skill and "pass" without proving anything).
+See `slow-powers:evaluating-skills` and its `pressure-scenarios.md` for the pressure-type taxonomy and how to write prompts that actually stress the rule (rather than letting the agent recite the skill and "pass" without proving anything). The mid-session rationalizations that belong in these tables surface most reliably from *seeded* eval cases — ones that embed a prior transcript so the agent meets the rule already committed to skipping it; see "Seeding conversation context" in that skill.
 
 ## Anti-patterns
 
@@ -288,13 +288,15 @@ Use your persistent task tracker — one task per item.
 - [ ] Cross-references use `slow-powers:<skill-name>`, not file paths or `@` imports
 
 **Validate** (handoff to `slow-powers:evaluating-skills`):
-- [ ] Author `evals/evals.json` with 2–3 realistic prompts
+- [ ] Decide whether the change is behavior-shaping or deterministic, and announce the decision and reasoning to the user (see "Choosing to test with evals" in that skill). Default to behavior-shaping when unsure.
+- [ ] If behavior-shaping (or the user opts in): author `evals/evals.json` with 2–3 realistic prompts
 - [ ] For discipline-enforcing skills, write pressure prompts with multiple combined pressures (see `pressure-scenarios.md` in that skill)
+- [ ] If the skill's real-world failure is *mid-session* (a competing attractor — prior commitment, redundancy framing, sunk cost, an in-flight workflow; common for discipline-enforcing skills), include at least one **seeded** case that embeds a short prior transcript in the prompt, kept alongside a cold contrast case (see "Seeding conversation context" in `slow-powers:evaluating-skills`)
 - [ ] Run the eval. Iterate until the with-skill pass rate is materially higher than the without-skill baseline.
 
 **Deploy:**
-- [ ] Commit the skill and its `evals/evals.json` together
-- [ ] Include before/after eval results in the PR description (per repo CLAUDE.md)
+- [ ] Commit the skill (and its `evals/evals.json`, when one was authored) together
+- [ ] In the PR description, include before/after eval results — or, for a deterministic change, the stated decision and reasoning to skip (per repo CLAUDE.md)
 
 ## Further reading
 
