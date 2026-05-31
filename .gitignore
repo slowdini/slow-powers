@@ -1,6 +1,8 @@
 .worktrees/
 .private-journal/
-.claude/
+# Ignore local Claude Code state, but track the shared, committed settings.
+.claude/*
+!.claude/settings.json
 .DS_Store
 node_modules/
 inspo
