@@ -44,9 +44,30 @@ describe("OpenCode npm-publish contract", () => {
     // production installs) would break a consumer's install. `prepare` is
     // intentionally allowed: it activates our git hooks for contributors and
     // does NOT run on a registry-tarball install — only on local dev and during
-    // `npm pack`/`npm publish` (already gated to CI by `prepublishOnly`).
+    // `npm pack`/`npm publish`. (Its CI-safety is asserted separately below.)
     for (const hook of ["preinstall", "install", "postinstall"]) {
       expect(Object.hasOwn(pkg.scripts ?? {}, hook)).toBe(false);
     }
+  });
+
+  test("prepare is CI-safe — guards husky behind a CI/production check", () => {
+    // `npm publish` runs `prepare`, but the release job never installs
+    // devDependencies, so calling `husky` directly fails with "husky: not
+    // found" (exit 127). `prepublishOnly` does NOT prevent this — it only blocks
+    // publishing *outside* CI; inside CI, `prepare` still fires. The guard
+    // script must short-circuit before importing husky when CI/production.
+    expect(pkg.scripts?.prepare).toBe("node .husky/install.mjs");
+
+    const guardPath = path.join(REPO_ROOT, ".husky/install.mjs");
+    expect(fs.existsSync(guardPath)).toBe(true);
+
+    const guard = fs.readFileSync(guardPath, "utf8");
+    // The CI/production exit must precede the husky import, or publish breaks.
+    const exitIdx = guard.indexOf("process.exit(0)");
+    const huskyIdx = guard.indexOf('import("husky")');
+    expect(guard).toContain('process.env.CI === "true"');
+    expect(guard).toContain('process.env.NODE_ENV === "production"');
+    expect(exitIdx).toBeGreaterThanOrEqual(0);
+    expect(huskyIdx).toBeGreaterThan(exitIdx);
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@slowdini/slow-powers-opencode",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Slow-powers — structured development workflows for coding agents (TDD, debugging, verification, git hygiene)",
   "type": "module",
   "main": "./opencode/plugins/slow-powers.js",
@@ -48,7 +48,7 @@
     "check": "biome check --write .",
     "check:ci": "biome check --error-on-warnings .",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky",
+    "prepare": "node .husky/install.mjs",
     "prepublishOnly": "node -e \"if (process.env.CI !== 'true') { console.error('Publishing should be done via CI'); process.exit(1); }\""
   },
   "devDependencies": {
