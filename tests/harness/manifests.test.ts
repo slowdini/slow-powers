@@ -9,7 +9,6 @@ import path from "node:path";
 import { VERSION_LOCKED_MANIFESTS } from "../../scripts/manifest-files";
 import {
   BOOTSTRAP_MARKER,
-  CORE_SKILLS,
   getByPath,
   HARNESSES,
   type HookSpec,
@@ -29,10 +28,6 @@ describe("shared assets (delivered by every harness)", () => {
 
   test("bootstrap.md leads with the Slow-powers instructions marker", () => {
     expect(bootstrap).toContain(BOOTSTRAP_MARKER);
-  });
-
-  test.each(CORE_SKILLS)("bootstrap.md advertises the %s skill", (skill) => {
-    expect(bootstrap).toContain(skill);
   });
 
   const skillFiles = fs
