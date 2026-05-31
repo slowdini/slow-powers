@@ -33,6 +33,26 @@ Slow-powers integrates directly into your agent's session, providing a highly di
 Installation differs by harness. If you use more than one, install
 Slow-powers separately for each.
 
+### Install with your agent
+
+Don't want to look up the steps? Open the harness you want Slow-powers on and
+paste this prompt to its agent — it'll read the guide, work out which harness
+it's in, and do the install for you:
+
+```text
+Install the "slow-powers" plugin for the coding-agent harness you are currently
+running in. Read the installation guide at
+https://github.com/slowdini/slow-powers#installation, determine which harness
+this is (Claude Code, Codex CLI, or OpenCode), and follow the matching steps —
+run the documented marketplace/install commands for Claude Code or Codex, or add
+the package to the `plugin` array in opencode.json for OpenCode. Then tell me
+exactly what you changed and what I need to do to finish (e.g. restart the
+session so the skills load).
+```
+
+The per-harness instructions below are the source of truth the agent follows —
+and the reference for installing by hand.
+
 ### Claude Code
 
 ```
@@ -65,13 +85,7 @@ Add Slow-powers to the `plugin` array in your `opencode.json` (global or project
 }
 ```
 
-This installs the latest version from npm. To track the `main` branch instead, use the GitHub install path:
-
-```json
-{
-  "plugin": ["github:slowdini/slow-powers#main"]
-}
-```
+This installs the latest published version from npm.
 
 ## The Core Execution Utilities
 
@@ -110,7 +124,7 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `tests/` — Cross-cutting and harness-specific tests
 - `.claude-plugin/` — Claude Code plugin manifest and hooks
 - `.codex-plugin/` — OpenAI Codex plugin manifest
-- `opencode/` — OpenCode plugin and installation docs
+- `opencode/` — OpenCode plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
 - `harness-parity-check.md` — Instructions for an agent in any harness to audit feature gaps and prep to close one
