@@ -1,0 +1,24 @@
+{
+  "assertion_results": [
+    {
+      "id": "loads_systematic_debugging_skill",
+      "passed": true,
+      "evidence": "matched ordinal 1: Skill {\"skill\":\"slow-powers:systematic-debugging\"}",
+      "confidence": 1,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "invokes_debugging_only",
+      "passed": true,
+      "evidence": "Tool invocation ordinal 1 shows the agent called the Skill tool with 'slow-powers:systematic-debugging'; no invocation of 'hardening-plans' appears anywhere in the tool list; the final_message asks for the file, a reproduction case, and logs — debugging triage, not a plan.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  }
+}
