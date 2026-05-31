@@ -24,6 +24,60 @@
       ]
     },
     {
+      "id": "seeded-plan-mode-todo-app",
+      "prompt": "[The following is the conversation so far in this session. You are the assistant operating inside the harness's plan-mode workflow — you have already explored the codebase and drafted a plan. Continue from the final user turn.]\n\nUser: We're adding a small feature to our React app — a todo list with add / complete / delete and localStorage persistence. We'll write a full plan to be sure of our changes before any code gets written.\n\nAssistant: I've explored the codebase and drafted a plan.\n\n## Approach\n1. Build the `TodoItem` component (checkbox, label, delete button) and its styles.\n2. Build the `TodoList` container: local state plus add / complete / delete handlers, and render the items.\n3. Wire up `localStorage` load-on-mount and save-on-change.\n4. Add an `AddTodoForm` with a controlled input and submit handler.\n\n## Tests\n(TDD — write tests first, then implement.) Add React Testing Library tests covering add, complete, delete, and persistence.\n\n## Verification\nRun the test suite and do a manual smoke test in the browser.\n\nUser: Looks roughly right. Before we touch any code, give me the full, finalized implementation plan so I can review the exact steps.",
+      "expected_output": "The agent should load `hardening-plans` and produce a highly granular, concrete implementation plan with no placeholders (TBD, TODO), tasks of 2–5 minutes each structured for Red-Green-Refactor, explicitly directing the implementation phase to load and follow `slow-powers:test-driven-development` (making the TDD hand-off load-bearing) and reordering the seeded impl-first draft to tests-first. This is a seeded realism probe: the prompt embeds a prior plan-mode transcript in which the assistant produced a native, skill-free plan that merely name-dropped 'TDD', so loading the skill now reads as redundant mid-session — the hardening discipline should still fire. A seed approximates but cannot inject a real harness plan mode, so a pass is a stronger-than-cold signal, not ground truth; see the 'Seeding conversation context (and its ceiling)' note in evaluating-skills. skill_should_trigger stays true: invoking the skill is the correct outcome, and this case is kept as a harder-than-cold contrast to `concrete-todo-app-plan`.",
+      "assertions": [
+        {
+          "id": "no_placeholders",
+          "type": "llm_judge",
+          "rubric": "Does the generated implementation plan completely avoid any placeholders such as 'TBD', 'TODO', 'later', 'if needed', or other unspecified implementation items? PASS if all tasks are concrete. FAIL if any placeholder is present."
+        },
+        {
+          "id": "atomic_granularity",
+          "type": "llm_judge",
+          "rubric": "Are the tasks in the implementation plan broken down into highly granular, atomic actions that would take 2-to-5 minutes to execute individually, rather than large monolithic blocks? PASS if all steps are atomic. FAIL if there are large, vague steps that represent significant chunks of work."
+        },
+        {
+          "id": "references_tdd_skill",
+          "type": "llm_judge",
+          "rubric": "Does the implementation plan explicitly direct the execution phase to load and follow `slow-powers:test-driven-development` and structure coding tasks to be compatible with it, without redundantly replicating the full TDD instructions themselves? PASS if the skill is referenced and tasks are structured for it. FAIL if the reference is missing or if the plan duplicates full TDD steps."
+        },
+        {
+          "id": "tdd_is_load_bearing",
+          "type": "llm_judge",
+          "rubric": "Does the plan make test-driven development actually load-bearing — directing the execution phase to load `slow-powers:test-driven-development` AND sequencing each coding task tests-first (a failing test before its implementation, Red before Green) — rather than merely name-dropping 'TDD' as a label or parenthetical while ordering implementation before tests? PASS only if TDD genuinely governs task ordering. FAIL if 'TDD' appears only as a label/aspiration while steps are sequenced implementation-first, or if it is absent. (This targets the specific wild failure: a plan that name-drops TDD reads as compliance without changing the sequencing.)"
+        }
+      ]
+    },
+    {
+      "id": "seeded-plan-mode-todo-app-adversarial",
+      "prompt": "[The following is the conversation so far in this session. You are the assistant, operating inside the harness's own plan-mode workflow — its multi-phase research → plan → review procedure with a dedicated plan file. Continue from the final user turn.]\n\nUser: We're adding a todo list (add / complete / delete plus localStorage persistence) to our React app. Use the plan-mode workflow — research first, then write the plan to the plan file for my review before any code.\n\nAssistant: I've run the research phase and drafted the plan in the plan file. A note on process: I'm driving this through the harness's plan-mode workflow, which already has its own research / plan / review phases and a designated plan file — so I'm not loading the separate planning or TDD skills on top of it; that would duplicate the workflow I'm already following and could conflict with its phases. Here's the current draft:\n\n## Approach\n1. Build the `TodoItem` component (checkbox, label, delete button).\n2. Build the `TodoList` container with add / complete / delete handlers.\n3. Wire `localStorage` load-on-mount and save-on-change.\n4. Add an `AddTodoForm` with a controlled input.\n\n## Tests\n(TDD — write tests first, then implement.) Add React Testing Library tests for add, complete, delete, and persistence.\n\n## Verification\nRun the test suite and do a manual smoke test.\n\nUser: Approach looks right — approved. Before we start coding, give me the finalized, fully-detailed implementation plan from the plan file so I can review the exact steps.",
+      "expected_output": "Adversarial companion to `seeded-plan-mode-todo-app`. The prior assistant turn explicitly rationalizes NOT loading the planning / TDD skills because the harness plan-mode workflow supposedly already covers them, plus sunk cost (an 'approved' plan) and a cargo-culted 'TDD' label over an impl-first draft. Correct behavior is still to load `hardening-plans`, harden the plan into atomic 2–5 minute Red-Green-Refactor tasks with no placeholders, make the `slow-powers:test-driven-development` hand-off load-bearing, and retract the seeded refusal-to-load rationalization. This is the maximally-adversarial text seed: it embeds the refuse-because-redundant mechanism directly in the transcript. A text seed can describe that rationalization but cannot inject the harness plan mode that would make it bite, so a pass is a stronger-than-cold signal, not ground truth; see the 'Seeding conversation context (and its ceiling)' note in evaluating-skills. skill_should_trigger stays true.",
+      "assertions": [
+        {
+          "id": "no_placeholders",
+          "type": "llm_judge",
+          "rubric": "Does the generated implementation plan completely avoid any placeholders such as 'TBD', 'TODO', 'later', 'if needed', or other unspecified implementation items? PASS if all tasks are concrete. FAIL if any placeholder is present."
+        },
+        {
+          "id": "atomic_granularity",
+          "type": "llm_judge",
+          "rubric": "Are the tasks in the implementation plan broken down into highly granular, atomic actions that would take 2-to-5 minutes to execute individually, rather than large monolithic blocks? PASS if all steps are atomic. FAIL if there are large, vague steps that represent significant chunks of work."
+        },
+        {
+          "id": "references_tdd_skill",
+          "type": "llm_judge",
+          "rubric": "Does the implementation plan explicitly direct the execution phase to load and follow `slow-powers:test-driven-development` and structure coding tasks to be compatible with it, without redundantly replicating the full TDD instructions themselves? PASS if the skill is referenced and tasks are structured for it. FAIL if the reference is missing or if the plan duplicates full TDD steps."
+        },
+        {
+          "id": "tdd_is_load_bearing",
+          "type": "llm_judge",
+          "rubric": "Does the plan make test-driven development actually load-bearing — directing the execution phase to load `slow-powers:test-driven-development` AND sequencing each coding task tests-first (a failing test before its implementation, Red before Green) — rather than merely name-dropping 'TDD' as a label or parenthetical while ordering implementation before tests? PASS only if TDD genuinely governs task ordering. FAIL if 'TDD' appears only as a label/aspiration while steps are sequenced implementation-first, or if it is absent. (This targets the specific wild failure: a plan that name-drops TDD reads as compliance without changing the sequencing.)"
+        }
+      ]
+    },
+    {
       "id": "oauth-task-breakdown-cold",
       "prompt": "I've decided to add OAuth2 login to our existing Express app. Before I write any code, break the work into a task list I can hand off to an engineer.",
       "expected_output": "The agent should load `hardening-plans` and produce a concrete, atomic task list with no placeholders (TBD, TODO), tasks sized at roughly 2–5 minutes each, structured for Red-Green-Refactor, and explicitly directing the implementation phase to load and follow `slow-powers:test-driven-development`. This is a colder trigger: the request frames the agent as already planning, so a skill named for 'how to write a plan' reads as redundant — the hardening discipline should still fire.",
