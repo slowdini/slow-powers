@@ -1,6 +1,6 @@
 {
   "name": "@slowdini/slow-powers-opencode",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Slow-powers — structured development workflows for coding agents (TDD, debugging, verification, git hygiene)",
   "type": "module",
   "main": "./opencode/plugins/slow-powers.js",
@@ -45,11 +45,10 @@
     "evals:grade": "bun run skills/evaluating-skills/runner/grade.ts --skill-dir ./skills",
     "evals:aggregate": "bun run skills/evaluating-skills/runner/aggregate.ts --skill-dir ./skills",
     "evals:promote-baseline": "bun run skills/evaluating-skills/runner/promote-baseline.ts --skill-dir ./skills",
-    "version": "bun scripts/bump-version.ts",
     "check": "biome check --write .",
     "check:ci": "biome check --error-on-warnings .",
     "typecheck": "tsc --noEmit",
-    "setup": "husky",
+    "prepare": "husky",
     "prepublishOnly": "node -e \"if (process.env.CI !== 'true') { console.error('Publishing should be done via CI'); process.exit(1); }\""
   },
   "devDependencies": {

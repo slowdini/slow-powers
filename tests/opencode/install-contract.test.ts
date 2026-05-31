@@ -1,12 +1,12 @@
 // OpenCode install contract.
 //
-// Slow-powers ships to OpenCode users as an npm package:
+// Slow-powers ships to OpenCode users only as an npm package:
 //   { "plugin": ["@slowdini/slow-powers-opencode"] }
 // The `files` allowlist controls exactly what lands in the published tarball.
-// These tests assert the package metadata is correct for both npm and
-// GitHub installs, and that no install-time build step runs on the consumer's
-// machine. (That the plugin entry, bootstrap.md, and skills/ exist is covered
-// by tests/harness/manifests.test.ts.)
+// These tests assert the package metadata is correct and that no build step
+// runs on the consumer's machine when they install the package. (That the
+// plugin entry, bootstrap.md, and skills/ exist is covered by
+// tests/harness/manifests.test.ts.)
 import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
@@ -38,19 +38,14 @@ describe("OpenCode npm-publish contract", () => {
     ).toBe(true);
   });
 
-  test("declares no install-time lifecycle scripts", () => {
-    // bun/npm run these during install. A build/prepare step that depends on
-    // devDependencies (which npm does not fetch for production installs) would
-    // break a consumer's install. prepublishOnly is allowed — it only runs
-    // during `npm pack`/`npm publish`, never on the consumer's machine.
-    for (const hook of [
-      "preinstall",
-      "install",
-      "postinstall",
-      "prepare",
-      "prepack",
-      "prepublish",
-    ]) {
+  test("declares no scripts that run on a consumer's install", () => {
+    // npm/bun run these on every install of the published package. A build step
+    // here that depends on devDependencies (which npm does not fetch for
+    // production installs) would break a consumer's install. `prepare` is
+    // intentionally allowed: it activates our git hooks for contributors and
+    // does NOT run on a registry-tarball install — only on local dev and during
+    // `npm pack`/`npm publish` (already gated to CI by `prepublishOnly`).
+    for (const hook of ["preinstall", "install", "postinstall"]) {
       expect(Object.hasOwn(pkg.scripts ?? {}, hook)).toBe(false);
     }
   });
