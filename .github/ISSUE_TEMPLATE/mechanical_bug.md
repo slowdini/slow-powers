@@ -9,7 +9,7 @@ labels: bug
 | Field | Value |
 |-------|-------|
 | Slow-powers version | |
-| Harness (Claude Code, Cursor, Codex CLI, OpenCode) | |
+| Harness (Claude Code, Codex CLI, OpenCode) | |
 | Harness version | |
 | Model | |
 | OS + shell | |

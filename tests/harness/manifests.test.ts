@@ -1,7 +1,7 @@
 // Standard, cross-harness parity checks. Every supported harness is held to
 // the same contract here; the per-harness specifics live in spec.ts. These
 // checks replace the retired tests/codex/test-plugin-layout.sh and extend
-// coverage to Claude Code, Cursor, and OpenCode which previously had no
+// coverage to Claude Code and OpenCode which previously had no
 // manifest tests.
 import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
@@ -141,25 +141,16 @@ function assertHookWiring(hooks: HookSpec): void {
   const manifest = readJson(hooks.path) as {
     hooks?: {
       SessionStart?: { matcher?: string; hooks?: { command?: string }[] }[];
-      sessionStart?: { command?: string }[];
     };
   };
 
-  let command: string | undefined;
-
-  if (hooks.format === "matcher") {
-    const groups = manifest.hooks?.SessionStart;
-    expect(Array.isArray(groups) && groups.length > 0).toBe(true);
-    const matcher = (groups as NonNullable<typeof groups>)[0].matcher ?? "";
-    for (const event of ["startup", "resume", "clear"]) {
-      expect(matcher.split("|")).toContain(event);
-    }
-    command = (groups as NonNullable<typeof groups>)[0].hooks?.[0]?.command;
-  } else {
-    const list = manifest.hooks?.sessionStart;
-    expect(Array.isArray(list) && list.length > 0).toBe(true);
-    command = (list as NonNullable<typeof list>)[0].command;
+  const groups = manifest.hooks?.SessionStart;
+  expect(Array.isArray(groups) && groups.length > 0).toBe(true);
+  const matcher = (groups as NonNullable<typeof groups>)[0].matcher ?? "";
+  for (const event of ["startup", "resume", "clear"]) {
+    expect(matcher.split("|")).toContain(event);
   }
+  const command = (groups as NonNullable<typeof groups>)[0].hooks?.[0]?.command;
 
   expect(command ?? "").toContain("run-hook.cmd");
   expect(fs.existsSync(path.join(REPO_ROOT, "hooks/run-hook.cmd"))).toBe(true);

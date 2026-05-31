@@ -11,7 +11,7 @@ Skill development has two phases: **drafting** (`slow-powers:writing-skills`) an
 
 An eval is a structured measurement of whether a skill actually shifts behavior. Each test case is a realistic prompt; each run dispatches a fresh general-purpose subagent twice — once with the skill loaded, once without (or once with the prior version, once with the revised version) — and grades the outputs against assertions. Pass-rate deltas tell you whether the skill is worth shipping or the change is worth landing.
 
-This skill is harness-agnostic. Run records use a portable JSON schema so evals authored on one harness (Claude Code, Codex, Cursor, OpenCode) can be executed and graded on any other. See `schema/run-record.schema.json`.
+This skill is harness-agnostic. Run records use a portable JSON schema so evals authored on one harness (Claude Code, Codex, OpenCode) can be executed and graded on any other. See `schema/run-record.schema.json`.
 
 ## Two comparison modes
 
@@ -273,7 +273,7 @@ Why this matters: a run where the skill wasn't actually invoked is a non-data-po
 The check has two tiers, chosen automatically per run:
 
 - **Code-based (Claude Code).** On harnesses that persist subagent transcripts with discrete `Skill` tool calls, the framework parses the transcript and checks for a `Skill` invocation whose `input.skill` matches the eval-staged slug. This is deterministic, free, and cannot be fooled by superficial vocabulary in the response.
-- **LLM-judge fallback (other harnesses).** Where transcripts aren't available or the harness injects skills via system-prompt hooks rather than a tool call (Codex, Cursor, OpenCode), a judge subagent compares the agent's `final_message` against the SKILL.md content embedded in the run record, looking for behavioral fingerprints — distinctive vocabulary, named sections, procedural steps that mirror the skill's phrasing. It does **not** require the agent to explicitly cite the skill (that would taint the eval).
+- **LLM-judge fallback (other harnesses).** Where transcripts aren't available or the harness injects skills via system-prompt hooks rather than a tool call (Codex, OpenCode), a judge subagent compares the agent's `final_message` against the SKILL.md content embedded in the run record, looking for behavioral fingerprints — distinctive vocabulary, named sections, procedural steps that mirror the skill's phrasing. It does **not** require the agent to explicitly cite the skill (that would taint the eval).
 
 To enable the code-based check on Claude Code, the runner stages each condition's SKILL.md snapshot at `<repoRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md`. The unique slug prevents collisions with already-installed production skills (relevant when evaluating skills in a repo where the same skills are also installed) and is what the code-based check looks for in the transcript. The dispatch prompt deliberately omits any inline `<skill>...</skill>` block so the subagent must discover and invoke the staged skill naturally — this measures whether the skill's `description:` actually triggers it. Stale staged skills are swept at the start of each fresh run. Pass `--no-stage` to opt out (e.g., when running the same eval against a harness that doesn't support project-local skill discovery); the runner will fall back to inlining the SKILL.md text in the dispatch prompt, and the LLM-judge meta-check will be used.
 

@@ -12,7 +12,7 @@ and clarifying skill content.
 
 ## Quickstart
 
-Give your agent superpowers with slow-powers: [Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [Cursor](#cursor) · [OpenCode](#opencode). Support varies per harness — see the [feature support](#feature-support) table.
+Give your agent superpowers with slow-powers: [Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [OpenCode](#opencode). Support varies per harness — see the [feature support](#feature-support) table.
 
 ## Feature support
 
@@ -20,7 +20,6 @@ Give your agent superpowers with slow-powers: [Claude Code](#claude-code) · [Co
 |-----------------|----------|----------------------------------------------------------------|
 | Claude Code     | Full     | Reference implementation                                       |
 | Codex CLI       | Partial  | Plugin manifest + shared hooks; no eval transcript adapter     |
-| Cursor          | Partial  | Plugin manifest + dedicated hooks; no eval transcript adapter  |
 | OpenCode        | Partial  | JS plugin with bootstrap injection; no eval transcript adapter |
 
 Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md): it audits which Slow-powers features are wired up for a given harness and preps an agent to close one gap.
@@ -55,16 +54,6 @@ Start a new Codex thread after installing so the bundled skills are loaded.
 Slow-powers includes a plugin-bundled `SessionStart` hook for bootstrap
 context. Codex hooks are stable, but plugin hooks must be reviewed and trusted
 before Codex runs them.
-
-### Cursor
-
-Cursor has no native git-install path. The Slow-powers installer clones the
-repo (or reuses an existing checkout) and symlinks the plugin into Cursor's
-local plugin directory.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/slowdini/slow-powers/main/.cursor-plugin/install.sh | sh
-```
 
 ### OpenCode
 
@@ -121,7 +110,6 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `tests/` — Cross-cutting and harness-specific tests
 - `.claude-plugin/` — Claude Code plugin manifest and hooks
 - `.codex-plugin/` — OpenAI Codex plugin manifest
-- `.cursor-plugin/` — Cursor plugin manifest, hooks, and install script
 - `opencode/` — OpenCode plugin and installation docs
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
