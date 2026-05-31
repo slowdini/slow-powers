@@ -247,7 +247,7 @@ These tables and lists come *from* the eval iteration loop — they're not somet
 All of these mean: delete code. Start over with TDD.
 ```
 
-See `slow-powers:evaluating-skills` and its `pressure-scenarios.md` for the pressure-type taxonomy and how to write prompts that actually stress the rule (rather than letting the agent recite the skill and "pass" without proving anything).
+See `slow-powers:evaluating-skills` and its `pressure-scenarios.md` for the pressure-type taxonomy and how to write prompts that actually stress the rule (rather than letting the agent recite the skill and "pass" without proving anything). The mid-session rationalizations that belong in these tables surface most reliably from *seeded* eval cases — ones that embed a prior transcript so the agent meets the rule already committed to skipping it; see "Seeding conversation context" in that skill.
 
 ## Anti-patterns
 
@@ -291,6 +291,7 @@ Use your persistent task tracker — one task per item.
 - [ ] Decide whether the change is behavior-shaping or deterministic, and announce the decision and reasoning to the user (see "Choosing to test with evals" in that skill). Default to behavior-shaping when unsure.
 - [ ] If behavior-shaping (or the user opts in): author `evals/evals.json` with 2–3 realistic prompts
 - [ ] For discipline-enforcing skills, write pressure prompts with multiple combined pressures (see `pressure-scenarios.md` in that skill)
+- [ ] If the skill's real-world failure is *mid-session* (a competing attractor — prior commitment, redundancy framing, sunk cost, an in-flight workflow; common for discipline-enforcing skills), include at least one **seeded** case that embeds a short prior transcript in the prompt, kept alongside a cold contrast case (see "Seeding conversation context" in `slow-powers:evaluating-skills`)
 - [ ] Run the eval. Iterate until the with-skill pass rate is materially higher than the without-skill baseline.
 
 **Deploy:**
