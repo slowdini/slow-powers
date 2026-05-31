@@ -48,7 +48,7 @@
     "check": "biome check --write .",
     "check:ci": "biome check --error-on-warnings .",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky",
+    "prepare": "node .husky/install.mjs",
     "prepublishOnly": "node -e \"if (process.env.CI !== 'true') { console.error('Publishing should be done via CI'); process.exit(1); }\""
   },
   "devDependencies": {
