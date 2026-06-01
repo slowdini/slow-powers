@@ -15,9 +15,11 @@ import {
   redactSkillFromBootstrap,
   STAGED_SIBLING_MANIFEST,
   STAGED_SKILL_PREFIX,
+  selectEvals,
   stageSiblingSkills,
   stageSkillForCC,
 } from "./run";
+import type { Eval } from "./types";
 
 const FIXTURE_ROOT = join(tmpdir(), `slow-powers-run-test-${process.pid}`);
 
@@ -27,6 +29,49 @@ beforeAll(() => {
 
 afterAll(() => {
   rmSync(FIXTURE_ROOT, { recursive: true, force: true });
+});
+
+describe("selectEvals", () => {
+  const mkEvals = (...ids: string[]): Eval[] =>
+    ids.map((id) => ({ id, prompt: `p-${id}`, expected_output: `o-${id}` }));
+
+  test("returns the full list unchanged when neither flag is set", () => {
+    const evals = mkEvals("a", "b", "c");
+    expect(selectEvals(evals, {})).toEqual(evals);
+  });
+
+  test("--only keeps just the named ids, preserving config order", () => {
+    const evals = mkEvals("a", "b", "c");
+    const got = selectEvals(evals, { only: ["c", "a"] });
+    expect(got.map((e) => e.id)).toEqual(["a", "c"]);
+  });
+
+  test("--skip drops the named ids", () => {
+    const evals = mkEvals("a", "b", "c");
+    const got = selectEvals(evals, { skip: ["b"] });
+    expect(got.map((e) => e.id)).toEqual(["a", "c"]);
+  });
+
+  test("throws on an unknown id, listing the unknown and the available ids", () => {
+    const evals = mkEvals("a", "b");
+    expect(() => selectEvals(evals, { only: ["a", "nope"] })).toThrow(
+      /unknown eval id\(s\): nope\. Available ids: a, b/,
+    );
+  });
+
+  test("throws when both --only and --skip are given", () => {
+    const evals = mkEvals("a", "b");
+    expect(() => selectEvals(evals, { only: ["a"], skip: ["b"] })).toThrow(
+      /only one of --only \/ --skip/,
+    );
+  });
+
+  test("throws when a flag resolves to an empty id list", () => {
+    const evals = mkEvals("a", "b");
+    expect(() => selectEvals(evals, { only: [] })).toThrow(
+      /at least one eval id/,
+    );
+  });
 });
 
 describe("stageSkillForCC", () => {
@@ -423,7 +468,12 @@ describe("buildDispatchTask bootstrap injection", () => {
 describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
   const RUN_TS = join(import.meta.dir, "run.ts");
 
-  function setup(name: string): { skillDir: string; cwd: string } {
+  function setup(
+    name: string,
+    evals: Eval[] = [
+      { id: "e1", prompt: "review this MR", expected_output: "a review" },
+    ],
+  ): { skillDir: string; cwd: string } {
     const root = join(FIXTURE_ROOT, name);
     const skillDir = join(root, "skill-dir");
     const skillSub = join(skillDir, "mr-review");
@@ -434,12 +484,7 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     );
     writeFileSync(
       join(skillSub, "evals", "evals.json"),
-      JSON.stringify({
-        skill_name: "mr-review",
-        evals: [
-          { id: "e1", prompt: "review this MR", expected_output: "a review" },
-        ],
-      }),
+      JSON.stringify({ skill_name: "mr-review", evals }),
     );
     const cwd = join(root, "work");
     mkdirSync(cwd, { recursive: true });
@@ -712,5 +757,70 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     const invIdx = prompt.indexOf("staged and discoverable");
     expect(bootIdx).toBeGreaterThan(-1);
     expect(invIdx).toBeGreaterThan(bootIdx);
+  });
+
+  test("--only restricts dispatches to the named eval ids", () => {
+    const { skillDir, cwd } = setup("usermode-only", [
+      { id: "e1", prompt: "review MR 1", expected_output: "a review" },
+      { id: "e2", prompt: "review MR 2", expected_output: "a review" },
+    ]);
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--only",
+        "e1",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const dispatch = JSON.parse(
+      readFileSync(
+        join(
+          cwd,
+          "skills-workspace",
+          "mr-review",
+          "iteration-1",
+          "dispatch.json",
+        ),
+        "utf8",
+      ),
+    ) as { tasks: Array<{ eval_id: string }> };
+
+    expect(dispatch.tasks.map((t) => t.eval_id).sort()).toEqual(["e1", "e1"]);
+    // The "N evals × 2 conditions" line reflects the filtered set.
+    expect(new TextDecoder().decode(res.stdout)).toContain(
+      "1 evals × 2 conditions",
+    );
+  });
+
+  test("--only with an unknown id exits non-zero and names the unknown id", () => {
+    const { skillDir, cwd } = setup("usermode-only-unknown", [
+      { id: "e1", prompt: "review MR 1", expected_output: "a review" },
+    ]);
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--only",
+        "nope",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).not.toBe(0);
+    expect(new TextDecoder().decode(res.stderr)).toContain(
+      "unknown eval id(s): nope",
+    );
   });
 });

@@ -22,6 +22,7 @@ Other flags:
 - `--workspace-dir <path>` (optional) — where iteration artifacts are written. Defaults to `<CWD>/skills-workspace`.
 - `--harness claude-code` (optional, default `claude-code`; the only supported harness).
 - `--no-stage`, `--dry-run`, `--iteration <N>`, `--mode <new-skill|revision>`, `--baseline <label>`, `--label <label>` — as before.
+- `--only <id,id,...>` / `--skip <id,id,...>` (optional) — run only, or all-but, the named eval ids from `evals.json`. The two are mutually exclusive, and every named id must exist (the run aborts with the available ids listed otherwise). Use this for a cost-conscious reduced-set run instead of temporarily editing `evals.json` down. The pre-flight summary and the `N evals × 2 conditions` count reflect the filtered set.
 
 Staging is written under the current working directory: `<CWD>/.claude/skills/`. A subagent dispatched from that CWD discovers the staged skills there. Run the commands from the directory you want to be the eval root (the repo root for internal use; your skill folder or its parent for personal use).
 
@@ -82,6 +83,15 @@ bun run evals -- --skill <name> --mode revision --baseline baseline-2026-05-24
 
 ```bash
 bun run evals -- --skill <name> --mode new-skill --dry-run
+```
+
+### Reduced-set run (cost-conscious subset)
+
+```bash
+# Run just two of the defined evals, leaving evals.json untouched.
+bun run evals -- --skill <name> --mode new-skill --only case-a,case-b
+# Or run everything except a slow case.
+bun run evals -- --skill <name> --mode new-skill --skip slow-case
 ```
 
 ## Quickstart (running an eval on your own skill)
