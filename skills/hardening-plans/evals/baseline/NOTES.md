@@ -51,6 +51,13 @@ Re-adding the one-line debugging route to "When NOT to Use" would very likely
 restore the negative guard at near-zero risk to the reframe. Deferred as a
 separate change so 3b stays one-problem-per-PR; left to the maintainer's call.
 
+**Update (2026-06-01):** `csv-parser-bug-no-plan` was retired per #111 — the
+over-trigger guard went red on correct consult-then-defer behavior (the agent
+loads `hardening-plans`, reads "When NOT to Use," and correctly routes to
+`systematic-debugging`, which the strict rubric scored as a failure). Its grading
+files were removed; the table and `benchmark.json` below still reflect the
+original 3-case run as it happened.
+
 ## Provenance / scope
 
 3-case cost-conscious subset (the runner has no per-case selector — tracked as a
