@@ -139,6 +139,8 @@ type Args = {
   baseline?: string;
   label?: string;
   iteration?: number;
+  only?: string[];
+  skip?: string[];
   dryRun: boolean;
   noStage: boolean;
   guard: boolean;
@@ -176,12 +178,22 @@ function parseArgs(argv: string[]): Args {
   if (iteration !== undefined && !Number.isInteger(iteration))
     die(`--iteration must be an integer, got ${iterationFlag}`);
 
+  const parseIdList = (v: string | undefined): string[] | undefined =>
+    v === undefined
+      ? undefined
+      : v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
   return {
     command,
     mode: flag("mode") as Mode | undefined,
     baseline: flag("baseline"),
     label: flag("label"),
     iteration,
+    only: parseIdList(flag("only")),
+    skip: parseIdList(flag("skip")),
     dryRun: has("dry-run"),
     noStage: has("no-stage"),
     guard: has("guard"),
@@ -273,6 +285,16 @@ function commandRun(args: Args, ctx: RunContext): void {
       `warning: evals.json skill_name (${config.skill_name}) does not match the skill folder (${ctx.skillName}). Proceeding with ${ctx.skillName}.`,
     );
 
+  let selectedEvals: Eval[];
+  try {
+    selectedEvals = selectEvals(config.evals, {
+      only: args.only,
+      skip: args.skip,
+    });
+  } catch (err) {
+    die(err instanceof Error ? err.message : String(err));
+  }
+
   const workspaceSkillDir = join(ctx.workspaceRoot, ctx.skillName);
   const iteration = nextIteration(workspaceSkillDir, args.iteration);
   const iterationDir = join(workspaceSkillDir, `iteration-${iteration}`);
@@ -318,6 +340,14 @@ function commandRun(args: Args, ctx: RunContext): void {
   );
   console.log(`  ${conditionA}: ${skillPathForA ?? "(no skill)"}`);
   console.log(`  ${conditionB}: ${skillPathForB ?? "(no skill)"}`);
+  if (selectedEvals.length !== config.evals.length) {
+    const [flagName, ids] = args.only
+      ? ["--only", args.only]
+      : ["--skip", args.skip ?? []];
+    console.log(
+      `  selection: ${selectedEvals.length} of ${config.evals.length} evals (${flagName} ${ids.join(", ")})`,
+    );
+  }
   if (args.noStage)
     console.log(
       "  staging: disabled (--no-stage) — skills will be inlined into dispatch_prompt for harnesses without project-local skill discovery",
@@ -408,7 +438,7 @@ function commandRun(args: Args, ctx: RunContext): void {
   };
 
   const tasks: DispatchTask[] = [];
-  for (const ev of config.evals) {
+  for (const ev of selectedEvals) {
     const evalDir = join(iterationDir, `eval-${ev.id}`);
     ensureDir(evalDir);
 
@@ -499,7 +529,7 @@ function commandRun(args: Args, ctx: RunContext): void {
   console.log(`Dispatch manifest:  ${manifestPath}`);
   console.log(`Dispatch tasks:     ${dispatchJsonPath}`);
   console.log(
-    `\n${tasks.length} dispatches required (${config.evals.length} evals × 2 conditions).`,
+    `\n${tasks.length} dispatches required (${selectedEvals.length} evals × 2 conditions).`,
   );
 
   if (args.dryRun) console.log("\n--dry-run: stopping after workspace prep.");
@@ -536,6 +566,39 @@ export type AvailableSkill = {
   path: string;
   description: string;
 };
+
+/**
+ * Filters the eval list to the subset requested via `--only` / `--skip`. The
+ * two flags are mutually exclusive. Every requested id must exist in the config,
+ * so a typo'd id is caught up front rather than silently producing an empty or
+ * surprising run. Throws on invalid input; the caller routes the message to
+ * `die`. `--only` preserves the config's eval order, not the order ids were
+ * passed.
+ */
+export function selectEvals(
+  evals: Eval[],
+  opts: { only?: string[]; skip?: string[] },
+): Eval[] {
+  if (opts.only && opts.skip)
+    throw new Error("use only one of --only / --skip, not both");
+  const requested = opts.only ?? opts.skip;
+  if (requested === undefined) return evals;
+  if (requested.length === 0)
+    throw new Error("--only/--skip requires at least one eval id");
+
+  const known = new Set(evals.map((e) => e.id));
+  const unknown = requested.filter((id) => !known.has(id));
+  if (unknown.length)
+    throw new Error(
+      `unknown eval id(s): ${unknown.join(", ")}. ` +
+        `Available ids: ${[...known].join(", ")}`,
+    );
+
+  const set = new Set(requested);
+  return opts.only
+    ? evals.filter((e) => set.has(e.id))
+    : evals.filter((e) => !set.has(e.id));
+}
 
 function copyFixtures(ev: Eval, skillDir: string, condDir: string): string[] {
   if (!ev.files || ev.files.length === 0) return [];
