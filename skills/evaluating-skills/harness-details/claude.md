@@ -120,6 +120,8 @@ Add `--bootstrap <path>` if the user has authored a framing file they want prepe
 
 For a **plan-mode-relevant skill** (e.g. `hardening-plans`), add `--plan-mode` to inject Claude Code's verbatim plan-mode procedure as a `<system-reminder>` operating-context layer in every dispatch — the highest-fidelity in-runner approximation of a real plan mode (issue #142). Use it as the verbatim-procedure arm of an A/B against a plain paraphrase-seed run (no flag) to measure whether `with_skill` invocation de-saturates. It is still text the agent reads, not an injected mode, so treat any de-saturation as a stronger-than-cold signal, not ground truth (see *Seeding conversation context (and its ceiling)* in `../SKILL.md`).
 
+**The live ExitPlanMode → hardening-plans hook is not exercised here.** The shipped Claude plugin gates plan hand-off with a `PreToolUse` hook on `ExitPlanMode` (`hooks/exit-plan-mode`) that denies the first plan-exit and steers the agent through `hardening-plans` before the plan is presented. The runner only *simulates* plan mode as injected `<system-reminder>` text and dispatches single agent turns — it never emits a real `ExitPlanMode` tool call nor runs `PreToolUse` hooks, so that gate is structurally outside what the eval harness can exercise. This is the standing reason a `hardening-plans` invocation-rate delta *from the hook* can't be exhibited in-runner, independent of the #119 invocation-hint gate and the plan-mode-simulation ceiling.
+
 Only when the user has opted out of the guard, drop `--guard` from the command above and rely on the post-hoc `detect-stray-writes` step in Step 10 instead — it reports stray writes but does not clean them up.
 
 ## Step 9 — Drive the dispatches

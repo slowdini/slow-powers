@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# PreToolUse hook for Slow-powers — gates ExitPlanMode on Claude Code.
+#
+# WHY THIS EXISTS
+#   On Claude, the plan-mode procedure runs "write the plan" straight into
+#   "ExitPlanMode" with no beat in between, so the hardening-plans skill — whose
+#   gate is exactly "about to hand off a plan" — never gets airtime and is never
+#   self-invoked. This hook reinstates that beat with no reasoning required: it
+#   fires deterministically at the present-a-plan moment.
+#
+# WHAT IT DOES (deny-once per session)
+#   The FIRST ExitPlanMode of a session is DENIED with an instruction to run
+#   hardening-plans on the plan file first. A denied ExitPlanMode does NOT exit
+#   plan mode (only a successful call does), and editing the plan file is the one
+#   write plan mode permits — so the agent can load the skill, verify referenced
+#   files, fix findings inline, and re-submit a HARDENED plan *before the user
+#   ever sees it*. The re-submission finds the marker and is allowed through.
+#   Result: the user only ever sees a hardened plan (trust guarantee preserved),
+#   and the agent is routed onto the correct workflow rail (→ TDD next).
+#
+# WHY DENY-ONCE (and not deny-until-proven-hardened)
+#   Keying the marker per session and allowing the second attempt guarantees we
+#   can never hard-lock a user inside plan mode. Worst case (agent re-submits
+#   without hardening) degrades to today's behavior — never worse.
+#
+# CROSS-HARNESS
+#   ExitPlanMode is a Claude Code tool. Codex/OpenCode expose no such tool, so
+#   this matcher in the shared hooks/hooks.json is inert there (it never fires)
+#   and degrades cleanly to a no-op. An analogous present-a-plan lifecycle event
+#   on other harnesses is deferred (see harness-parity-check.md, issue #141).
+#
+# Conventions mirror hooks/session-start: extensionless name (so Windows
+# auto-detection doesn't prepend bash), printf-based JSON (heredoc hangs on bash
+# 5.3+, see https://github.com/obra/superpowers/issues/571), and pure bash with
+# no runtime dependencies (no jq/python/bun — not guaranteed at hook time).
+
+set -euo pipefail
+
+payload=$(cat)
+
+# Extract the first JSON string value for the given key, tolerant of missing
+# keys (|| true keeps set -e/pipefail happy when grep finds nothing).
+extract_field() {
+  printf '%s' "$payload" \
+    | grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" \
+    | head -n1 \
+    | sed -E 's/.*:[[:space:]]*"([^"]*)"$/\1/' \
+    || true
+}
+
+# Pick a key that is stable across the deny and the re-submit. session_id is the
+# natural choice; fall back to transcript_path, then a fixed key. Any consistent
+# key preserves deny-once safety.
+session_key=$(extract_field session_id)
+[ -n "$session_key" ] || session_key=$(extract_field transcript_path)
+[ -n "$session_key" ] || session_key="fallback"
+
+# Sanitize to a safe, bounded filename component.
+session_key=$(printf '%s' "$session_key" | tr -c 'A-Za-z0-9._-' '_')
+
+marker="${TMPDIR:-/tmp}/slow-powers-plan-gate-${session_key}"
+
+if [ -e "$marker" ]; then
+  # Re-submission after hardening — let the (now hardened) plan be presented.
+  exit 0
+fi
+
+# First ExitPlanMode this session: record it, then deny once to insert the
+# hardening-plans beat the plan-mode procedure otherwise skips.
+: > "$marker" 2>/dev/null || true
+
+reason="A plan is about to be presented. Before it leaves your hands, use the slow-powers:hardening-plans skill to review the plan file as a skeptical executor, then call ExitPlanMode again to present the hardened plan."
+
+# Minimal JSON-string escaping for the reason text.
+escape_for_json() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+reason_escaped=$(escape_for_json "$reason")
+
+printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "PreToolUse",\n    "permissionDecision": "deny",\n    "permissionDecisionReason": "%s"\n  }\n}\n' "$reason_escaped"
+
+exit 0
