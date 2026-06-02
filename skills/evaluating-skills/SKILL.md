@@ -55,7 +55,7 @@ The runner stages every skill it finds under `--skill-dir`. The skill-under-test
 
 #### Bootstrap content
 
-Every dispatch prompt includes a `<session-start-context>` header listing the skills staged for this eval (auto-built by the runner). If you also want product-specific framing prepended — instruction priority rules, planning guidelines, anything you'd put in a SessionStart hook — author a Markdown file and pass it via `--bootstrap <path>`. The runner emits the file verbatim before the staged-skills list. Omit `--bootstrap` and the dispatch carries only the staged-skills list, nothing else.
+Every dispatch prompt includes an available-skills block listing the skills staged for this eval (auto-built by the runner), rendered in the harness's native presentation so the dispatch reads like a real session rather than an eval. If you also want product-specific framing prepended — instruction priority rules, planning guidelines, anything you'd put in a SessionStart hook — author a Markdown file and pass it via `--bootstrap <path>`. The runner emits the file verbatim inside a `<session-start-context>` block, before the available-skills block. Omit `--bootstrap` and the dispatch carries only the available-skills block, nothing else.
 
 ## Designing test cases
 

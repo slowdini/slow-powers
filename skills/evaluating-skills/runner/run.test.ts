@@ -347,7 +347,7 @@ describe("buildDispatchTask bootstrap injection", () => {
     expect(task.dispatch_prompt).not.toContain("<session-start-context>");
   });
 
-  test("emits <session-start-context> with a staged-skills inventory even when bootstrapContent is null", () => {
+  test("emits a harness-native available-skills block (no <session-start-context>) when bootstrapContent is null", () => {
     const task = buildDispatchTask({
       ...baseOpts,
       bootstrapContent: null,
@@ -355,15 +355,20 @@ describe("buildDispatchTask bootstrap injection", () => {
         { name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
       ],
     });
-    expect(task.dispatch_prompt).toContain("<session-start-context>");
-    expect(task.dispatch_prompt).toContain("staged and discoverable");
-    expect(task.dispatch_prompt).toContain("* `foo`");
-    expect(task.dispatch_prompt).toContain("*Trigger:* the foo skill");
+    // Without a bootstrap, there is no SessionStart block — only the skills list.
+    expect(task.dispatch_prompt).not.toContain("<session-start-context>");
+    expect(task.dispatch_prompt).toContain(
+      "The following skills are available for use with the Skill tool:",
+    );
+    expect(task.dispatch_prompt).toContain("- foo: the foo skill");
+    // The eval-flavored wording and custom format are gone.
+    expect(task.dispatch_prompt).not.toContain("staged and discoverable");
+    expect(task.dispatch_prompt).not.toContain("*Trigger:*");
     // No product framing should appear without a bootstrap file.
     expect(task.dispatch_prompt).not.toContain("loaded at session start");
   });
 
-  test("staged-skills inventory follows the verbatim bootstrap content when both are present", () => {
+  test("renders the available-skills block as its own section, outside <session-start-context>, after the verbatim bootstrap", () => {
     const task = buildDispatchTask({
       ...baseOpts,
       bootstrapContent: "BOOT-LOADED",
@@ -371,10 +376,18 @@ describe("buildDispatchTask bootstrap injection", () => {
         { name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
       ],
     });
-    const bootIdx = task.dispatch_prompt.indexOf("BOOT-LOADED");
-    const invIdx = task.dispatch_prompt.indexOf("staged and discoverable");
+    const prompt = task.dispatch_prompt;
+    // The skills list is a separate block, not bundled inside the SessionStart
+    // context (which carries bootstrap content only).
+    const sscEnd = prompt.indexOf("</session-start-context>");
+    const listIdx = prompt.indexOf(
+      "The following skills are available for use with the Skill tool:",
+    );
+    const bootIdx = prompt.indexOf("BOOT-LOADED");
+    expect(sscEnd).toBeGreaterThan(-1);
     expect(bootIdx).toBeGreaterThan(-1);
-    expect(invIdx).toBeGreaterThan(bootIdx);
+    expect(bootIdx).toBeLessThan(sscEnd);
+    expect(listIdx).toBeGreaterThan(sscEnd);
   });
 
   test("sets dispatch_prompt_path to dispatch-prompt.txt under the condition dir", () => {
@@ -571,8 +584,10 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     // The full prompt is no longer inlined in dispatch.json — it lives in a file.
     expect(withSkill?.dispatch_prompt).toBeUndefined();
     const prompt = readFileSync(withSkill?.dispatch_prompt_path ?? "", "utf8");
-    expect(prompt).toContain("<session-start-context>");
-    expect(prompt).toContain("* `mr-review`");
+    expect(prompt).toContain(
+      "The following skills are available for use with the Skill tool:",
+    );
+    expect(prompt).toContain("- mr-review:");
     expect(prompt).not.toContain("test-driven-development");
     expect(prompt).not.toContain("writing-skills");
     // No product framing (EXTREMELY-IMPORTANT etc.) without a --bootstrap file.
@@ -715,7 +730,7 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     expect(conditions.run_nonce).toBe(dispatch.run_nonce);
   });
 
-  test("--bootstrap content is prepended verbatim before the staged-skills inventory", () => {
+  test("--bootstrap content is prepended verbatim before the available-skills block", () => {
     const { skillDir, cwd } = setup("usermode-bootstrap");
     const bootstrapPath = join(cwd, "my-bootstrap.md");
     writeFileSync(bootstrapPath, "MY CUSTOM EVAL FRAMING");
@@ -754,9 +769,11 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
       ? readFileSync(withSkill.dispatch_prompt_path, "utf8")
       : "";
     const bootIdx = prompt.indexOf("MY CUSTOM EVAL FRAMING");
-    const invIdx = prompt.indexOf("staged and discoverable");
+    const listIdx = prompt.indexOf(
+      "The following skills are available for use with the Skill tool:",
+    );
     expect(bootIdx).toBeGreaterThan(-1);
-    expect(invIdx).toBeGreaterThan(bootIdx);
+    expect(listIdx).toBeGreaterThan(bootIdx);
   });
 
   test("--only restricts dispatches to the named eval ids", () => {

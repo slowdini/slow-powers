@@ -13,9 +13,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
+import { renderAvailableSkillsBlock } from "./adapters/claude-code-session";
 import { detectRunContext, type RunContext } from "./context";
 import { installGuard, teardownGuard } from "./guard/install";
-import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
+import type {
+  AvailableSkill,
+  ConditionsRecord,
+  Eval,
+  EvalsConfig,
+} from "./types";
 import { validateEvalsConfig } from "./validate";
 
 export const STAGED_SKILL_PREFIX = "slow-powers-eval-";
@@ -561,11 +567,7 @@ type DispatchTask = {
   dispatch_prompt: string;
 };
 
-export type AvailableSkill = {
-  name: string;
-  path: string;
-  description: string;
-};
+export type { AvailableSkill } from "./types";
 
 /**
  * Filters the eval list to the subset requested via `--only` / `--skip`. The
@@ -717,53 +719,42 @@ export function buildDispatchTask(opts: {
     ? `Available fixture files:\n${opts.fixtures.map((f) => `  - ${f}`).join("\n")}`
     : "Available fixture files: none";
 
-  // The session-start context carries two kinds of content:
-  //   1. The verbatim --bootstrap file (product-specific framing), if supplied.
-  //   2. An auto-built inventory of the skills staged for this eval.
+  // A dispatch mirrors a real session by carrying two *separate* surfaces, the
+  // way the harness actually delivers them:
+  //   1. The verbatim --bootstrap file (the SessionStart-hook equivalent),
+  //      wrapped in <session-start-context>, if supplied.
+  //   2. The list of discoverable skills, rendered in the harness's native
+  //      presentation as its own block (see adapters/claude-code-session.ts).
   // A condition that does not load the skill-under-test (the new-skill
   // `without_skill` arm, under staging or --no-stage) must carry zero reference
-  // to it — including in the verbatim bootstrap, which otherwise lists it in its
-  // Active Skills Directory and leaks the skill into the control arm.
+  // to it. The skill-under-test is auto-omitted from the available-skills block
+  // (see `availableSkillsFor`). redactSkillFromBootstrap covers the other path:
+  // a *user-supplied* --bootstrap that names the skill in its own prose would
+  // otherwise leak it into the control arm. (The shipped bootstrap.md no longer
+  // enumerates skills, so that redaction is a no-op against it.)
   const skillAbsent = !opts.skillPath && !opts.stagedSkillSlug;
   const effectiveBootstrap =
     opts.bootstrapContent && skillAbsent
       ? redactSkillFromBootstrap(opts.bootstrapContent, opts.skillName)
       : opts.bootstrapContent;
 
-  const startContextParts: string[] = [];
+  const sections: string[] = [];
   if (effectiveBootstrap) {
-    startContextParts.push(
+    sections.push(
       [
+        "<session-start-context>",
         "The following guidelines were loaded at session start by the slow-powers plugin",
         "(equivalent to the SessionStart hook firing in a real user's environment):",
         "",
         effectiveBootstrap.trim(),
-      ].join("\n"),
-    );
-  }
-  if (stagedSkills.length > 0) {
-    const inventoryLines = stagedSkills.map(
-      (s) => `* \`${s.name}\`\n  * *Trigger:* ${s.description}`,
-    );
-    startContextParts.push(
-      [
-        "The following skills are staged and discoverable in this eval environment:",
-        "",
-        ...inventoryLines,
-      ].join("\n"),
-    );
-  }
-
-  const sections: string[] = [];
-  if (startContextParts.length > 0) {
-    sections.push(
-      [
-        "<session-start-context>",
-        startContextParts.join("\n\n"),
         "</session-start-context>",
         "",
       ].join("\n"),
     );
+  }
+  const availableSkillsBlock = renderAvailableSkillsBlock(stagedSkills);
+  if (availableSkillsBlock) {
+    sections.push(`${availableSkillsBlock}\n\n`);
   }
   sections.push(
     [
