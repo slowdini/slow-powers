@@ -2,6 +2,10 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { detectRunContext } from "./context";
+import {
+  type PluginShadowReport,
+  shadowValidityWarnings,
+} from "./plugin-shadow";
 import type { ConditionsRecord, GradingResult, TimingRecord } from "./types";
 
 function die(msg: string): never {
@@ -193,6 +197,22 @@ if (existsSync(strayPath)) {
           `${r.eval_id}/${r.condition} wrote ${n} file(s) outside its outputs dir — data point may be tainted (see stray-writes.json).`,
         );
     }
+  } catch {
+    // ignore a malformed report rather than failing aggregation
+  }
+}
+
+// Plugin-shadow findings (from the runner's build-time preflight, Claude Code)
+// taint a run the same way a missed invocation does: a staged skill also served
+// by an enabled plugin means subagents could discover both copies, so the
+// with/without comparison may not reflect the staged skill alone.
+const shadowPath = join(iterationDir, "plugin-shadow.json");
+if (existsSync(shadowPath)) {
+  try {
+    const report = JSON.parse(
+      readFileSync(shadowPath, "utf8"),
+    ) as PluginShadowReport;
+    for (const w of shadowValidityWarnings(report)) validityWarnings.push(w);
   } catch {
     // ignore a malformed report rather than failing aggregation
   }

@@ -16,6 +16,11 @@ import { basename, dirname, join } from "node:path";
 import { renderAvailableSkillsBlock } from "./adapters/claude-code-session";
 import { detectRunContext, type RunContext } from "./context";
 import { installGuard, teardownGuard } from "./guard/install";
+import {
+  detectPluginShadows,
+  formatShadowBanner,
+  resolveConfigDir,
+} from "./plugin-shadow";
 import type {
   AvailableSkill,
   ConditionsRecord,
@@ -531,6 +536,23 @@ function commandRun(args: Args, ctx: RunContext): void {
     }
   }
 
+  // Plugin-shadow preflight (Claude Code): a staged skill name that is also
+  // discoverable from an enabled plugin or the global skills dir contaminates the
+  // run — subagents inherit this session's plugins, so both copies are reachable.
+  // The runner can't unload a plugin from a live session; it only flags it. The
+  // report is persisted so the aggregator can surface it in validity_warnings.
+  if (ctx.harness === "claude-code") {
+    const shadowReport = detectPluginShadows({
+      configDir: resolveConfigDir(),
+      cwd: ctx.stageRoot,
+      stagedSkillNames: [ctx.skillName, ...ctx.siblingSkillNames],
+    });
+    if (shadowReport.shadowed.length > 0) {
+      writeJson(join(iterationDir, "plugin-shadow.json"), shadowReport);
+      console.warn(formatShadowBanner(shadowReport));
+    }
+  }
+
   console.log(`\nWorkspace prepared: ${iterationDir}`);
   console.log(`Dispatch manifest:  ${manifestPath}`);
   console.log(`Dispatch tasks:     ${dispatchJsonPath}`);
@@ -691,15 +713,16 @@ export function buildDispatchTask(opts: {
 
   let skillBlock: string;
   if (opts.stagedSkillSlug) {
-    // Neutral slug disambiguation only — no imperative to invoke. The slug is
-    // surfaced so a deliberate invocation targets the staged version (a bare
-    // name would resolve to the globally-installed plugin copy), but whether to
-    // invoke is left to the skill's own triggering. Removing the old "invoke
-    // that slug ... if the skill applies" directive is the fix for the issue
-    // #119 invocation ceiling.
+    // Neutral slug disambiguation only — no imperative to invoke. The skill is
+    // staged under a unique slug; surface that identifier so a deliberate
+    // invocation targets the staged copy and the __skill_invoked meta-check can
+    // find it. Do NOT assert a plugin is "loaded" or tell the agent to prefer the
+    // slug "rather than the bare name": in an isolated run there is no global copy,
+    // and that framing invited the agent to hunt for one (issue #144 global-plugin
+    // leakage). Whether to invoke is left to the skill's own triggering (dropping
+    // the old "invoke if it applies" directive was the issue #119 ceiling fix).
     skillBlock = [
-      "Your environment has the slow-powers plugin loaded; its skills are discoverable via the Skill tool.",
-      `The \`${opts.skillName}\` skill is registered under the identifier \`${opts.stagedSkillSlug}\`. If you invoke it, use that identifier rather than the bare name.`,
+      `The \`${opts.skillName}\` skill is registered under the identifier \`${opts.stagedSkillSlug}\` and is discoverable via the Skill tool. If you invoke it, use that identifier.`,
     ].join("\n");
   } else if (opts.skillPath) {
     skillBlock = [
