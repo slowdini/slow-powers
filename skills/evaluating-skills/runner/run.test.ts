@@ -13,6 +13,7 @@ import {
   buildDispatchTask,
   cleanupStagedSkills,
   redactSkillFromBootstrap,
+  registerStagedSkillForCleanup,
   STAGED_SIBLING_MANIFEST,
   STAGED_SKILL_PREFIX,
   selectEvals,
@@ -118,6 +119,92 @@ describe("stageSkillForCC", () => {
 
     const stagedPath = join(repoRoot, ".claude", "skills", slug, "SKILL.md");
     expect(readFileSync(stagedPath, "utf8")).toBe("second");
+  });
+
+  test("stageNameOverride stages under the verbatim name instead of the eval slug", () => {
+    const repoRoot = join(FIXTURE_ROOT, "stage-override");
+    mkdirSync(repoRoot, { recursive: true });
+    const content =
+      "---\nname: example\ndescription: example skill\n---\n\nbody\n";
+
+    const slug = stageSkillForCC({
+      content,
+      iteration: 2,
+      condition: "with_skill",
+      skillName: "verification-before-completion",
+      repoRoot,
+      stageNameOverride: "verification-before-completion",
+    });
+
+    expect(slug).toBe("verification-before-completion");
+    const stagedPath = join(repoRoot, ".claude", "skills", slug, "SKILL.md");
+    expect(existsSync(stagedPath)).toBe(true);
+    expect(readFileSync(stagedPath, "utf8")).toBe(content);
+  });
+});
+
+describe("registerStagedSkillForCleanup", () => {
+  test("appends the custom dir to the manifest so cleanup removes it", () => {
+    const root = join(FIXTURE_ROOT, "register-cleanup");
+    const skillsDir = join(root, ".claude", "skills");
+    mkdirSync(skillsDir, { recursive: true });
+    // A sibling manifest already exists (written by stageSiblingSkills).
+    writeFileSync(
+      join(skillsDir, STAGED_SIBLING_MANIFEST),
+      `${JSON.stringify(
+        {
+          created_at: "x",
+          staged_under_test: "verification-before-completion",
+          created_entries: [{ name: "sibling-a", preexisting: false }],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const customDir = join(skillsDir, "verification-before-completion");
+    mkdirSync(customDir, { recursive: true });
+    writeFileSync(join(customDir, "SKILL.md"), "staged");
+
+    registerStagedSkillForCleanup(root, "verification-before-completion");
+
+    const manifest = JSON.parse(
+      readFileSync(join(skillsDir, STAGED_SIBLING_MANIFEST), "utf8"),
+    ) as { created_entries: Array<{ name: string }> };
+    expect(manifest.created_entries.map((e) => e.name).sort()).toEqual([
+      "sibling-a",
+      "verification-before-completion",
+    ]);
+
+    cleanupStagedSkills(root);
+    expect(existsSync(customDir)).toBe(false);
+  });
+
+  test("is idempotent — registering the same name twice does not duplicate it", () => {
+    const root = join(FIXTURE_ROOT, "register-idempotent");
+    const skillsDir = join(root, ".claude", "skills");
+    mkdirSync(skillsDir, { recursive: true });
+    writeFileSync(
+      join(skillsDir, STAGED_SIBLING_MANIFEST),
+      `${JSON.stringify(
+        {
+          created_at: "x",
+          staged_under_test: "foo",
+          created_entries: [],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    registerStagedSkillForCleanup(root, "foo-staged");
+    registerStagedSkillForCleanup(root, "foo-staged");
+
+    const manifest = JSON.parse(
+      readFileSync(join(skillsDir, STAGED_SIBLING_MANIFEST), "utf8"),
+    ) as { created_entries: Array<{ name: string }> };
+    expect(
+      manifest.created_entries.filter((e) => e.name === "foo-staged").length,
+    ).toBe(1);
   });
 });
 
@@ -552,6 +639,93 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
       (e) => e !== STAGED_SIBLING_MANIFEST,
     );
     expect(entries).toEqual(["slow-powers-eval-1-with_skill__mr-review"]);
+  });
+
+  test("--stage-name stages the SUT under the verbatim name, threads it everywhere, and registers it for cleanup", () => {
+    const { skillDir, cwd } = setup("usermode-stage-name");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--stage-name",
+        "mr-review",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    // Staged dir is the natural name, not the conspicuous eval slug.
+    const stagedSkillsDir = join(cwd, ".claude", "skills");
+    const entries = readdirSync(stagedSkillsDir).filter(
+      (e) => e !== STAGED_SIBLING_MANIFEST,
+    );
+    expect(entries).toEqual(["mr-review"]);
+
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+
+    // conditions.json carries the natural slug — the grader meta-check reads it.
+    const conditions = JSON.parse(
+      readFileSync(join(iterationDir, "conditions.json"), "utf8"),
+    ) as {
+      conditions: Array<{ name: string; staged_skill_slug: string | null }>;
+    };
+    const withSkill = conditions.conditions.find(
+      (c) => c.name === "with_skill",
+    );
+    expect(withSkill?.staged_skill_slug).toBe("mr-review");
+
+    // The custom dir is registered for cleanup (prefix scan won't catch it).
+    const manifest = JSON.parse(
+      readFileSync(join(stagedSkillsDir, STAGED_SIBLING_MANIFEST), "utf8"),
+    ) as { created_entries: Array<{ name: string }> };
+    expect(manifest.created_entries.map((e) => e.name)).toContain("mr-review");
+
+    // The dispatch prompt disambiguates to the natural identifier, not the slug.
+    const dispatch = JSON.parse(
+      readFileSync(join(iterationDir, "dispatch.json"), "utf8"),
+    ) as {
+      tasks: Array<{ condition: string; dispatch_prompt_path: string }>;
+    };
+    const task = dispatch.tasks.find((t) => t.condition === "with_skill");
+    const prompt = readFileSync(task?.dispatch_prompt_path ?? "", "utf8");
+    expect(prompt).toContain("registered under the identifier `mr-review`");
+    expect(prompt).not.toContain("slow-powers-eval-");
+  });
+
+  test("--stage-name refuses to clobber a pre-existing same-named dir", () => {
+    const { skillDir, cwd } = setup("usermode-stage-name-clobber");
+    const preexisting = join(cwd, ".claude", "skills", "my-real-skill");
+    mkdirSync(preexisting, { recursive: true });
+    writeFileSync(join(preexisting, "SKILL.md"), "USER OWNED");
+
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--stage-name",
+        "my-real-skill",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).not.toBe(0);
+    expect(readFileSync(join(preexisting, "SKILL.md"), "utf8")).toBe(
+      "USER OWNED",
+    );
   });
 
   test("dispatch prompt lists only the skill-under-test, no other skills, and no product framing without --bootstrap", () => {

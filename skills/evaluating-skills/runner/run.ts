@@ -33,12 +33,49 @@ export function stageSkillForCC(opts: {
   condition: string;
   skillName: string;
   repoRoot: string;
+  /**
+   * When set, stage under this verbatim identifier instead of the conspicuous
+   * `slow-powers-eval-…` slug. Used by `--stage-name` to A/B a natural name
+   * against the eval-flagged one (issue #144 Step 2). A custom name is not
+   * caught by `cleanupStagedSkills`'s prefix scan, so the caller must also call
+   * `registerStagedSkillForCleanup` to have it removed on the next run.
+   */
+  stageNameOverride?: string;
 }): string {
-  const slug = `${STAGED_SKILL_PREFIX}${opts.iteration}-${opts.condition}__${opts.skillName}`;
+  const slug =
+    opts.stageNameOverride ??
+    `${STAGED_SKILL_PREFIX}${opts.iteration}-${opts.condition}__${opts.skillName}`;
   const skillDir = join(opts.repoRoot, ".claude", "skills", slug);
   mkdirSync(skillDir, { recursive: true });
   writeFileSync(join(skillDir, "SKILL.md"), opts.content);
   return slug;
+}
+
+/**
+ * Adds a custom-named staged skill dir (one created via `stageNameOverride`) to
+ * the sibling manifest's `created_entries` so the next run's
+ * `cleanupStagedSkills` removes it — the prefix scan only catches
+ * `slow-powers-eval-…` names. Idempotent: a name already recorded is left alone.
+ */
+export function registerStagedSkillForCleanup(
+  repoRoot: string,
+  name: string,
+): void {
+  const skillsDir = join(repoRoot, ".claude", "skills");
+  const manifestPath = join(skillsDir, STAGED_SIBLING_MANIFEST);
+  let manifest: SiblingManifest;
+  if (existsSync(manifestPath)) {
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } else {
+    manifest = {
+      created_at: new Date().toISOString(),
+      staged_under_test: name,
+      created_entries: [],
+    };
+  }
+  if (manifest.created_entries.some((e) => e.name === name)) return;
+  manifest.created_entries.push({ name, preexisting: false });
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 type SiblingManifest = {
@@ -150,6 +187,7 @@ type Args = {
   dryRun: boolean;
   noStage: boolean;
   guard: boolean;
+  stageName?: string;
 };
 
 function die(msg: string): never {
@@ -203,6 +241,7 @@ function parseArgs(argv: string[]): Args {
     dryRun: has("dry-run"),
     noStage: has("no-stage"),
     guard: has("guard"),
+    stageName: flag("stage-name"),
   };
 }
 
@@ -388,6 +427,26 @@ function commandRun(args: Args, ctx: RunContext): void {
         return { name, path: p, description: getSkillDescription(p) };
       });
 
+  // `--stage-name` overrides the conspicuous `slow-powers-eval-…` slug with a
+  // verbatim name (issue #144 Step 2: A/B a natural name against the eval slug).
+  // It targets the single staging condition, so reject the case where both
+  // conditions stage (e.g. revision mode) — one name can't cover two dirs — and
+  // refuse to clobber a dir that already exists (a real project skill the user
+  // owns; cleanup has already removed our own prior custom dirs by this point).
+  if (args.stageName !== undefined && !args.noStage) {
+    if (skillPathForA !== null && skillPathForB !== null) {
+      die(
+        "--stage-name is only supported when exactly one condition stages the skill (e.g. --mode new-skill); both conditions stage here.",
+      );
+    }
+    const target = join(ctx.stageRoot, ".claude", "skills", args.stageName);
+    if (existsSync(target)) {
+      die(
+        `--stage-name "${args.stageName}": ${target} already exists; refusing to clobber it. Remove it or choose a different name.`,
+      );
+    }
+  }
+
   const stageFor = (
     condName: string,
     condSkillPath: string | null,
@@ -399,11 +458,21 @@ function commandRun(args: Args, ctx: RunContext): void {
       condition: condName,
       skillName: ctx.skillName,
       repoRoot: ctx.stageRoot,
+      stageNameOverride: args.stageName,
     });
   };
 
   const conditionASlug = stageFor(conditionA, skillPathForA);
   const conditionBSlug = stageFor(conditionB, skillPathForB);
+
+  // A custom-named dir isn't caught by cleanupStagedSkills's prefix scan; record
+  // it in the sibling manifest so the next run removes it.
+  if (
+    args.stageName !== undefined &&
+    (conditionASlug === args.stageName || conditionBSlug === args.stageName)
+  ) {
+    registerStagedSkillForCleanup(ctx.stageRoot, args.stageName);
+  }
 
   const conditions: ConditionsRecord = {
     mode: args.mode,
