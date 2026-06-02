@@ -691,11 +691,15 @@ export function buildDispatchTask(opts: {
 
   let skillBlock: string;
   if (opts.stagedSkillSlug) {
+    // Neutral slug disambiguation only — no imperative to invoke. The slug is
+    // surfaced so a deliberate invocation targets the staged version (a bare
+    // name would resolve to the globally-installed plugin copy), but whether to
+    // invoke is left to the skill's own triggering. Removing the old "invoke
+    // that slug ... if the skill applies" directive is the fix for the issue
+    // #119 invocation ceiling.
     skillBlock = [
-      "Your environment has the slow-powers plugin loaded. All slow-powers skills are",
-      "discoverable via the Skill tool. The skill currently under evaluation is",
-      `staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
-      "than the natural name if the skill applies to the user's request.",
+      "Your environment has the slow-powers plugin loaded; its skills are discoverable via the Skill tool.",
+      `The \`${opts.skillName}\` skill is registered under the identifier \`${opts.stagedSkillSlug}\`. If you invoke it, use that identifier rather than the bare name.`,
     ].join("\n");
   } else if (opts.skillPath) {
     skillBlock = [
@@ -706,11 +710,11 @@ export function buildDispatchTask(opts: {
       "</skill>",
     ].join("\n");
   } else if (stagedSkills.length > 0 || opts.bootstrapContent) {
-    skillBlock = [
-      "The skill currently under evaluation is NOT available in this environment.",
-      "Other staged skills remain discoverable via the Skill tool; apply any",
-      "that fit the user's request.",
-    ].join("\n");
+    // Skill-absent arm in a realistic environment: stay silent. The
+    // available-skills block already omits the skill-under-test, so any
+    // commentary here would only announce the eval (and, in the control arm,
+    // draw attention to the very skill that is supposed to be absent).
+    skillBlock = "";
   } else {
     skillBlock = "No skill is loaded. Respond as you naturally would.";
   }
@@ -756,25 +760,25 @@ export function buildDispatchTask(opts: {
   if (availableSkillsBlock) {
     sections.push(`${availableSkillsBlock}\n\n`);
   }
-  sections.push(
-    [
-      "You are executing a single test case for a skill evaluation framework.",
-      "Treat this as a real user request — do NOT optimize behavior for the eval.",
-      "",
-      skillBlock,
-      "",
-      fixturesBlock,
-      `Output directory: ${opts.outputsDir}`,
-      "",
-      "Instructions:",
-      "- Write any files you produce into the output directory.",
-      `- After completing the task, write your final user-facing response to ${opts.outputsDir}/final-message.md.`,
-      "- Do not write outside the output directory.",
-      "",
-      "User request:",
-      opts.userPrompt,
-    ].join("\n"),
+  const taskLines = [
+    "You are executing a single test case for a skill evaluation framework.",
+    "Treat this as a real user request — do NOT optimize behavior for the eval.",
+  ];
+  if (skillBlock) taskLines.push("", skillBlock);
+  taskLines.push(
+    "",
+    fixturesBlock,
+    `Output directory: ${opts.outputsDir}`,
+    "",
+    "Instructions:",
+    "- Write any files you produce into the output directory.",
+    `- After completing the task, write your final user-facing response to ${opts.outputsDir}/final-message.md.`,
+    "- Do not write outside the output directory.",
+    "",
+    "User request:",
+    opts.userPrompt,
   );
+  sections.push(taskLines.join("\n"));
 
   return {
     eval_id: opts.evalId,
