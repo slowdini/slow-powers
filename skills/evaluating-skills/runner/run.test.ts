@@ -538,8 +538,10 @@ describe("buildDispatchTask bootstrap injection", () => {
       ...baseOpts,
       bootstrapContent: "BOOT-LOADED",
     });
-    // The slug is still surfaced so the agent can target the staged version
-    // (a bare name would resolve to the globally-installed plugin copy).
+    // The slug is still surfaced so a deliberate invocation targets the staged
+    // version and the meta-check can find it — but we no longer assert a plugin
+    // is "loaded" or tell the agent to prefer the slug over the bare name, which
+    // invited it to hunt for a global copy (issue #144 global-plugin leakage).
     expect(task.dispatch_prompt).toContain(
       "slow-powers-eval-1-with_skill__foo",
     );
@@ -548,6 +550,10 @@ describe("buildDispatchTask bootstrap injection", () => {
     expect(task.dispatch_prompt).not.toContain("invoke that slug");
     expect(task.dispatch_prompt).not.toContain("if the skill applies");
     expect(task.dispatch_prompt).not.toContain("under evaluation");
+    // ...and the leakage-inviting framing is gone (issue #144): no claim that a
+    // plugin is loaded, no "use the slug rather than the bare name" contrast.
+    expect(task.dispatch_prompt).not.toContain("plugin loaded");
+    expect(task.dispatch_prompt).not.toContain("rather than the bare name");
   });
 
   test("without-skill condition under realistic env carries no eval-announcing skill commentary", () => {

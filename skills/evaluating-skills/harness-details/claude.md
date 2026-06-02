@@ -4,6 +4,25 @@ This is the Claude Code-specific walkthrough for `evaluating-skills`. The runner
 
 Use this when a user, working from their own skill folder, asks to run an eval (e.g. "run an eval on this skill to check if a change reduces token usage").
 
+## Isolating from installed plugins
+
+**Read this first if the skill you're evaluating shares a name with one an installed, enabled plugin provides** — e.g. evaluating a slow-powers skill with the slow-powers plugin installed, or any user evaluating their own plugin's skills.
+
+Eval subagents are dispatched via the **Task tool**, so they run in-process and inherit *this session's* enabled plugins and global skills. The runner stages the skill-under-test under a unique slug (`slow-powers-eval-…`) — that avoids an on-disk collision and lets the `__skill_invoked` meta-check find the staged copy — but it does **not** stop the installed plugin's own `<plugin>:<name>` copy from also being discoverable. When both copies are reachable:
+
+- the with-skill arm can invoke the staged slug *and then* reach for the installed copy (redundant/leaked invocation), and
+- the `without_skill` arm is **not truly skill-absent** — the installed copy is still discoverable, contaminating the baseline and shrinking the measured delta.
+
+Plugins load at **session start** and the runner can't unload them mid-session, so it only *detects and warns* (a build-time "plugin-shadow" banner, also surfaced in `benchmark.json`'s `validity_warnings`). To actually isolate, **launch the session you run the eval from** one of these ways — subagents inherit it:
+
+1. **Drop user-scope plugins, keep auth:** `claude --setting-sources project,local`. User-scope `enabledPlugins` (where user-installed plugins are enabled) isn't loaded, so they don't appear. Auth is unaffected. (Also drops your other user-scope settings/MCP for that session.)
+2. **Disable the specific plugin, then restart:** set `"enabledPlugins": { "<plugin>@<marketplace>": false }` in a settings source that loads at startup (project `.claude/settings.json` or user `~/.claude/settings.json`) and start a fresh session. *(The slow-powers repo ships this for `slow-powers@slowdini` and `superpowers@claude-plugins-official` in its own `.claude/settings.json`.)*
+3. **Clean config dir (strips everything):** `CLAUDE_CONFIG_DIR="$(mktemp -d)" claude`. No installed plugins or global skills load at all. **Auth caveat:** your OAuth session lives in `~/.claude.json`, which a relocated config dir may not carry — set `ANTHROPIC_API_KEY` or re-authenticate once in the fresh dir.
+
+All three keep the eval working: project-local staged skills live in `<cwd>/.claude/skills/` (project scope, independent of installed plugins), so they still load and the meta-check still resolves the slug. A clean config dir (option 3) additionally means the real SessionStart bootstrap hook doesn't fire, so the only session-start framing present is whatever you pass via `--bootstrap` — which removes the separate "even a 1% chance → you MUST invoke" mandate that otherwise pins invocation at 100%.
+
+**Verify before you run:** the installed twin should be gone — `/plugin` shows it disabled, or the runner's build step prints no plugin-shadow banner.
+
 ## Step 1 — Resolve the bundled runner
 
 The runner ships inside the installed slow-powers plugin. Resolve its path once per session and reuse it. Use `find` rather than a shell glob so the command behaves the same under bash and zsh (a bare glob with no match errors under zsh):

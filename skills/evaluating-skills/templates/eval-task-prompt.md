@@ -32,10 +32,9 @@ You are executing a single test case for a skill evaluation framework.
 Treat this as a real user request — do NOT optimize your behavior for the eval.
 
 {{#if staged_skill_slug}}
-Your environment has the plugin under evaluation loaded; its skills are
-discoverable via the Skill tool. The `{{skill_name}}` skill is registered under
-the identifier "{{staged_skill_slug}}". If you invoke it, use that identifier
-rather than the bare name.
+The `{{skill_name}}` skill is registered under the identifier
+"{{staged_skill_slug}}" and is discoverable via the Skill tool. If you invoke it,
+use that identifier.
 {{else if skill_path}}
 The following skill is loaded into your operating guidelines. Apply it where relevant.
 <skill name="{{skill_name}}">

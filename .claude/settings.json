@@ -22,5 +22,9 @@
       "mcp__plugin_context7_context7__resolve-library-id",
       "mcp__plugin_context7_context7__query-docs"
     ]
+  },
+  "enabledPlugins": {
+    "slow-powers@slowdini": false,
+    "superpowers@claude-plugins-official": false
   }
 }
