@@ -35,6 +35,14 @@ export type EvalsConfig = {
   evals: Eval[];
 };
 
+/** A skill staged and discoverable for an eval — its natural name, on-disk
+ * SKILL.md path, and frontmatter description. */
+export type AvailableSkill = {
+  name: string;
+  path: string;
+  description: string;
+};
+
 export type ConditionEntry = {
   name: string;
   skill_path: string | null;

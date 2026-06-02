@@ -22,6 +22,8 @@ Other flags:
 - `--workspace-dir <path>` (optional) — where iteration artifacts are written. Defaults to `<CWD>/skills-workspace`.
 - `--harness claude-code` (optional, default `claude-code`; the only supported harness).
 - `--no-stage`, `--dry-run`, `--iteration <N>`, `--mode <new-skill|revision>`, `--baseline <label>`, `--label <label>` — as before.
+- `--only <id,id,...>` / `--skip <id,id,...>` (optional) — run only, or all-but, the named eval ids from `evals.json`. The two are mutually exclusive, and every named id must exist (the run aborts with the available ids listed otherwise). Use this for a cost-conscious reduced-set run instead of temporarily editing `evals.json` down. The pre-flight summary and the `N evals × 2 conditions` count reflect the filtered set.
+- `--plan-mode` (optional, Claude Code) — inject the harness's verbatim plan-mode procedure as an operating-context layer. When set, the runner reads `profiles/<harness>/plan-mode.md` and emits it (via the session adapter's `renderPlanModeContext`) as a `<system-reminder>` block in every dispatch, after the available-skills block and before the user request. It is identical across the with/without-skill arms and recorded as `plan_mode` in `dispatch.json`. This is issue #142's highest-fidelity in-runner approximation of a real plan mode — still text the agent reads, so a pass is necessary-not-sufficient; see *Seeding conversation context (and its ceiling)* in `../SKILL.md`. Opt-in, and meant only for plan-mode-relevant skills; a harness with no profile aborts the run, leaving the portable dispatch contract unchanged.
 
 Staging is written under the current working directory: `<CWD>/.claude/skills/`. A subagent dispatched from that CWD discovers the staged skills there. Run the commands from the directory you want to be the eval root (the repo root for internal use; your skill folder or its parent for personal use).
 
@@ -84,6 +86,15 @@ bun run evals -- --skill <name> --mode revision --baseline baseline-2026-05-24
 bun run evals -- --skill <name> --mode new-skill --dry-run
 ```
 
+### Reduced-set run (cost-conscious subset)
+
+```bash
+# Run just two of the defined evals, leaving evals.json untouched.
+bun run evals -- --skill <name> --mode new-skill --only case-a,case-b
+# Or run everything except a slow case.
+bun run evals -- --skill <name> --mode new-skill --skip slow-case
+```
+
 ## Quickstart (running an eval on your own skill)
 
 If you have the slow-powers plugin installed and a personal skill, you do **not** run the npm scripts. The skill's `SKILL.md` routes you to `../harness-details/<harness>.md`, which gives the full command sequence (resolving the installed runner path, invoking `run.ts` directly with `--skill-dir`/`--skill`, dispatching subagents, grading). On Claude Code, see `../harness-details/claude.md`.
@@ -104,12 +115,14 @@ If you have the slow-powers plugin installed and a personal skill, you do **not*
 
 A subagent that runs an eval should start in an environment that mirrors a real install of the plugin under evaluation. Otherwise the result depends on the operator's local install state (whether they happen to have the plugin loaded into their parent session, which version, etc.) rather than the skill being measured. The runner produces this parity explicitly so results reproduce on a clean checkout or in CI.
 
+**Caveat — parity is only as clean as the operator's session.** Staging controls what the runner *adds* (the skills below), not what the operator's session already *loaded*. Subagents are dispatched in-process and share the parent session's plugins, so if that session has the plugin-under-evaluation — or any plugin exposing a same-named skill — enabled, the subagent discovers that copy too. That is exactly the "operator's local install state" dependency this section warns against, and the unique staging slug does not prevent it (it stops an on-disk collision, not runtime discovery). The runner can't unload a live plugin; on Claude Code it emits a build-time *plugin-shadow* warning (also surfaced in `benchmark.json`'s `validity_warnings`) so the contamination is visible. Closing it is a launch-time step: run the eval from a plugin-isolated session — see `../harness-details/claude.md` → *Isolating from installed plugins*.
+
 Parity has two parts, both applied when `--no-stage` is NOT set (the default `--harness claude-code`):
 
-1. **A staged-skills inventory is built into every dispatch prompt.** The runner lists the skills actually staged for the eval — the skill-under-test plus the siblings found in `--skill-dir` — inside the `<session-start-context>` block as a Markdown bullet list. This tells the subagent what is discoverable, independent of any `--bootstrap` file.
+1. **An available-skills block is built into every dispatch prompt.** The runner lists the skills actually staged for the eval — the skill-under-test plus the siblings found in `--skill-dir` — as its **own block**, rendered the way the harness surfaces discoverable skills to a real session rather than in an eval-specific format. On Claude Code that is `The following skills are available for use with the Skill tool:` followed by `- name: description` bullets. This rendering is **harness-specific** and lives in `adapters/claude-code-session.ts` (a new harness adds its own renderer alongside it). The block is emitted *after*, and separate from, the `<session-start-context>` block — mirroring how a real session delivers the SessionStart hook and the skill list as two distinct surfaces. It tells the subagent what is discoverable, independent of any `--bootstrap` file.
 2. **Every skill in `--skill-dir` is staged.** The skill-under-test is staged under its unique slug (`<stageRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/`); every *other* skill in `--skill-dir` is copied to `<stageRoot>/.claude/skills/<name>/` at its natural name (excluding each skill's `evals/` subdir). Natural names matter because cross-references inside skill bodies (e.g. "REQUIRED SUB-SKILL: Use `slow-powers:test-driven-development`") only resolve cleanly to natural-name entries.
 
-`--bootstrap` is **separate** from parity. It injects product-specific framing (the file's verbatim contents) ahead of the staged-skills inventory. Internal runs pass `./bootstrap.md`; that file contains its own "Active Skills Directory" list, which overlaps the auto-built inventory. That small duplication is intentional — it avoids maintaining a second bootstrap file in lockstep with the runner.
+`--bootstrap` is **separate** from parity. It injects product-specific framing (the file's verbatim contents) inside the `<session-start-context>` block, ahead of the available-skills block. Internal runs pass `./bootstrap.md`. That file does **not** enumerate skills — the available-skills block is the single source of the skill list, so there is no duplication to keep in lockstep. (A *user-supplied* `--bootstrap` that does enumerate skills is handled defensively by `redactSkillFromBootstrap`, which strips the skill-under-test from the bootstrap prose on the `without_skill` arm so it can't leak into the control condition.)
 
 The runner records what it staged in `<stageRoot>/.claude/skills/.slow-powers-eval-manifest.json` so cleanup is reversible. Any pre-existing entry with a colliding name is backed up to a temp directory (recorded in the manifest) before being overwritten, and restored on the next `cleanupStagedSkills()` call. The prefix sweep (`slow-powers-eval-*` entries) still runs first so a crashed prior run is recovered even if the manifest itself was never written.
 
@@ -122,6 +135,7 @@ For the **`without_skill` / baseline condition** in this realistic environment, 
 - **Codex.** Declares `"skills": "./skills/"` in its `plugin.json`, so the harness scans a directory at start-up. Sibling staging would write to whatever staging path that harness reads from — analogous to `stageSiblingSkills()` but pointed at the right directory. Bootstrap can be prepended to the dispatch prompt the same way.
 - **OpenCode.** Installed via npm package; the package's own directory is the discoverable surface. Sibling staging would copy into that directory, or — if the harness loads from `node_modules` directly — into a parallel staging path the harness is configured to scan.
 - **General fallback.** Harnesses without project-local discovery should keep using `--no-stage`; the inline `<skill>` block in the dispatch prompt is the only skill the subagent sees. Bootstrap is omitted in this mode because its references to other skills would mislead the agent.
+- **Plan-mode profiles (`--plan-mode`).** The plan-mode operating-context layer is also a harness-specific surface. The procedure text lives in `profiles/<harness>/plan-mode.md` and is wrapped by a `renderPlanModeContext` in that harness's session adapter (`adapters/<harness>-session.ts`), exactly mirroring how `renderAvailableSkillsBlock` is harness-specific. Only `profiles/claude-code/plan-mode.md` exists today; a harness that wants this fidelity layer adds its own profile file (its native plan/research mode procedure) plus a renderer alongside the Claude ones. A harness with no profile simply has no `--plan-mode`, and the portable dispatch contract is unchanged.
 
 The committed per-skill baselines (`skills/<skill>/evals/baseline/`) plus the `transcript_check` assertions in the baseline eval suite give other harnesses a concrete target to reproduce: a harness whose adapter populates `tool_invocations` faithfully should be able to re-run a skill's eval and land close to the committed `benchmark.json` delta. See `harness-parity-check.md` — the transcript adapter is a parity target, and evals are not production functionality, so a harness can aim high here without risking user-facing behavior.
 

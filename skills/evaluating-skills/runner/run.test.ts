@@ -13,11 +13,14 @@ import {
   buildDispatchTask,
   cleanupStagedSkills,
   redactSkillFromBootstrap,
+  registerStagedSkillForCleanup,
   STAGED_SIBLING_MANIFEST,
   STAGED_SKILL_PREFIX,
+  selectEvals,
   stageSiblingSkills,
   stageSkillForCC,
 } from "./run";
+import type { Eval } from "./types";
 
 const FIXTURE_ROOT = join(tmpdir(), `slow-powers-run-test-${process.pid}`);
 
@@ -27,6 +30,49 @@ beforeAll(() => {
 
 afterAll(() => {
   rmSync(FIXTURE_ROOT, { recursive: true, force: true });
+});
+
+describe("selectEvals", () => {
+  const mkEvals = (...ids: string[]): Eval[] =>
+    ids.map((id) => ({ id, prompt: `p-${id}`, expected_output: `o-${id}` }));
+
+  test("returns the full list unchanged when neither flag is set", () => {
+    const evals = mkEvals("a", "b", "c");
+    expect(selectEvals(evals, {})).toEqual(evals);
+  });
+
+  test("--only keeps just the named ids, preserving config order", () => {
+    const evals = mkEvals("a", "b", "c");
+    const got = selectEvals(evals, { only: ["c", "a"] });
+    expect(got.map((e) => e.id)).toEqual(["a", "c"]);
+  });
+
+  test("--skip drops the named ids", () => {
+    const evals = mkEvals("a", "b", "c");
+    const got = selectEvals(evals, { skip: ["b"] });
+    expect(got.map((e) => e.id)).toEqual(["a", "c"]);
+  });
+
+  test("throws on an unknown id, listing the unknown and the available ids", () => {
+    const evals = mkEvals("a", "b");
+    expect(() => selectEvals(evals, { only: ["a", "nope"] })).toThrow(
+      /unknown eval id\(s\): nope\. Available ids: a, b/,
+    );
+  });
+
+  test("throws when both --only and --skip are given", () => {
+    const evals = mkEvals("a", "b");
+    expect(() => selectEvals(evals, { only: ["a"], skip: ["b"] })).toThrow(
+      /only one of --only \/ --skip/,
+    );
+  });
+
+  test("throws when a flag resolves to an empty id list", () => {
+    const evals = mkEvals("a", "b");
+    expect(() => selectEvals(evals, { only: [] })).toThrow(
+      /at least one eval id/,
+    );
+  });
 });
 
 describe("stageSkillForCC", () => {
@@ -73,6 +119,92 @@ describe("stageSkillForCC", () => {
 
     const stagedPath = join(repoRoot, ".claude", "skills", slug, "SKILL.md");
     expect(readFileSync(stagedPath, "utf8")).toBe("second");
+  });
+
+  test("stageNameOverride stages under the verbatim name instead of the eval slug", () => {
+    const repoRoot = join(FIXTURE_ROOT, "stage-override");
+    mkdirSync(repoRoot, { recursive: true });
+    const content =
+      "---\nname: example\ndescription: example skill\n---\n\nbody\n";
+
+    const slug = stageSkillForCC({
+      content,
+      iteration: 2,
+      condition: "with_skill",
+      skillName: "verification-before-completion",
+      repoRoot,
+      stageNameOverride: "verification-before-completion",
+    });
+
+    expect(slug).toBe("verification-before-completion");
+    const stagedPath = join(repoRoot, ".claude", "skills", slug, "SKILL.md");
+    expect(existsSync(stagedPath)).toBe(true);
+    expect(readFileSync(stagedPath, "utf8")).toBe(content);
+  });
+});
+
+describe("registerStagedSkillForCleanup", () => {
+  test("appends the custom dir to the manifest so cleanup removes it", () => {
+    const root = join(FIXTURE_ROOT, "register-cleanup");
+    const skillsDir = join(root, ".claude", "skills");
+    mkdirSync(skillsDir, { recursive: true });
+    // A sibling manifest already exists (written by stageSiblingSkills).
+    writeFileSync(
+      join(skillsDir, STAGED_SIBLING_MANIFEST),
+      `${JSON.stringify(
+        {
+          created_at: "x",
+          staged_under_test: "verification-before-completion",
+          created_entries: [{ name: "sibling-a", preexisting: false }],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const customDir = join(skillsDir, "verification-before-completion");
+    mkdirSync(customDir, { recursive: true });
+    writeFileSync(join(customDir, "SKILL.md"), "staged");
+
+    registerStagedSkillForCleanup(root, "verification-before-completion");
+
+    const manifest = JSON.parse(
+      readFileSync(join(skillsDir, STAGED_SIBLING_MANIFEST), "utf8"),
+    ) as { created_entries: Array<{ name: string }> };
+    expect(manifest.created_entries.map((e) => e.name).sort()).toEqual([
+      "sibling-a",
+      "verification-before-completion",
+    ]);
+
+    cleanupStagedSkills(root);
+    expect(existsSync(customDir)).toBe(false);
+  });
+
+  test("is idempotent — registering the same name twice does not duplicate it", () => {
+    const root = join(FIXTURE_ROOT, "register-idempotent");
+    const skillsDir = join(root, ".claude", "skills");
+    mkdirSync(skillsDir, { recursive: true });
+    writeFileSync(
+      join(skillsDir, STAGED_SIBLING_MANIFEST),
+      `${JSON.stringify(
+        {
+          created_at: "x",
+          staged_under_test: "foo",
+          created_entries: [],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    registerStagedSkillForCleanup(root, "foo-staged");
+    registerStagedSkillForCleanup(root, "foo-staged");
+
+    const manifest = JSON.parse(
+      readFileSync(join(skillsDir, STAGED_SIBLING_MANIFEST), "utf8"),
+    ) as { created_entries: Array<{ name: string }> };
+    expect(
+      manifest.created_entries.filter((e) => e.name === "foo-staged").length,
+    ).toBe(1);
   });
 });
 
@@ -302,7 +434,7 @@ describe("buildDispatchTask bootstrap injection", () => {
     expect(task.dispatch_prompt).not.toContain("<session-start-context>");
   });
 
-  test("emits <session-start-context> with a staged-skills inventory even when bootstrapContent is null", () => {
+  test("emits a harness-native available-skills block (no <session-start-context>) when bootstrapContent is null", () => {
     const task = buildDispatchTask({
       ...baseOpts,
       bootstrapContent: null,
@@ -310,15 +442,20 @@ describe("buildDispatchTask bootstrap injection", () => {
         { name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
       ],
     });
-    expect(task.dispatch_prompt).toContain("<session-start-context>");
-    expect(task.dispatch_prompt).toContain("staged and discoverable");
-    expect(task.dispatch_prompt).toContain("* `foo`");
-    expect(task.dispatch_prompt).toContain("*Trigger:* the foo skill");
+    // Without a bootstrap, there is no SessionStart block — only the skills list.
+    expect(task.dispatch_prompt).not.toContain("<session-start-context>");
+    expect(task.dispatch_prompt).toContain(
+      "The following skills are available for use with the Skill tool:",
+    );
+    expect(task.dispatch_prompt).toContain("- foo: the foo skill");
+    // The eval-flavored wording and custom format are gone.
+    expect(task.dispatch_prompt).not.toContain("staged and discoverable");
+    expect(task.dispatch_prompt).not.toContain("*Trigger:*");
     // No product framing should appear without a bootstrap file.
     expect(task.dispatch_prompt).not.toContain("loaded at session start");
   });
 
-  test("staged-skills inventory follows the verbatim bootstrap content when both are present", () => {
+  test("renders the available-skills block as its own section, outside <session-start-context>, after the verbatim bootstrap", () => {
     const task = buildDispatchTask({
       ...baseOpts,
       bootstrapContent: "BOOT-LOADED",
@@ -326,10 +463,18 @@ describe("buildDispatchTask bootstrap injection", () => {
         { name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
       ],
     });
-    const bootIdx = task.dispatch_prompt.indexOf("BOOT-LOADED");
-    const invIdx = task.dispatch_prompt.indexOf("staged and discoverable");
+    const prompt = task.dispatch_prompt;
+    // The skills list is a separate block, not bundled inside the SessionStart
+    // context (which carries bootstrap content only).
+    const sscEnd = prompt.indexOf("</session-start-context>");
+    const listIdx = prompt.indexOf(
+      "The following skills are available for use with the Skill tool:",
+    );
+    const bootIdx = prompt.indexOf("BOOT-LOADED");
+    expect(sscEnd).toBeGreaterThan(-1);
     expect(bootIdx).toBeGreaterThan(-1);
-    expect(invIdx).toBeGreaterThan(bootIdx);
+    expect(bootIdx).toBeLessThan(sscEnd);
+    expect(listIdx).toBeGreaterThan(sscEnd);
   });
 
   test("sets dispatch_prompt_path to dispatch-prompt.txt under the condition dir", () => {
@@ -388,25 +533,41 @@ describe("buildDispatchTask bootstrap injection", () => {
     expect(withSkill.dispatch_prompt).toContain("test-driven-development");
   });
 
-  test("references staged slug in skill block for claude-code", () => {
+  test("names the staged slug for disambiguation without instructing invocation", () => {
     const task = buildDispatchTask({
       ...baseOpts,
       bootstrapContent: "BOOT-LOADED",
     });
+    // The slug is still surfaced so a deliberate invocation targets the staged
+    // version and the meta-check can find it — but we no longer assert a plugin
+    // is "loaded" or tell the agent to prefer the slug over the bare name, which
+    // invited it to hunt for a global copy (issue #144 global-plugin leakage).
     expect(task.dispatch_prompt).toContain(
       "slow-powers-eval-1-with_skill__foo",
     );
+    // ...but the over-promoting invoke imperative (issue #119) is gone, so
+    // invocation reflects the skill's own triggering rather than an order.
+    expect(task.dispatch_prompt).not.toContain("invoke that slug");
+    expect(task.dispatch_prompt).not.toContain("if the skill applies");
+    expect(task.dispatch_prompt).not.toContain("under evaluation");
+    // ...and the leakage-inviting framing is gone (issue #144): no claim that a
+    // plugin is loaded, no "use the slug rather than the bare name" contrast.
+    expect(task.dispatch_prompt).not.toContain("plugin loaded");
+    expect(task.dispatch_prompt).not.toContain("rather than the bare name");
   });
 
-  test("without-skill condition under realistic env reflects 'this skill removed, others available' rather than 'no skill loaded'", () => {
+  test("without-skill condition under realistic env carries no eval-announcing skill commentary", () => {
     const task = buildDispatchTask({
       ...baseOpts,
       skillPath: null,
       stagedSkillSlug: null,
       bootstrapContent: "BOOT-LOADED",
     });
+    // The arm stays silent about the absent skill: the available-skills block
+    // already omits it, so nothing announces that this is an eval control arm.
     expect(task.dispatch_prompt).not.toContain("No skill is loaded");
-    expect(task.dispatch_prompt.toLowerCase()).toContain("not available");
+    expect(task.dispatch_prompt.toLowerCase()).not.toContain("not available");
+    expect(task.dispatch_prompt).not.toContain("under evaluation");
   });
 
   test("without-skill condition without bootstrap (e.g. --no-stage) keeps the legacy 'No skill is loaded' wording", () => {
@@ -420,10 +581,87 @@ describe("buildDispatchTask bootstrap injection", () => {
   });
 });
 
+describe("buildDispatchTask plan-mode injection", () => {
+  const baseOpts = {
+    evalId: "e1",
+    condition: "with_skill",
+    skillPath: null,
+    stagedSkillSlug: "slow-powers-eval-1-with_skill__foo" as string | null,
+    userPrompt: "BUILD-THE-TODO-APP",
+    fixtures: [] as string[],
+    outputsDir: "/tmp/out",
+    condDir: "/tmp/cond",
+    skillName: "foo",
+    bootstrapContent: null as string | null,
+    availableSkills: [
+      { name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
+    ] as { name: string; path: string; description: string }[],
+  };
+
+  test("omits the plan-mode block when planModeContent is null/absent", () => {
+    const task = buildDispatchTask({ ...baseOpts });
+    expect(task.dispatch_prompt).not.toContain("<system-reminder>");
+    const withNull = buildDispatchTask({ ...baseOpts, planModeContent: null });
+    expect(withNull.dispatch_prompt).not.toContain("<system-reminder>");
+  });
+
+  test("injects the rendered plan-mode block when planModeContent is provided", () => {
+    const task = buildDispatchTask({
+      ...baseOpts,
+      planModeContent: "Plan mode is active. PLAN-RAIL-MARKER.",
+    });
+    expect(task.dispatch_prompt).toContain("<system-reminder>");
+    expect(task.dispatch_prompt).toContain("PLAN-RAIL-MARKER.");
+    expect(task.dispatch_prompt).toContain("</system-reminder>");
+  });
+
+  test("places the plan-mode block after the available-skills block and before the user request", () => {
+    const prompt = buildDispatchTask({
+      ...baseOpts,
+      planModeContent: "PLAN-RAIL-MARKER",
+    }).dispatch_prompt;
+    const skillsIdx = prompt.indexOf(
+      "The following skills are available for use with the Skill tool:",
+    );
+    const planIdx = prompt.indexOf("<system-reminder>");
+    const promptIdx = prompt.indexOf("BUILD-THE-TODO-APP");
+    expect(skillsIdx).toBeGreaterThan(-1);
+    expect(planIdx).toBeGreaterThan(skillsIdx);
+    expect(promptIdx).toBeGreaterThan(planIdx);
+  });
+
+  test("injects an identical plan-mode block in the with- and without-skill arms", () => {
+    const planModeContent = "Plan mode is active. PLAN-RAIL-MARKER.";
+    const rendered =
+      "<system-reminder>\nPlan mode is active. PLAN-RAIL-MARKER.\n</system-reminder>";
+    const withSkill = buildDispatchTask({
+      ...baseOpts,
+      condition: "with_skill",
+      stagedSkillSlug: "slow-powers-eval-1-with_skill__foo",
+      planModeContent,
+    });
+    const withoutSkill = buildDispatchTask({
+      ...baseOpts,
+      condition: "without_skill",
+      skillPath: null,
+      stagedSkillSlug: null,
+      availableSkills: [],
+      planModeContent,
+    });
+    expect(withSkill.dispatch_prompt).toContain(rendered);
+    expect(withoutSkill.dispatch_prompt).toContain(rendered);
+  });
+});
+
 describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
   const RUN_TS = join(import.meta.dir, "run.ts");
 
-  function setup(name: string): { skillDir: string; cwd: string } {
+  function setup(
+    name: string,
+    evals: Eval[] = [
+      { id: "e1", prompt: "review this MR", expected_output: "a review" },
+    ],
+  ): { skillDir: string; cwd: string } {
     const root = join(FIXTURE_ROOT, name);
     const skillDir = join(root, "skill-dir");
     const skillSub = join(skillDir, "mr-review");
@@ -434,12 +672,7 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     );
     writeFileSync(
       join(skillSub, "evals", "evals.json"),
-      JSON.stringify({
-        skill_name: "mr-review",
-        evals: [
-          { id: "e1", prompt: "review this MR", expected_output: "a review" },
-        ],
-      }),
+      JSON.stringify({ skill_name: "mr-review", evals }),
     );
     const cwd = join(root, "work");
     mkdirSync(cwd, { recursive: true });
@@ -486,6 +719,168 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     expect(entries).toEqual(["slow-powers-eval-1-with_skill__mr-review"]);
   });
 
+  test("--plan-mode injects the resolved profile into every dispatch and records plan_mode in dispatch.json", () => {
+    const { skillDir, cwd } = setup("usermode-plan-mode");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--plan-mode",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    const dispatch = JSON.parse(
+      readFileSync(join(iterationDir, "dispatch.json"), "utf8"),
+    ) as {
+      plan_mode: boolean;
+      tasks: Array<{ condition: string; dispatch_prompt_path: string }>;
+    };
+    expect(dispatch.plan_mode).toBe(true);
+
+    // Both arms carry the same harness-injected plan-mode operating context.
+    for (const t of dispatch.tasks) {
+      const prompt = readFileSync(t.dispatch_prompt_path, "utf8");
+      expect(prompt).toContain("<system-reminder>");
+      expect(prompt).toContain("Plan mode is active");
+      expect(prompt).toContain("ExitPlanMode");
+    }
+  });
+
+  test("without --plan-mode, dispatch.json records plan_mode:false and no plan-mode block is injected", () => {
+    const { skillDir, cwd } = setup("usermode-no-plan-mode");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    const dispatch = JSON.parse(
+      readFileSync(join(iterationDir, "dispatch.json"), "utf8"),
+    ) as {
+      plan_mode: boolean;
+      tasks: Array<{ dispatch_prompt_path: string }>;
+    };
+    expect(dispatch.plan_mode).toBe(false);
+    for (const t of dispatch.tasks) {
+      const prompt = readFileSync(t.dispatch_prompt_path, "utf8");
+      expect(prompt).not.toContain("<system-reminder>");
+    }
+  });
+
+  test("--stage-name stages the SUT under the verbatim name, threads it everywhere, and registers it for cleanup", () => {
+    const { skillDir, cwd } = setup("usermode-stage-name");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--stage-name",
+        "mr-review",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    // Staged dir is the natural name, not the conspicuous eval slug.
+    const stagedSkillsDir = join(cwd, ".claude", "skills");
+    const entries = readdirSync(stagedSkillsDir).filter(
+      (e) => e !== STAGED_SIBLING_MANIFEST,
+    );
+    expect(entries).toEqual(["mr-review"]);
+
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+
+    // conditions.json carries the natural slug — the grader meta-check reads it.
+    const conditions = JSON.parse(
+      readFileSync(join(iterationDir, "conditions.json"), "utf8"),
+    ) as {
+      conditions: Array<{ name: string; staged_skill_slug: string | null }>;
+    };
+    const withSkill = conditions.conditions.find(
+      (c) => c.name === "with_skill",
+    );
+    expect(withSkill?.staged_skill_slug).toBe("mr-review");
+
+    // The custom dir is registered for cleanup (prefix scan won't catch it).
+    const manifest = JSON.parse(
+      readFileSync(join(stagedSkillsDir, STAGED_SIBLING_MANIFEST), "utf8"),
+    ) as { created_entries: Array<{ name: string }> };
+    expect(manifest.created_entries.map((e) => e.name)).toContain("mr-review");
+
+    // The dispatch prompt disambiguates to the natural identifier, not the slug.
+    const dispatch = JSON.parse(
+      readFileSync(join(iterationDir, "dispatch.json"), "utf8"),
+    ) as {
+      tasks: Array<{ condition: string; dispatch_prompt_path: string }>;
+    };
+    const task = dispatch.tasks.find((t) => t.condition === "with_skill");
+    const prompt = readFileSync(task?.dispatch_prompt_path ?? "", "utf8");
+    expect(prompt).toContain("registered under the identifier `mr-review`");
+    expect(prompt).not.toContain("slow-powers-eval-");
+  });
+
+  test("--stage-name refuses to clobber a pre-existing same-named dir", () => {
+    const { skillDir, cwd } = setup("usermode-stage-name-clobber");
+    const preexisting = join(cwd, ".claude", "skills", "my-real-skill");
+    mkdirSync(preexisting, { recursive: true });
+    writeFileSync(join(preexisting, "SKILL.md"), "USER OWNED");
+
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--stage-name",
+        "my-real-skill",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).not.toBe(0);
+    expect(readFileSync(join(preexisting, "SKILL.md"), "utf8")).toBe(
+      "USER OWNED",
+    );
+  });
+
   test("dispatch prompt lists only the skill-under-test, no other skills, and no product framing without --bootstrap", () => {
     const { skillDir, cwd } = setup("usermode-prompt");
     const res = runCli(
@@ -526,8 +921,10 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     // The full prompt is no longer inlined in dispatch.json — it lives in a file.
     expect(withSkill?.dispatch_prompt).toBeUndefined();
     const prompt = readFileSync(withSkill?.dispatch_prompt_path ?? "", "utf8");
-    expect(prompt).toContain("<session-start-context>");
-    expect(prompt).toContain("* `mr-review`");
+    expect(prompt).toContain(
+      "The following skills are available for use with the Skill tool:",
+    );
+    expect(prompt).toContain("- mr-review:");
     expect(prompt).not.toContain("test-driven-development");
     expect(prompt).not.toContain("writing-skills");
     // No product framing (EXTREMELY-IMPORTANT etc.) without a --bootstrap file.
@@ -670,7 +1067,7 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     expect(conditions.run_nonce).toBe(dispatch.run_nonce);
   });
 
-  test("--bootstrap content is prepended verbatim before the staged-skills inventory", () => {
+  test("--bootstrap content is prepended verbatim before the available-skills block", () => {
     const { skillDir, cwd } = setup("usermode-bootstrap");
     const bootstrapPath = join(cwd, "my-bootstrap.md");
     writeFileSync(bootstrapPath, "MY CUSTOM EVAL FRAMING");
@@ -709,8 +1106,75 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
       ? readFileSync(withSkill.dispatch_prompt_path, "utf8")
       : "";
     const bootIdx = prompt.indexOf("MY CUSTOM EVAL FRAMING");
-    const invIdx = prompt.indexOf("staged and discoverable");
+    const listIdx = prompt.indexOf(
+      "The following skills are available for use with the Skill tool:",
+    );
     expect(bootIdx).toBeGreaterThan(-1);
-    expect(invIdx).toBeGreaterThan(bootIdx);
+    expect(listIdx).toBeGreaterThan(bootIdx);
+  });
+
+  test("--only restricts dispatches to the named eval ids", () => {
+    const { skillDir, cwd } = setup("usermode-only", [
+      { id: "e1", prompt: "review MR 1", expected_output: "a review" },
+      { id: "e2", prompt: "review MR 2", expected_output: "a review" },
+    ]);
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--only",
+        "e1",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const dispatch = JSON.parse(
+      readFileSync(
+        join(
+          cwd,
+          "skills-workspace",
+          "mr-review",
+          "iteration-1",
+          "dispatch.json",
+        ),
+        "utf8",
+      ),
+    ) as { tasks: Array<{ eval_id: string }> };
+
+    expect(dispatch.tasks.map((t) => t.eval_id).sort()).toEqual(["e1", "e1"]);
+    // The "N evals × 2 conditions" line reflects the filtered set.
+    expect(new TextDecoder().decode(res.stdout)).toContain(
+      "1 evals × 2 conditions",
+    );
+  });
+
+  test("--only with an unknown id exits non-zero and names the unknown id", () => {
+    const { skillDir, cwd } = setup("usermode-only-unknown", [
+      { id: "e1", prompt: "review MR 1", expected_output: "a review" },
+    ]);
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--only",
+        "nope",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).not.toBe(0);
+    expect(new TextDecoder().decode(res.stderr)).toContain(
+      "unknown eval id(s): nope",
+    );
   });
 });

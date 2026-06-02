@@ -13,9 +13,23 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { detectRunContext, type RunContext } from "./context";
+import {
+  renderAvailableSkillsBlock,
+  renderPlanModeContext,
+} from "./adapters/claude-code-session";
+import { detectRunContext, type Harness, type RunContext } from "./context";
 import { installGuard, teardownGuard } from "./guard/install";
-import type { ConditionsRecord, Eval, EvalsConfig } from "./types";
+import {
+  detectPluginShadows,
+  formatShadowBanner,
+  resolveConfigDir,
+} from "./plugin-shadow";
+import type {
+  AvailableSkill,
+  ConditionsRecord,
+  Eval,
+  EvalsConfig,
+} from "./types";
 import { validateEvalsConfig } from "./validate";
 
 export const STAGED_SKILL_PREFIX = "slow-powers-eval-";
@@ -27,12 +41,49 @@ export function stageSkillForCC(opts: {
   condition: string;
   skillName: string;
   repoRoot: string;
+  /**
+   * When set, stage under this verbatim identifier instead of the conspicuous
+   * `slow-powers-eval-…` slug. Used by `--stage-name` to A/B a natural name
+   * against the eval-flagged one (issue #144 Step 2). A custom name is not
+   * caught by `cleanupStagedSkills`'s prefix scan, so the caller must also call
+   * `registerStagedSkillForCleanup` to have it removed on the next run.
+   */
+  stageNameOverride?: string;
 }): string {
-  const slug = `${STAGED_SKILL_PREFIX}${opts.iteration}-${opts.condition}__${opts.skillName}`;
+  const slug =
+    opts.stageNameOverride ??
+    `${STAGED_SKILL_PREFIX}${opts.iteration}-${opts.condition}__${opts.skillName}`;
   const skillDir = join(opts.repoRoot, ".claude", "skills", slug);
   mkdirSync(skillDir, { recursive: true });
   writeFileSync(join(skillDir, "SKILL.md"), opts.content);
   return slug;
+}
+
+/**
+ * Adds a custom-named staged skill dir (one created via `stageNameOverride`) to
+ * the sibling manifest's `created_entries` so the next run's
+ * `cleanupStagedSkills` removes it — the prefix scan only catches
+ * `slow-powers-eval-…` names. Idempotent: a name already recorded is left alone.
+ */
+export function registerStagedSkillForCleanup(
+  repoRoot: string,
+  name: string,
+): void {
+  const skillsDir = join(repoRoot, ".claude", "skills");
+  const manifestPath = join(skillsDir, STAGED_SIBLING_MANIFEST);
+  let manifest: SiblingManifest;
+  if (existsSync(manifestPath)) {
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } else {
+    manifest = {
+      created_at: new Date().toISOString(),
+      staged_under_test: name,
+      created_entries: [],
+    };
+  }
+  if (manifest.created_entries.some((e) => e.name === name)) return;
+  manifest.created_entries.push({ name, preexisting: false });
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 type SiblingManifest = {
@@ -139,9 +190,13 @@ type Args = {
   baseline?: string;
   label?: string;
   iteration?: number;
+  only?: string[];
+  skip?: string[];
   dryRun: boolean;
   noStage: boolean;
   guard: boolean;
+  stageName?: string;
+  planMode: boolean;
 };
 
 function die(msg: string): never {
@@ -176,15 +231,27 @@ function parseArgs(argv: string[]): Args {
   if (iteration !== undefined && !Number.isInteger(iteration))
     die(`--iteration must be an integer, got ${iterationFlag}`);
 
+  const parseIdList = (v: string | undefined): string[] | undefined =>
+    v === undefined
+      ? undefined
+      : v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
   return {
     command,
     mode: flag("mode") as Mode | undefined,
     baseline: flag("baseline"),
     label: flag("label"),
     iteration,
+    only: parseIdList(flag("only")),
+    skip: parseIdList(flag("skip")),
     dryRun: has("dry-run"),
     noStage: has("no-stage"),
     guard: has("guard"),
+    stageName: flag("stage-name"),
+    planMode: has("plan-mode"),
   };
 }
 
@@ -273,6 +340,16 @@ function commandRun(args: Args, ctx: RunContext): void {
       `warning: evals.json skill_name (${config.skill_name}) does not match the skill folder (${ctx.skillName}). Proceeding with ${ctx.skillName}.`,
     );
 
+  let selectedEvals: Eval[];
+  try {
+    selectedEvals = selectEvals(config.evals, {
+      only: args.only,
+      skip: args.skip,
+    });
+  } catch (err) {
+    die(err instanceof Error ? err.message : String(err));
+  }
+
   const workspaceSkillDir = join(ctx.workspaceRoot, ctx.skillName);
   const iteration = nextIteration(workspaceSkillDir, args.iteration);
   const iterationDir = join(workspaceSkillDir, `iteration-${iteration}`);
@@ -318,6 +395,14 @@ function commandRun(args: Args, ctx: RunContext): void {
   );
   console.log(`  ${conditionA}: ${skillPathForA ?? "(no skill)"}`);
   console.log(`  ${conditionB}: ${skillPathForB ?? "(no skill)"}`);
+  if (selectedEvals.length !== config.evals.length) {
+    const [flagName, ids] = args.only
+      ? ["--only", args.only]
+      : ["--skip", args.skip ?? []];
+    console.log(
+      `  selection: ${selectedEvals.length} of ${config.evals.length} evals (${flagName} ${ids.join(", ")})`,
+    );
+  }
   if (args.noStage)
     console.log(
       "  staging: disabled (--no-stage) — skills will be inlined into dispatch_prompt for harnesses without project-local skill discovery",
@@ -343,6 +428,19 @@ function commandRun(args: Args, ctx: RunContext): void {
   const bootstrapContent =
     ctx.bootstrapPath !== null ? readFileSync(ctx.bootstrapPath, "utf8") : null;
 
+  // `--plan-mode` (issue #142): inject the harness's verbatim plan-mode
+  // procedure as an operating-context layer. The profile is a bundled asset
+  // resolved relative to this runner (mirroring the guard-script resolution
+  // below) and keyed by harness, so a harness without a profile simply has no
+  // `--plan-mode` and the portable dispatch contract is unchanged.
+  const planModeContent = args.planMode
+    ? resolvePlanModeProfile(ctx.harness)
+    : null;
+  if (args.planMode)
+    console.log(
+      `  plan-mode: injecting ${ctx.harness} plan-mode profile as operating context (issue #142; necessary-not-sufficient fidelity layer)`,
+    );
+
   // Sibling skill metadata, shared across conditions. Empty when --no-stage
   // (nothing is staged, so nothing is discoverable to list).
   const siblingSkills: AvailableSkill[] = args.noStage
@@ -351,6 +449,26 @@ function commandRun(args: Args, ctx: RunContext): void {
         const p = join(ctx.skillDir, name, "SKILL.md");
         return { name, path: p, description: getSkillDescription(p) };
       });
+
+  // `--stage-name` overrides the conspicuous `slow-powers-eval-…` slug with a
+  // verbatim name (issue #144 Step 2: A/B a natural name against the eval slug).
+  // It targets the single staging condition, so reject the case where both
+  // conditions stage (e.g. revision mode) — one name can't cover two dirs — and
+  // refuse to clobber a dir that already exists (a real project skill the user
+  // owns; cleanup has already removed our own prior custom dirs by this point).
+  if (args.stageName !== undefined && !args.noStage) {
+    if (skillPathForA !== null && skillPathForB !== null) {
+      die(
+        "--stage-name is only supported when exactly one condition stages the skill (e.g. --mode new-skill); both conditions stage here.",
+      );
+    }
+    const target = join(ctx.stageRoot, ".claude", "skills", args.stageName);
+    if (existsSync(target)) {
+      die(
+        `--stage-name "${args.stageName}": ${target} already exists; refusing to clobber it. Remove it or choose a different name.`,
+      );
+    }
+  }
 
   const stageFor = (
     condName: string,
@@ -363,11 +481,21 @@ function commandRun(args: Args, ctx: RunContext): void {
       condition: condName,
       skillName: ctx.skillName,
       repoRoot: ctx.stageRoot,
+      stageNameOverride: args.stageName,
     });
   };
 
   const conditionASlug = stageFor(conditionA, skillPathForA);
   const conditionBSlug = stageFor(conditionB, skillPathForB);
+
+  // A custom-named dir isn't caught by cleanupStagedSkills's prefix scan; record
+  // it in the sibling manifest so the next run removes it.
+  if (
+    args.stageName !== undefined &&
+    (conditionASlug === args.stageName || conditionBSlug === args.stageName)
+  ) {
+    registerStagedSkillForCleanup(ctx.stageRoot, args.stageName);
+  }
 
   const conditions: ConditionsRecord = {
     mode: args.mode,
@@ -408,7 +536,7 @@ function commandRun(args: Args, ctx: RunContext): void {
   };
 
   const tasks: DispatchTask[] = [];
-  for (const ev of config.evals) {
+  for (const ev of selectedEvals) {
     const evalDir = join(iterationDir, `eval-${ev.id}`);
     ensureDir(evalDir);
 
@@ -432,6 +560,7 @@ function commandRun(args: Args, ctx: RunContext): void {
           outputsDir,
           condDir,
           bootstrapContent,
+          planModeContent,
           skillName: ctx.skillName,
           availableSkills: availableSkillsFor(condSkillPath),
           runTag,
@@ -467,6 +596,7 @@ function commandRun(args: Args, ctx: RunContext): void {
     iteration_dir: iterationDir,
     mode: args.mode,
     baseline: args.baseline ?? null,
+    plan_mode: args.planMode,
     conditions: conditions.conditions,
     harness: ctx.harness,
     tasks: tasks.map(({ dispatch_prompt: _omit, ...rest }) => rest),
@@ -495,11 +625,28 @@ function commandRun(args: Args, ctx: RunContext): void {
     }
   }
 
+  // Plugin-shadow preflight (Claude Code): a staged skill name that is also
+  // discoverable from an enabled plugin or the global skills dir contaminates the
+  // run — subagents inherit this session's plugins, so both copies are reachable.
+  // The runner can't unload a plugin from a live session; it only flags it. The
+  // report is persisted so the aggregator can surface it in validity_warnings.
+  if (ctx.harness === "claude-code") {
+    const shadowReport = detectPluginShadows({
+      configDir: resolveConfigDir(),
+      cwd: ctx.stageRoot,
+      stagedSkillNames: [ctx.skillName, ...ctx.siblingSkillNames],
+    });
+    if (shadowReport.shadowed.length > 0) {
+      writeJson(join(iterationDir, "plugin-shadow.json"), shadowReport);
+      console.warn(formatShadowBanner(shadowReport));
+    }
+  }
+
   console.log(`\nWorkspace prepared: ${iterationDir}`);
   console.log(`Dispatch manifest:  ${manifestPath}`);
   console.log(`Dispatch tasks:     ${dispatchJsonPath}`);
   console.log(
-    `\n${tasks.length} dispatches required (${config.evals.length} evals × 2 conditions).`,
+    `\n${tasks.length} dispatches required (${selectedEvals.length} evals × 2 conditions).`,
   );
 
   if (args.dryRun) console.log("\n--dry-run: stopping after workspace prep.");
@@ -531,11 +678,40 @@ type DispatchTask = {
   dispatch_prompt: string;
 };
 
-export type AvailableSkill = {
-  name: string;
-  path: string;
-  description: string;
-};
+export type { AvailableSkill } from "./types";
+
+/**
+ * Filters the eval list to the subset requested via `--only` / `--skip`. The
+ * two flags are mutually exclusive. Every requested id must exist in the config,
+ * so a typo'd id is caught up front rather than silently producing an empty or
+ * surprising run. Throws on invalid input; the caller routes the message to
+ * `die`. `--only` preserves the config's eval order, not the order ids were
+ * passed.
+ */
+export function selectEvals(
+  evals: Eval[],
+  opts: { only?: string[]; skip?: string[] },
+): Eval[] {
+  if (opts.only && opts.skip)
+    throw new Error("use only one of --only / --skip, not both");
+  const requested = opts.only ?? opts.skip;
+  if (requested === undefined) return evals;
+  if (requested.length === 0)
+    throw new Error("--only/--skip requires at least one eval id");
+
+  const known = new Set(evals.map((e) => e.id));
+  const unknown = requested.filter((id) => !known.has(id));
+  if (unknown.length)
+    throw new Error(
+      `unknown eval id(s): ${unknown.join(", ")}. ` +
+        `Available ids: ${[...known].join(", ")}`,
+    );
+
+  const set = new Set(requested);
+  return opts.only
+    ? evals.filter((e) => set.has(e.id))
+    : evals.filter((e) => !set.has(e.id));
+}
 
 function copyFixtures(ev: Eval, skillDir: string, condDir: string): string[] {
   if (!ev.files || ev.files.length === 0) return [];
@@ -551,6 +727,32 @@ function copyFixtures(ev: Eval, skillDir: string, condDir: string): string[] {
     copied.push(dst);
   }
   return copied;
+}
+
+/**
+ * Resolve the verbatim plan-mode procedure profile for a harness (issue #142).
+ * The profile is a bundled supporting-file asset under
+ * `profiles/<harness>/plan-mode.md`, resolved relative to this runner exactly
+ * like the guard script (`join(import.meta.dir, "guard", "guard.ts")`). A
+ * harness without a profile gets a clear error rather than a silent no-op — the
+ * profile is Claude-tier fidelity, and a harness lacking one leaves the portable
+ * dispatch contract unchanged (no `<system-reminder>` plan-mode block emitted).
+ */
+function resolvePlanModeProfile(harness: Harness): string {
+  const profilePath = join(
+    import.meta.dir,
+    "profiles",
+    harness,
+    "plan-mode.md",
+  );
+  if (!existsSync(profilePath)) {
+    die(
+      `--plan-mode: no plan-mode profile exists for harness '${harness}' ` +
+        `(expected ${profilePath}). This is a Claude-tier fidelity layer; a ` +
+        "harness without a profile leaves the portable dispatch contract unchanged.",
+    );
+  }
+  return readFileSync(profilePath, "utf8");
 }
 
 function getSkillDescription(skillPath: string): string {
@@ -611,6 +813,15 @@ export function buildDispatchTask(opts: {
   outputsDir: string;
   condDir: string;
   bootstrapContent: string | null;
+  /**
+   * Verbatim plan-mode procedure profile (from
+   * `profiles/<harness>/plan-mode.md`) to inject as an operating-context layer,
+   * or null/undefined to omit it. Skill-agnostic, so it is identical across the
+   * with/without-skill arms and needs no redaction. Set by the `--plan-mode`
+   * flag (issue #142): the highest-fidelity in-runner approximation of a real
+   * plan mode, still text the agent reads — a necessary-not-sufficient signal.
+   */
+  planModeContent?: string | null;
   skillName: string;
   availableSkills: AvailableSkill[];
   /**
@@ -626,11 +837,16 @@ export function buildDispatchTask(opts: {
 
   let skillBlock: string;
   if (opts.stagedSkillSlug) {
+    // Neutral slug disambiguation only — no imperative to invoke. The skill is
+    // staged under a unique slug; surface that identifier so a deliberate
+    // invocation targets the staged copy and the __skill_invoked meta-check can
+    // find it. Do NOT assert a plugin is "loaded" or tell the agent to prefer the
+    // slug "rather than the bare name": in an isolated run there is no global copy,
+    // and that framing invited the agent to hunt for one (issue #144 global-plugin
+    // leakage). Whether to invoke is left to the skill's own triggering (dropping
+    // the old "invoke if it applies" directive was the issue #119 ceiling fix).
     skillBlock = [
-      "Your environment has the slow-powers plugin loaded. All slow-powers skills are",
-      "discoverable via the Skill tool. The skill currently under evaluation is",
-      `staged under the unique slug "${opts.stagedSkillSlug}" — invoke that slug rather`,
-      "than the natural name if the skill applies to the user's request.",
+      `The \`${opts.skillName}\` skill is registered under the identifier \`${opts.stagedSkillSlug}\` and is discoverable via the Skill tool. If you invoke it, use that identifier.`,
     ].join("\n");
   } else if (opts.skillPath) {
     skillBlock = [
@@ -641,11 +857,11 @@ export function buildDispatchTask(opts: {
       "</skill>",
     ].join("\n");
   } else if (stagedSkills.length > 0 || opts.bootstrapContent) {
-    skillBlock = [
-      "The skill currently under evaluation is NOT available in this environment.",
-      "Other staged skills remain discoverable via the Skill tool; apply any",
-      "that fit the user's request.",
-    ].join("\n");
+    // Skill-absent arm in a realistic environment: stay silent. The
+    // available-skills block already omits the skill-under-test, so any
+    // commentary here would only announce the eval (and, in the control arm,
+    // draw attention to the very skill that is supposed to be absent).
+    skillBlock = "";
   } else {
     skillBlock = "No skill is loaded. Respond as you naturally would.";
   }
@@ -654,73 +870,72 @@ export function buildDispatchTask(opts: {
     ? `Available fixture files:\n${opts.fixtures.map((f) => `  - ${f}`).join("\n")}`
     : "Available fixture files: none";
 
-  // The session-start context carries two kinds of content:
-  //   1. The verbatim --bootstrap file (product-specific framing), if supplied.
-  //   2. An auto-built inventory of the skills staged for this eval.
+  // A dispatch mirrors a real session by carrying two *separate* surfaces, the
+  // way the harness actually delivers them:
+  //   1. The verbatim --bootstrap file (the SessionStart-hook equivalent),
+  //      wrapped in <session-start-context>, if supplied.
+  //   2. The list of discoverable skills, rendered in the harness's native
+  //      presentation as its own block (see adapters/claude-code-session.ts).
   // A condition that does not load the skill-under-test (the new-skill
   // `without_skill` arm, under staging or --no-stage) must carry zero reference
-  // to it — including in the verbatim bootstrap, which otherwise lists it in its
-  // Active Skills Directory and leaks the skill into the control arm.
+  // to it. The skill-under-test is auto-omitted from the available-skills block
+  // (see `availableSkillsFor`). redactSkillFromBootstrap covers the other path:
+  // a *user-supplied* --bootstrap that names the skill in its own prose would
+  // otherwise leak it into the control arm. (The shipped bootstrap.md no longer
+  // enumerates skills, so that redaction is a no-op against it.)
   const skillAbsent = !opts.skillPath && !opts.stagedSkillSlug;
   const effectiveBootstrap =
     opts.bootstrapContent && skillAbsent
       ? redactSkillFromBootstrap(opts.bootstrapContent, opts.skillName)
       : opts.bootstrapContent;
 
-  const startContextParts: string[] = [];
+  const sections: string[] = [];
   if (effectiveBootstrap) {
-    startContextParts.push(
+    sections.push(
       [
+        "<session-start-context>",
         "The following guidelines were loaded at session start by the slow-powers plugin",
         "(equivalent to the SessionStart hook firing in a real user's environment):",
         "",
         effectiveBootstrap.trim(),
-      ].join("\n"),
-    );
-  }
-  if (stagedSkills.length > 0) {
-    const inventoryLines = stagedSkills.map(
-      (s) => `* \`${s.name}\`\n  * *Trigger:* ${s.description}`,
-    );
-    startContextParts.push(
-      [
-        "The following skills are staged and discoverable in this eval environment:",
-        "",
-        ...inventoryLines,
-      ].join("\n"),
-    );
-  }
-
-  const sections: string[] = [];
-  if (startContextParts.length > 0) {
-    sections.push(
-      [
-        "<session-start-context>",
-        startContextParts.join("\n\n"),
         "</session-start-context>",
         "",
       ].join("\n"),
     );
   }
-  sections.push(
-    [
-      "You are executing a single test case for a skill evaluation framework.",
-      "Treat this as a real user request — do NOT optimize behavior for the eval.",
-      "",
-      skillBlock,
-      "",
-      fixturesBlock,
-      `Output directory: ${opts.outputsDir}`,
-      "",
-      "Instructions:",
-      "- Write any files you produce into the output directory.",
-      `- After completing the task, write your final user-facing response to ${opts.outputsDir}/final-message.md.`,
-      "- Do not write outside the output directory.",
-      "",
-      "User request:",
-      opts.userPrompt,
-    ].join("\n"),
+  const availableSkillsBlock = renderAvailableSkillsBlock(stagedSkills);
+  if (availableSkillsBlock) {
+    sections.push(`${availableSkillsBlock}\n\n`);
+  }
+  // Plan-mode operating context (issue #142). Injected as its own block after
+  // the session-start surfaces and before the eval task framing, so it reads as
+  // a session-level mode active for this turn — layered the way the real harness
+  // delivers it, not as seed prose. Skill-agnostic: identical in both arms.
+  const planModeBlock = opts.planModeContent
+    ? renderPlanModeContext(opts.planModeContent)
+    : "";
+  if (planModeBlock) {
+    sections.push(`${planModeBlock}\n\n`);
+  }
+  const taskLines = [
+    "You are executing a single test case for a skill evaluation framework.",
+    "Treat this as a real user request — do NOT optimize behavior for the eval.",
+  ];
+  if (skillBlock) taskLines.push("", skillBlock);
+  taskLines.push(
+    "",
+    fixturesBlock,
+    `Output directory: ${opts.outputsDir}`,
+    "",
+    "Instructions:",
+    "- Write any files you produce into the output directory.",
+    `- After completing the task, write your final user-facing response to ${opts.outputsDir}/final-message.md.`,
+    "- Do not write outside the output directory.",
+    "",
+    "User request:",
+    opts.userPrompt,
   );
+  sections.push(taskLines.join("\n"));
 
   return {
     eval_id: opts.evalId,

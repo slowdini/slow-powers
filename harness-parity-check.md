@@ -69,9 +69,11 @@ For each category below, compare what Claude Code has against what your harness 
 | Bootstrap injection | `hooks/hooks.json` `SessionStart` hook runs `hooks/run-hook.cmd session-start`, which executes `hooks/session-start` (bash) — that script reads `bootstrap.md` and emits a JSON `additionalContext` payload Claude injects into the session |
 | Skill discovery | Auto-discovered: Claude Code scans the conventional `skills/` directory at the plugin root, no manifest field required. Harnesses without convention-based discovery declare the path in their manifest instead |
 | Hook system / session start | `hooks/hooks.json` with matcher `startup\|resume\|clear\|compact` |
+| Plan hand-off enforcement (Claude-only) | `hooks/hooks.json` `PreToolUse` hook matching `ExitPlanMode` runs `hooks/run-hook.cmd exit-plan-mode` → `hooks/exit-plan-mode`, which denies the *first* plan-exit per session and steers the agent through `hardening-plans` before the plan is presented (it re-submits and is allowed). `ExitPlanMode` is a Claude tool — on a harness with no such tool the matcher in the shared `hooks.json` is **inert** (never fires, clean no-op). An analogous "about to present a plan" lifecycle event on Codex/OpenCode is **deferred** (issue #141, avenue 3) |
 | Skill-eval transcript adapter | `skills/evaluating-skills/runner/adapters/claude-code-transcript.ts` |
-| Realistic eval environment (skill staging) | `runner/run.ts` stages skills under `<stageRoot>/.claude/skills/` and builds a `<session-start-context>` inventory block |
+| Realistic eval environment (skill staging) | `runner/run.ts` stages skills under `<stageRoot>/.claude/skills/`, wraps any `--bootstrap` content in a `<session-start-context>` block, and emits a separate available-skills block. That block is rendered in the harness's **native** skill-list presentation — Claude Code's lives in `runner/adapters/claude-code-session.ts` (`The following skills are available for use with the Skill tool:` / `- name: description`). Another harness adds its own renderer there so its dispatches read like a real session in that harness, not an eval |
 | Eval subagent write enforcement | Opt-in `--guard` stages a `PreToolUse` hook (`runner/guard/`) that *denies* subagent writes/installs outside the eval sandbox while dispatches run. Portable fallback for every harness: the `evals:detect-stray-writes` post-pass (`runner/detect-stray-writes.ts`) flags out-of-bounds writes from the parsed transcript after the fact |
+| Eval plan-mode operating context | Opt-in `--plan-mode` injects a harness-specific plan-mode procedure profile (`runner/profiles/<harness>/plan-mode.md`) as a `<system-reminder>` operating-context layer in every dispatch, rendered by `renderPlanModeContext` in the harness session adapter (`runner/adapters/claude-code-session.ts`). Only `profiles/claude-code/plan-mode.md` exists today; a harness adds its own profile (its native plan/research-mode procedure) + renderer alongside the Claude ones. A harness with no profile has no `--plan-mode` and an unchanged dispatch contract |
 | Harness-details operator guide | `skills/evaluating-skills/harness-details/claude.md` |
 | Installation docs | README section titled `### Claude Code` |
 | Version-sync registration | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are listed in `scripts/manifest-files.ts` (the shared lockstep list) |
@@ -103,6 +105,18 @@ pre-tool guard (a hook, a permission rule, a sandboxed cwd) should wire one up s
 its eval runs are as self-contained as Claude Code's; until then, the
 `detect-stray-writes` report is the honest fallback. Treat the write-enforcement
 row above as a goal to aim at, with detection as the baseline every harness meets.
+
+**Note on plan-mode fidelity (residual parity goal).** `--plan-mode` injects a
+harness's *verbatim* plan-mode procedure as operating context, which is the
+closest a harness's eval runner can get to reproducing the wild failure where a
+real plan mode makes loading a skill feel redundant. It is **not** the real mode:
+it is still text the dispatched subagent reads, not a state the harness places it
+under, so a pass remains necessary-not-sufficient (see *Seeding conversation
+context (and its ceiling)* in `skills/evaluating-skills/SKILL.md`). A harness that
+can actually dispatch an eval subagent *into* its own plan/research mode — not
+merely describe it — would close this gap; that real-mode injection is the
+residual parity goal, with `--plan-mode` (a profile + renderer) as the approximation
+every harness can reach in the meantime.
 
 Surface your findings inline using this template:
 

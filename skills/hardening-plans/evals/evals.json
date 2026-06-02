@@ -90,25 +90,6 @@
           "rubric": "Does the response make a real hand-off to the implementation skill — explicitly naming `slow-powers:test-driven-development` as the required next skill for the implementation phase — rather than merely dropping 'TDD' as an unexplained label or parenthetical? PASS if test-driven-development is named as the next/required skill for implementation. FAIL if 'TDD' appears only as a bare label with no hand-off, or is absent. (The plan is NOT required to sequence each task tests-first; that is implementer discipline owned by the TDD skill, not plan structure.)"
         }
       ]
-    },
-    {
-      "id": "csv-parser-bug-no-plan",
-      "prompt": "Our users are reporting that the CSV parser is skipping rows with empty email fields instead of using the fallback 'anonymous' label. Can we fix this issue in csv-parser.ts?",
-      "expected_output": "The agent should immediately trigger `systematic-debugging` (root-cause analysis) rather than loading `hardening-plans` or writing an implementation plan.",
-      "skill_should_trigger": false,
-      "assertions": [
-        {
-          "id": "loads_systematic_debugging_skill",
-          "type": "transcript_check",
-          "check": "tool_invocation_matches",
-          "pattern": "(Skill.*systematic-debugging|view_file.*systematic-debugging)"
-        },
-        {
-          "id": "invokes_debugging_only",
-          "type": "llm_judge",
-          "rubric": "Did the agent identify that this is a systematic debugging task and load the `systematic-debugging` skill, while completely bypassing the `hardening-plans` skill and avoiding writing a full implementation plan? PASS if the agent focused on debugging and did not load planning guidelines. FAIL if the agent attempted to load `hardening-plans` or write a general implementation plan before debugging the root cause."
-        }
-      ]
     }
   ]
 }

@@ -84,6 +84,28 @@ describe("shared assets (delivered by every harness)", () => {
 
     expect(missing).toEqual([]);
   });
+
+  // The ExitPlanMode gate lives in the shared hooks.json but is meaningful only
+  // on Claude (Codex/OpenCode have no ExitPlanMode tool), so it is asserted as a
+  // shared-asset property here rather than via the per-harness SessionStart
+  // wiring check, which would conflate the inert Codex case with real wiring.
+  test("hooks.json wires a PreToolUse ExitPlanMode gate to run-hook.cmd exit-plan-mode", () => {
+    const manifest = readJson("hooks/hooks.json") as {
+      hooks?: {
+        PreToolUse?: { matcher?: string; hooks?: { command?: string }[] }[];
+      };
+    };
+    const group = (manifest.hooks?.PreToolUse ?? []).find(
+      (g) => g.matcher === "ExitPlanMode",
+    );
+    expect(group).toBeDefined();
+    const command = group?.hooks?.[0]?.command ?? "";
+    expect(command).toContain("run-hook.cmd");
+    expect(command).toContain("exit-plan-mode");
+    expect(fs.existsSync(path.join(REPO_ROOT, "hooks/exit-plan-mode"))).toBe(
+      true,
+    );
+  });
 });
 
 describe("version lockstep", () => {

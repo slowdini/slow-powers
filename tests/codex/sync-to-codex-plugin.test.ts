@@ -116,6 +116,7 @@ function writeUpstreamFixture(repo: string): void {
   );
   write(path.join(repo, "hooks/hooks.json"), HOOKS_JSON);
   write(path.join(repo, "hooks/session-start"), "#!/usr/bin/env bash\n");
+  write(path.join(repo, "hooks/exit-plan-mode"), "#!/usr/bin/env bash\n");
   write(path.join(repo, "hooks/run-hook.cmd"), "@echo off\n");
   write(
     path.join(repo, "assets/slow-powers-small.svg"),
@@ -133,6 +134,7 @@ function writeUpstreamFixture(repo: string): void {
     ".gitignore",
     "assets/app-icon.png",
     "assets/slow-powers-small.svg",
+    "hooks/exit-plan-mode",
     "hooks/hooks.json",
     "hooks/run-hook.cmd",
     "hooks/session-start",
@@ -168,6 +170,10 @@ function writeSyncedDestinationFixture(repo: string): void {
   write(path.join(repo, "plugins/slow-powers/hooks/hooks.json"), HOOKS_JSON);
   write(
     path.join(repo, "plugins/slow-powers/hooks/session-start"),
+    "#!/usr/bin/env bash\n",
+  );
+  write(
+    path.join(repo, "plugins/slow-powers/hooks/exit-plan-mode"),
     "#!/usr/bin/env bash\n",
   );
   write(
