@@ -97,7 +97,7 @@ bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" snapshot --skill-dir <skill-dir> --ski
 bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode revision --baseline baseline --guard
 ```
 
-Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built staged-skills inventory.
+Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built available-skills block (rendered the way Claude Code surfaces discoverable skills, so the dispatch reads like a real session).
 
 Only when the user has opted out of the guard, drop `--guard` from the command above and rely on the post-hoc `detect-stray-writes` step in Step 10 instead — it reports stray writes but does not clean them up.
 
