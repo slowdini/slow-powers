@@ -446,25 +446,35 @@ describe("buildDispatchTask bootstrap injection", () => {
     expect(withSkill.dispatch_prompt).toContain("test-driven-development");
   });
 
-  test("references staged slug in skill block for claude-code", () => {
+  test("names the staged slug for disambiguation without instructing invocation", () => {
     const task = buildDispatchTask({
       ...baseOpts,
       bootstrapContent: "BOOT-LOADED",
     });
+    // The slug is still surfaced so the agent can target the staged version
+    // (a bare name would resolve to the globally-installed plugin copy).
     expect(task.dispatch_prompt).toContain(
       "slow-powers-eval-1-with_skill__foo",
     );
+    // ...but the over-promoting invoke imperative (issue #119) is gone, so
+    // invocation reflects the skill's own triggering rather than an order.
+    expect(task.dispatch_prompt).not.toContain("invoke that slug");
+    expect(task.dispatch_prompt).not.toContain("if the skill applies");
+    expect(task.dispatch_prompt).not.toContain("under evaluation");
   });
 
-  test("without-skill condition under realistic env reflects 'this skill removed, others available' rather than 'no skill loaded'", () => {
+  test("without-skill condition under realistic env carries no eval-announcing skill commentary", () => {
     const task = buildDispatchTask({
       ...baseOpts,
       skillPath: null,
       stagedSkillSlug: null,
       bootstrapContent: "BOOT-LOADED",
     });
+    // The arm stays silent about the absent skill: the available-skills block
+    // already omits it, so nothing announces that this is an eval control arm.
     expect(task.dispatch_prompt).not.toContain("No skill is loaded");
-    expect(task.dispatch_prompt.toLowerCase()).toContain("not available");
+    expect(task.dispatch_prompt.toLowerCase()).not.toContain("not available");
+    expect(task.dispatch_prompt).not.toContain("under evaluation");
   });
 
   test("without-skill condition without bootstrap (e.g. --no-stage) keeps the legacy 'No skill is loaded' wording", () => {

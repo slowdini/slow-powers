@@ -32,19 +32,16 @@ You are executing a single test case for a skill evaluation framework.
 Treat this as a real user request — do NOT optimize your behavior for the eval.
 
 {{#if staged_skill_slug}}
-Your environment has the plugin under evaluation loaded. Its skills are
-discoverable via the Skill tool. The skill currently under evaluation is
-staged under the unique slug "{{staged_skill_slug}}" — invoke that slug rather
-than the natural name if the skill applies to the user's request.
+Your environment has the plugin under evaluation loaded; its skills are
+discoverable via the Skill tool. The `{{skill_name}}` skill is registered under
+the identifier "{{staged_skill_slug}}". If you invoke it, use that identifier
+rather than the bare name.
 {{else if skill_path}}
 The following skill is loaded into your operating guidelines. Apply it where relevant.
 <skill name="{{skill_name}}">
 {{skill_content}}
 </skill>
 {{else if bootstrap_content}}
-The skill currently under evaluation is NOT available in this environment.
-Other skills from the plugin remain discoverable via the Skill tool; apply any
-that fit the user's request.
 {{else}}
 No skill is loaded. Respond as you naturally would.
 {{/if}}
