@@ -29,6 +29,16 @@ Two file-confusion traps are common in this repo. Avoid both:
   installed skill file is *not* the file you want. Every read and edit belongs to
   a path under this project directory.
 
+  To stop the installed copy from shadowing source during work and skill evals,
+  this repo **disables** the installed slow-powers (and upstream superpowers)
+  plugins in `.claude/settings.json`, so their skills are not auto-loaded in a
+  session opened here — see
+  `skills/evaluating-skills/harness-details/claude.md` → *Isolating from installed
+  plugins* for why this matters to eval validity. With the plugin off, **use the
+  source skills directly**: open `skills/<name>/SKILL.md` when you need a
+  slow-powers skill rather than relying on skill auto-discovery. The disable
+  applies at session start, so restart once after pulling this setting.
+
 ## Cross-Harness Compatibility
 
 Ensure all features work across supported harnesses, with at least a minimum level of compatibility. If a feature isn't supported in a harness, or has reduced or limited functionality, this should be clearly communicated. A feature MUST NOT break or degrade any harness functionality.

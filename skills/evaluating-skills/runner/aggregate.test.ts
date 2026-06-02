@@ -185,4 +185,80 @@ describe("aggregate.ts user-mode (--skill-dir, isolated CWD)", () => {
       ),
     ).toBe(true);
   });
+
+  test("surfaces plugin-shadow findings as validity_warnings", () => {
+    const root = join(FIXTURE_ROOT, "agg-shadow");
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, "mr-review");
+    mkdirSync(skillSub, { recursive: true });
+    writeFileSync(
+      join(skillSub, "SKILL.md"),
+      "---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+    );
+
+    const cwd = join(root, "work");
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    mkdirSync(iterationDir, { recursive: true });
+    writeJson(join(iterationDir, "conditions.json"), {
+      mode: "new-skill",
+      conditions: [
+        { name: "with_skill", skill_path: join(skillSub, "SKILL.md") },
+        { name: "without_skill", skill_path: null },
+      ],
+      timestamp: new Date().toISOString(),
+      harness: "claude-code",
+    });
+    for (const cond of ["with_skill", "without_skill"]) {
+      const condDir = join(iterationDir, "eval-e1", cond);
+      mkdirSync(condDir, { recursive: true });
+      writeJson(join(condDir, "grading.json"), {
+        assertion_results: [],
+        summary: { passed: 1, failed: 0, total: 1, pass_rate: 1 },
+      });
+      writeJson(join(condDir, "timing.json"), {
+        total_tokens: 100,
+        duration_ms: 1,
+      });
+    }
+    writeJson(join(iterationDir, "plugin-shadow.json"), {
+      config_dir: "/home/u/.claude",
+      shadowed: [
+        {
+          kind: "plugin",
+          plugin: "slow-powers@slowdini",
+          skill_name: "mr-review",
+          path: "/home/u/.claude/plugins/cache/slowdini/slow-powers/skills/mr-review",
+        },
+      ],
+    });
+
+    const res = Bun.spawnSync(
+      [
+        "bun",
+        "run",
+        AGGREGATE_TS,
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--iteration",
+        "1",
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(res.exitCode).toBe(0);
+    const benchmark = JSON.parse(
+      readFileSync(join(iterationDir, "benchmark.json"), "utf8"),
+    ) as { validity_warnings: string[] };
+    expect(
+      benchmark.validity_warnings.some(
+        (w) => w.includes("mr-review") && /contaminat/i.test(w),
+      ),
+    ).toBe(true);
+  });
 });
