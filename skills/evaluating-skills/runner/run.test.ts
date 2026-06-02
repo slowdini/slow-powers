@@ -581,6 +581,78 @@ describe("buildDispatchTask bootstrap injection", () => {
   });
 });
 
+describe("buildDispatchTask plan-mode injection", () => {
+  const baseOpts = {
+    evalId: "e1",
+    condition: "with_skill",
+    skillPath: null,
+    stagedSkillSlug: "slow-powers-eval-1-with_skill__foo" as string | null,
+    userPrompt: "BUILD-THE-TODO-APP",
+    fixtures: [] as string[],
+    outputsDir: "/tmp/out",
+    condDir: "/tmp/cond",
+    skillName: "foo",
+    bootstrapContent: null as string | null,
+    availableSkills: [
+      { name: "foo", path: "/x/foo/SKILL.md", description: "the foo skill" },
+    ] as { name: string; path: string; description: string }[],
+  };
+
+  test("omits the plan-mode block when planModeContent is null/absent", () => {
+    const task = buildDispatchTask({ ...baseOpts });
+    expect(task.dispatch_prompt).not.toContain("<system-reminder>");
+    const withNull = buildDispatchTask({ ...baseOpts, planModeContent: null });
+    expect(withNull.dispatch_prompt).not.toContain("<system-reminder>");
+  });
+
+  test("injects the rendered plan-mode block when planModeContent is provided", () => {
+    const task = buildDispatchTask({
+      ...baseOpts,
+      planModeContent: "Plan mode is active. PLAN-RAIL-MARKER.",
+    });
+    expect(task.dispatch_prompt).toContain("<system-reminder>");
+    expect(task.dispatch_prompt).toContain("PLAN-RAIL-MARKER.");
+    expect(task.dispatch_prompt).toContain("</system-reminder>");
+  });
+
+  test("places the plan-mode block after the available-skills block and before the user request", () => {
+    const prompt = buildDispatchTask({
+      ...baseOpts,
+      planModeContent: "PLAN-RAIL-MARKER",
+    }).dispatch_prompt;
+    const skillsIdx = prompt.indexOf(
+      "The following skills are available for use with the Skill tool:",
+    );
+    const planIdx = prompt.indexOf("<system-reminder>");
+    const promptIdx = prompt.indexOf("BUILD-THE-TODO-APP");
+    expect(skillsIdx).toBeGreaterThan(-1);
+    expect(planIdx).toBeGreaterThan(skillsIdx);
+    expect(promptIdx).toBeGreaterThan(planIdx);
+  });
+
+  test("injects an identical plan-mode block in the with- and without-skill arms", () => {
+    const planModeContent = "Plan mode is active. PLAN-RAIL-MARKER.";
+    const rendered =
+      "<system-reminder>\nPlan mode is active. PLAN-RAIL-MARKER.\n</system-reminder>";
+    const withSkill = buildDispatchTask({
+      ...baseOpts,
+      condition: "with_skill",
+      stagedSkillSlug: "slow-powers-eval-1-with_skill__foo",
+      planModeContent,
+    });
+    const withoutSkill = buildDispatchTask({
+      ...baseOpts,
+      condition: "without_skill",
+      skillPath: null,
+      stagedSkillSlug: null,
+      availableSkills: [],
+      planModeContent,
+    });
+    expect(withSkill.dispatch_prompt).toContain(rendered);
+    expect(withoutSkill.dispatch_prompt).toContain(rendered);
+  });
+});
+
 describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
   const RUN_TS = join(import.meta.dir, "run.ts");
 
@@ -645,6 +717,81 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
       (e) => e !== STAGED_SIBLING_MANIFEST,
     );
     expect(entries).toEqual(["slow-powers-eval-1-with_skill__mr-review"]);
+  });
+
+  test("--plan-mode injects the resolved profile into every dispatch and records plan_mode in dispatch.json", () => {
+    const { skillDir, cwd } = setup("usermode-plan-mode");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--plan-mode",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    const dispatch = JSON.parse(
+      readFileSync(join(iterationDir, "dispatch.json"), "utf8"),
+    ) as {
+      plan_mode: boolean;
+      tasks: Array<{ condition: string; dispatch_prompt_path: string }>;
+    };
+    expect(dispatch.plan_mode).toBe(true);
+
+    // Both arms carry the same harness-injected plan-mode operating context.
+    for (const t of dispatch.tasks) {
+      const prompt = readFileSync(t.dispatch_prompt_path, "utf8");
+      expect(prompt).toContain("<system-reminder>");
+      expect(prompt).toContain("Plan mode is active");
+      expect(prompt).toContain("ExitPlanMode");
+    }
+  });
+
+  test("without --plan-mode, dispatch.json records plan_mode:false and no plan-mode block is injected", () => {
+    const { skillDir, cwd } = setup("usermode-no-plan-mode");
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--dry-run",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    const dispatch = JSON.parse(
+      readFileSync(join(iterationDir, "dispatch.json"), "utf8"),
+    ) as {
+      plan_mode: boolean;
+      tasks: Array<{ dispatch_prompt_path: string }>;
+    };
+    expect(dispatch.plan_mode).toBe(false);
+    for (const t of dispatch.tasks) {
+      const prompt = readFileSync(t.dispatch_prompt_path, "utf8");
+      expect(prompt).not.toContain("<system-reminder>");
+    }
   });
 
   test("--stage-name stages the SUT under the verbatim name, threads it everywhere, and registers it for cleanup", () => {

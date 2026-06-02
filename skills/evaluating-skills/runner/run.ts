@@ -13,8 +13,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { renderAvailableSkillsBlock } from "./adapters/claude-code-session";
-import { detectRunContext, type RunContext } from "./context";
+import {
+  renderAvailableSkillsBlock,
+  renderPlanModeContext,
+} from "./adapters/claude-code-session";
+import { detectRunContext, type Harness, type RunContext } from "./context";
 import { installGuard, teardownGuard } from "./guard/install";
 import {
   detectPluginShadows,
@@ -193,6 +196,7 @@ type Args = {
   noStage: boolean;
   guard: boolean;
   stageName?: string;
+  planMode: boolean;
 };
 
 function die(msg: string): never {
@@ -247,6 +251,7 @@ function parseArgs(argv: string[]): Args {
     noStage: has("no-stage"),
     guard: has("guard"),
     stageName: flag("stage-name"),
+    planMode: has("plan-mode"),
   };
 }
 
@@ -423,6 +428,19 @@ function commandRun(args: Args, ctx: RunContext): void {
   const bootstrapContent =
     ctx.bootstrapPath !== null ? readFileSync(ctx.bootstrapPath, "utf8") : null;
 
+  // `--plan-mode` (issue #142): inject the harness's verbatim plan-mode
+  // procedure as an operating-context layer. The profile is a bundled asset
+  // resolved relative to this runner (mirroring the guard-script resolution
+  // below) and keyed by harness, so a harness without a profile simply has no
+  // `--plan-mode` and the portable dispatch contract is unchanged.
+  const planModeContent = args.planMode
+    ? resolvePlanModeProfile(ctx.harness)
+    : null;
+  if (args.planMode)
+    console.log(
+      `  plan-mode: injecting ${ctx.harness} plan-mode profile as operating context (issue #142; necessary-not-sufficient fidelity layer)`,
+    );
+
   // Sibling skill metadata, shared across conditions. Empty when --no-stage
   // (nothing is staged, so nothing is discoverable to list).
   const siblingSkills: AvailableSkill[] = args.noStage
@@ -542,6 +560,7 @@ function commandRun(args: Args, ctx: RunContext): void {
           outputsDir,
           condDir,
           bootstrapContent,
+          planModeContent,
           skillName: ctx.skillName,
           availableSkills: availableSkillsFor(condSkillPath),
           runTag,
@@ -577,6 +596,7 @@ function commandRun(args: Args, ctx: RunContext): void {
     iteration_dir: iterationDir,
     mode: args.mode,
     baseline: args.baseline ?? null,
+    plan_mode: args.planMode,
     conditions: conditions.conditions,
     harness: ctx.harness,
     tasks: tasks.map(({ dispatch_prompt: _omit, ...rest }) => rest),
@@ -709,6 +729,32 @@ function copyFixtures(ev: Eval, skillDir: string, condDir: string): string[] {
   return copied;
 }
 
+/**
+ * Resolve the verbatim plan-mode procedure profile for a harness (issue #142).
+ * The profile is a bundled supporting-file asset under
+ * `profiles/<harness>/plan-mode.md`, resolved relative to this runner exactly
+ * like the guard script (`join(import.meta.dir, "guard", "guard.ts")`). A
+ * harness without a profile gets a clear error rather than a silent no-op — the
+ * profile is Claude-tier fidelity, and a harness lacking one leaves the portable
+ * dispatch contract unchanged (no `<system-reminder>` plan-mode block emitted).
+ */
+function resolvePlanModeProfile(harness: Harness): string {
+  const profilePath = join(
+    import.meta.dir,
+    "profiles",
+    harness,
+    "plan-mode.md",
+  );
+  if (!existsSync(profilePath)) {
+    die(
+      `--plan-mode: no plan-mode profile exists for harness '${harness}' ` +
+        `(expected ${profilePath}). This is a Claude-tier fidelity layer; a ` +
+        "harness without a profile leaves the portable dispatch contract unchanged.",
+    );
+  }
+  return readFileSync(profilePath, "utf8");
+}
+
 function getSkillDescription(skillPath: string): string {
   try {
     const content = readFileSync(skillPath, "utf8");
@@ -767,6 +813,15 @@ export function buildDispatchTask(opts: {
   outputsDir: string;
   condDir: string;
   bootstrapContent: string | null;
+  /**
+   * Verbatim plan-mode procedure profile (from
+   * `profiles/<harness>/plan-mode.md`) to inject as an operating-context layer,
+   * or null/undefined to omit it. Skill-agnostic, so it is identical across the
+   * with/without-skill arms and needs no redaction. Set by the `--plan-mode`
+   * flag (issue #142): the highest-fidelity in-runner approximation of a real
+   * plan mode, still text the agent reads — a necessary-not-sufficient signal.
+   */
+  planModeContent?: string | null;
   skillName: string;
   availableSkills: AvailableSkill[];
   /**
@@ -851,6 +906,16 @@ export function buildDispatchTask(opts: {
   const availableSkillsBlock = renderAvailableSkillsBlock(stagedSkills);
   if (availableSkillsBlock) {
     sections.push(`${availableSkillsBlock}\n\n`);
+  }
+  // Plan-mode operating context (issue #142). Injected as its own block after
+  // the session-start surfaces and before the eval task framing, so it reads as
+  // a session-level mode active for this turn — layered the way the real harness
+  // delivers it, not as seed prose. Skill-agnostic: identical in both arms.
+  const planModeBlock = opts.planModeContent
+    ? renderPlanModeContext(opts.planModeContent)
+    : "";
+  if (planModeBlock) {
+    sections.push(`${planModeBlock}\n\n`);
   }
   const taskLines = [
     "You are executing a single test case for a skill evaluation framework.",

@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { AvailableSkill } from "../types";
-import { renderAvailableSkillsBlock } from "./claude-code-session";
+import {
+  renderAvailableSkillsBlock,
+  renderPlanModeContext,
+} from "./claude-code-session";
 
 const skill = (name: string, description: string): AvailableSkill => ({
   name,
@@ -30,5 +33,24 @@ describe("renderAvailableSkillsBlock", () => {
 
   test("returns an empty string for an empty list", () => {
     expect(renderAvailableSkillsBlock([])).toBe("");
+  });
+});
+
+describe("renderPlanModeContext", () => {
+  test("wraps the profile text in a harness-native system-reminder block", () => {
+    const block = renderPlanModeContext("Plan mode is active. Do not edit.");
+    expect(block).toContain("<system-reminder>");
+    expect(block).toContain("</system-reminder>");
+    expect(block).toContain("Plan mode is active. Do not edit.");
+  });
+
+  test("trims surrounding whitespace from the profile text", () => {
+    const block = renderPlanModeContext("\n\n  PROFILE-BODY  \n\n");
+    expect(block).toBe("<system-reminder>\nPROFILE-BODY\n</system-reminder>");
+  });
+
+  test("returns an empty string for empty or whitespace-only input", () => {
+    expect(renderPlanModeContext("")).toBe("");
+    expect(renderPlanModeContext("   \n  ")).toBe("");
   });
 });

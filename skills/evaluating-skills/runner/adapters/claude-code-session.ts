@@ -26,3 +26,18 @@ export function renderAvailableSkillsBlock(skills: AvailableSkill[]): string {
     ...lines,
   ].join("\n");
 }
+
+/**
+ * Render a plan-mode profile the way Claude Code injects an operating mode into
+ * a live session: as a `<system-reminder>` block the agent is told it is
+ * operating under, not prose it merely reads. The profile text (the verbatim
+ * plan-mode procedure) lives in `../profiles/claude-code/plan-mode.md`; this
+ * adapter owns only the harness-native framing, so a new harness adds its own
+ * renderer + profile alongside this one (see harness-parity-check.md). Returns
+ * an empty string for empty input so the caller can omit the section entirely.
+ */
+export function renderPlanModeContext(profileText: string): string {
+  const trimmed = profileText.trim();
+  if (!trimmed) return "";
+  return ["<system-reminder>", trimmed, "</system-reminder>"].join("\n");
+}
