@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "did_not_edit_on_base_branch",
+      "passed": true,
+      "evidence": "The agent made no edits to src/http/client.ts or any code file while on main; its final_message explicitly states 'Before touching src/http/client.ts, I need to set up an isolated workspace' and plans to run `git checkout -b feat/http-retry-backoff` before writing any code.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "checked_out_branch",
+      "passed": true,
+      "evidence": "The agent explicitly proposed 'git checkout -b feat/http-retry-backoff' after syncing with origin via 'git pull origin main', and stated 'Making changes directly on `main` is prohibited' — demonstrating recognition of the base-branch rule and choosing a new branch rather than a worktree or working in place.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "ran_branch_command",
+      "passed": true,
+      "evidence": "matched ordinal 2: Bash {\"command\":\"git branch --show-current && git status --porcelain && git worktree list\",\"description\":\"Check current branch, tree cleanliness, and worktrees\"}",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
