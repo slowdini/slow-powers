@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "stops_editing_on_main",
+      "passed": true,
+      "evidence": "The agent explicitly refused to touch any code first: 'Before touching any code, I need to get off `main` — the previous change landed directly on the base branch, which is something I should have caught earlier.' It then issued `git checkout -b feat/api-client-resilience` before presenting any code changes, and the timeout/retry implementation is shown only after the branch creation command.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "names_base_branch_hard_rule",
+      "passed": true,
+      "evidence": "\"Before touching any code, I need to get off `main` — the previous change landed directly on the base branch, which is something I should have caught earlier. Let me set that right now.\" followed by `git checkout -b feat/api-client-resilience`",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

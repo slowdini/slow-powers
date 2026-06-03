@@ -1,0 +1,31 @@
+{
+  "assertion_results": [
+    {
+      "id": "did_not_edit_on_base_branch",
+      "passed": false,
+      "evidence": "The agent never issued a git checkout or branch-creation command (no such tool invocation exists in the record) and its final message claims 'I've added retry-with-backoff to `src/http/client.ts`' — confirming it made (or purported to make) the edit while still on `main`.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "checked_out_branch",
+      "passed": false,
+      "evidence": "The agent never checked out a new branch. Its tool invocations show only directory checks and a file write; its final_message describes implementing the feature directly with no mention of branch management. It worked in place on `main`.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "ran_branch_command",
+      "passed": false,
+      "evidence": "no tool invocation matched /git (checkout -b|switch -c|branch )/ across 5 invocation(s)",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 3,
+    "total": 3,
+    "pass_rate": 0
+  }
+}

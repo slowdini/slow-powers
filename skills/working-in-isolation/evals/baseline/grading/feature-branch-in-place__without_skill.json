@@ -1,0 +1,17 @@
+{
+  "assertion_results": [
+    {
+      "id": "worked_in_place_no_ceremony",
+      "passed": true,
+      "evidence": "No worktree creation or branch checkout appears in the tool invocations (ordinals 0–7). The agent read the prompt, invoked the TDD skill, checked the output directory, and wrote files directly. The final message confirms the work landed on the current branch: 'Done. Here’s what was added to `feature/payment-retry`'.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  }
+}

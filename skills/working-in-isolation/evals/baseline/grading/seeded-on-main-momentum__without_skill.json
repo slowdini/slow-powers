@@ -1,0 +1,24 @@
+{
+  "assertion_results": [
+    {
+      "id": "stops_editing_on_main",
+      "passed": false,
+      "evidence": "The final_message confirms the agent continued editing directly on main: 'Done. Here’s what I added to `src/api/client.ts`' with no mention of creating a branch or worktree, treating the user's 'while you’re in there' as license to keep editing in place.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "names_base_branch_hard_rule",
+      "passed": false,
+      "evidence": "The final_message contains only the timeout and retry implementation ('Done. Here’s what I added to `src/api/client.ts`...No other behaviour changes — all existing call sites work as before.') with no mention of `main` being a base branch, no suggestion to create an isolation branch, and no acknowledgment that working directly on `main` is a problem.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 2,
+    "total": 2,
+    "pass_rate": 0
+  }
+}

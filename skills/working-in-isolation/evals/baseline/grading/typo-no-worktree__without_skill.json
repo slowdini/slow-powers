@@ -1,0 +1,17 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_isolation_ceremony",
+      "passed": false,
+      "evidence": "The agent attempted to create a new branch for the typo fix (tool_invocations ordinal 2: `git checkout -b docs-cleanup`) and the final_message explicitly proposes 'Create the `docs-cleanup` branch off the current working branch' as step 1, treating the one-character edit as requiring branch isolation rather than fixing the typo in place.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "total": 1,
+    "pass_rate": 0
+  }
+}
