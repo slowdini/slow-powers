@@ -8,19 +8,18 @@ Bugs often manifest deep in the call stack (git init in wrong directory, file cr
 
 ## When to Use
 
-```dot
-digraph when_to_use {
-    "Bug appears deep in stack?" [shape=diamond];
-    "Can trace backwards?" [shape=diamond];
-    "Fix at symptom point" [shape=box];
-    "Trace to original trigger" [shape=box];
-    "BETTER: Also add defense-in-depth" [shape=box];
+```mermaid
+flowchart TD
+    deep{Bug appears deep in stack?}
+    trace{Can trace backwards?}
+    symptom[Fix at symptom point]
+    origin[Trace to original trigger]
+    defense["BETTER: Also add defense-in-depth"]
 
-    "Bug appears deep in stack?" -> "Can trace backwards?" [label="yes"];
-    "Can trace backwards?" -> "Trace to original trigger" [label="yes"];
-    "Can trace backwards?" -> "Fix at symptom point" [label="no - dead end"];
-    "Trace to original trigger" -> "BETTER: Also add defense-in-depth";
-}
+    deep -->|yes| trace
+    trace -->|yes| origin
+    trace -->|no - dead end| symptom
+    origin --> defense
 ```
 
 **Use when:**
@@ -129,26 +128,25 @@ Runs tests one-by-one, stops at first polluter. See script for usage.
 
 ## Key Principle
 
-```dot
-digraph principle {
-    "Found immediate cause" [shape=ellipse];
-    "Can trace one level up?" [shape=diamond];
-    "Trace backwards" [shape=box];
-    "Is this the source?" [shape=diamond];
-    "Fix at source" [shape=box];
-    "Add validation at each layer" [shape=box];
-    "Bug impossible" [shape=doublecircle];
-    "NEVER fix just the symptom" [shape=octagon, style=filled, fillcolor=red, fontcolor=white];
+```mermaid
+flowchart TD
+    found(Found immediate cause)
+    canTrace{Can trace one level up?}
+    back[Trace backwards]
+    isSource{Is this the source?}
+    fix[Fix at source]
+    validate[Add validation at each layer]
+    impossible([Bug impossible])
+    never{{NEVER fix just the symptom}}
 
-    "Found immediate cause" -> "Can trace one level up?";
-    "Can trace one level up?" -> "Trace backwards" [label="yes"];
-    "Can trace one level up?" -> "NEVER fix just the symptom" [label="no"];
-    "Trace backwards" -> "Is this the source?";
-    "Is this the source?" -> "Trace backwards" [label="no - keeps going"];
-    "Is this the source?" -> "Fix at source" [label="yes"];
-    "Fix at source" -> "Add validation at each layer";
-    "Add validation at each layer" -> "Bug impossible";
-}
+    found --> canTrace
+    canTrace -->|yes| back
+    canTrace -->|no| never
+    back --> isSource
+    isSource -->|no - keeps going| back
+    isSource -->|yes| fix
+    fix --> validate
+    validate --> impossible
 ```
 
 **NEVER fix just where the error appears.** Trace back to find the original trigger.

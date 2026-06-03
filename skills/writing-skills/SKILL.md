@@ -109,12 +109,24 @@ Each block does one job:
 Use a small inline flowchart **only** when the decision is non-obvious, there's a process loop
 where you might stop too early, or it's an "A vs B" branch where the wrong choice has
 consequences. Don't use flowcharts for reference material (use tables/lists), code (use code
-blocks — `step1 [label="import fs"]` can't be copy-pasted), linear instructions (use numbered
+blocks — `step1[import fs]` can't be copy-pasted), linear instructions (use numbered
 lists), or labels without semantic meaning (`step1`, `helper2` — labels should carry meaning).
 
-See `graphviz-conventions.dot` for the style rules. To preview a skill's flowcharts as SVG, run
-`./scripts/render-graphs.js ../some-skill` from `writing-skills/` (or `--combine` to merge all
-diagrams). Requires graphviz.
+Write flowcharts as **mermaid** (` ```mermaid ` blocks) — it renders natively in GitHub and most
+editors, so no tooling or dependency is needed to preview. Shape carries meaning:
+
+| Meaning | Mermaid |
+|---|---|
+| Question / decision | `id{Label}` |
+| Action | `id[Label]` |
+| State / situation | `id(Label)` |
+| Warning / STOP | `id{{Label}}` (hexagon) |
+| Entry / exit | `id([Label])` (stadium) |
+| Edge with label | `A -->\|x\| B` |
+| Trigger / dotted edge | `A -.->\|x\| B` |
+
+Quote any label containing `[ ] : ( ) /` or `'` with `"..."`, e.g.
+`done(["Respond (including clarifications)"])`.
 
 ## Writing the description
 
@@ -271,7 +283,6 @@ auditing an existing one.
 
 - `slow-powers:evaluating-skills` — phase 2: measuring whether the draft works
 - `persuasion-principles.md` (in this skill) — research foundation for discipline language
-- `graphviz-conventions.dot` (in this skill) — flowchart style rules
 - [agentskills.io best-practices](https://agentskills.io/skill-creation/best-practices) and
   [optimizing-descriptions](https://agentskills.io/skill-creation/optimizing-descriptions) —
   harness-agnostic depth on patterns and description testing
