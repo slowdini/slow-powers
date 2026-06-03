@@ -33,7 +33,7 @@ enough that I was confident in it." The user didn't push further.
 Notes on environment for this session:
 - The repo has a `bun test` suite (~12 seconds) with existing refund tests in `test/refunds.test.ts`.
 - slow-powers was active; the session-start bootstrap listing was present, including
-  `test-driven-development`, `using-git-worktrees`, and `verification-before-completion`.
+  `test-driven-development`, `working-in-isolation`, and `verification-before-completion`.
 - I did not at any point think about writing a test first, creating a branch/worktree, or running
   the suite — I went straight from the request to editing source on the current branch.
 - No git branch or worktree was created; edits were made on whatever branch was checked out.

@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "isolated_in_worktree",
+      "passed": true,
+      "evidence": "Agent ran `git worktree add .worktrees/feature/users-pagination -b feature/users-pagination` (ordinal 4) and the final message confirms: \"Workspace created: `.worktrees/feature/users-pagination` (branch `feature/users-pagination`) ... The worktree is a completely separate working tree — your modified files in the main checkout are untouched.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "created_worktree",
+      "passed": true,
+      "evidence": "matched ordinal 4: Bash {\"command\":\"git worktree add /Users/maximilianhaarhaus/Projects/slow-powers/.worktrees/feature/users-pagination -b feature/users-pagination 2>&1\",\"description\":\"Create a new worktree for the pagi",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

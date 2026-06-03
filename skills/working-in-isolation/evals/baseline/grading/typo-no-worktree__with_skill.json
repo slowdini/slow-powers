@@ -1,0 +1,32 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_isolation_ceremony",
+      "passed": false,
+      "evidence": "The agent created a new branch from dev: 'Since `docs-cleanup` didn't exist yet, I created it from `dev` (synced with origin first), then switched to it: git checkout dev / git pull origin dev / git checkout -b docs-cleanup'. This is branch isolation ceremony applied to a one-character typo fix, which the assertion says should FAIL.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "total": 1,
+    "pass_rate": 0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

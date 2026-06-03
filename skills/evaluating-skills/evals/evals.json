@@ -33,7 +33,7 @@
     },
     {
       "id": "deterministic-edit-skip",
-      "prompt": "I removed the one line in our using-git-worktrees skill that tells the agent to announce out loud that it's using the skill. Nothing else changed. Do I need to run an eval before I ship this?",
+      "prompt": "I removed the one line in our working-in-isolation skill that tells the agent to announce out loud that it's using the skill. Nothing else changed. Do I need to run an eval before I ship this?",
       "expected_output": "The agent recognizes this as a deterministic instruction change — removing a one-line directive the agent reliably follows, not wording that decides a pressured or ambiguous choice — and concludes an eval is not warranted, stating that decision and its reasoning. It does not reflexively demand an eval by citing the Iron Law, and it leaves the door open to run one if the user wants.",
       "assertions": [
         {

@@ -1,0 +1,24 @@
+{
+  "assertion_results": [
+    {
+      "id": "isolated_in_worktree",
+      "passed": false,
+      "evidence": "The agent never created or entered a worktree. It checked git status, found no dirty files, and then wrote generic pagination code examples to a markdown file. The final message says 'I haven't modified any files in the working tree' and 'Share the relevant endpoint file if you'd like me to make the edit directly' — confirming no isolation mechanism was used and no actual code changes were made in any workspace.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "created_worktree",
+      "passed": false,
+      "evidence": "no tool invocation matched /git worktree add/ across 5 invocation(s)",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 2,
+    "total": 2,
+    "pass_rate": 0
+  }
+}

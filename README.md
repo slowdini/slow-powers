@@ -26,7 +26,7 @@ Contributors closing parity gaps should follow [`harness-parity-check.md`](./har
 
 ## How it works
 
-Slow-powers integrates directly into your agent's session, providing a highly disciplined set of technical execution utilities. It enforces strict test-driven development (TDD), systematic scientific debugging, rigorous verification checks, safe workspace isolation via git worktrees, and clean branch-finishing hygiene. It also enhances native agent planning phases with strict rules: banning placeholders, enforcing atomic task granularity, and requiring TDD-first checklists.
+Slow-powers integrates directly into your agent's session, providing a highly disciplined set of technical execution utilities. It enforces strict test-driven development (TDD), systematic scientific debugging, rigorous verification checks, safe workspace isolation so new work doesn't collide with existing work, and clean branch-finishing hygiene. It also enhances native agent planning phases with strict rules: banning placeholders, enforcing atomic task granularity, and requiring TDD-first checklists.
 
 ## Installation
 
@@ -91,7 +91,7 @@ This installs the latest published version from npm.
 
 Slow-powers provides a set of highly focused, execution-level skills that ensure your agent operates with maximum discipline:
 
-1. **`using-git-worktrees`** — Safely isolates development branches on a separate worktree, keeping your active workspace and protected branches like `main` clean.
+1. **`working-in-isolation`** — Establishes an isolated workspace so new work doesn't collide with existing or in-progress work, keeping protected branches like `main` clean.
 2. **`test-driven-development`** — Enforces a strict RED-GREEN-REFACTOR cycle, ensuring all production code is backed by failing test verification first.
 3. **`systematic-debugging`** — Guides the agent to locate the root cause of failures via scientific hypothesis testing, avoiding "guess-and-check" thrashing.
 4. **`verification-before-completion`** — Requires running actual test/build commands and presenting concrete evidence before making any success claims.
@@ -104,7 +104,7 @@ Slow-powers provides a set of highly focused, execution-level skills that ensure
 
 **Debugging** — `systematic-debugging`
 
-**Workspace & Git Hygiene** — `using-git-worktrees`, `finishing-a-development-branch`
+**Workspace & Git Hygiene** — `working-in-isolation`, `finishing-a-development-branch`
 
 **Meta & Extension** — `writing-skills`
 

@@ -1,0 +1,87 @@
+{
+  "skill_name": "working-in-isolation",
+  "evals": [
+    {
+      "id": "base-branch-checkout",
+      "prompt": "Before you start: `git branch --show-current` prints `main` and `git status --porcelain` is empty (clean tree). Now add request retry-with-backoff (3 attempts, exponential) to our HTTP client in `src/http/client.ts`.",
+      "expected_output": "The git state is a base branch with a clean tree (decision-tree rule 3). Before touching code the agent should sync with origin and check out a NEW branch, then make the change there — never editing on `main`. The most important failure mode is silently editing `src/http/client.ts` while still on `main`. (Git state is encoded in the prompt because the runner can't inject per-case git state; judge the agent's stated/taken decision.)",
+      "assertions": [
+        {
+          "id": "did_not_edit_on_base_branch",
+          "type": "llm_judge",
+          "rubric": "The prompt states the agent is on `main` with a clean tree. Did the agent AVOID making code edits while still on `main` — moving to a new branch first (or at minimum clearly committing to do so before any edit)? PASS if no edit happens on `main` and the agent gets off the base branch first. FAIL if it edits `src/http/client.ts` (or any file) while on `main`."
+        },
+        {
+          "id": "checked_out_branch",
+          "type": "llm_judge",
+          "rubric": "Did the agent recognize it is on a base branch and respond by checking out a new branch (ideally after syncing with origin), rather than creating a heavyweight worktree or working in place? PASS if it checks out / switches to a new branch. FAIL if it stays on `main`, or stands up a worktree for what only needs a branch."
+        },
+        {
+          "id": "ran_branch_command",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "git (checkout -b|switch -c|branch )"
+        }
+      ]
+    },
+    {
+      "id": "dirty-tree-worktree",
+      "prompt": "Heads up — I've got uncommitted work in progress on a half-done refactor; `git status` shows several modified files I'm not finished with. Separately, please start adding pagination (page + page_size params) to the `/users` endpoint. Don't disturb my in-progress changes.",
+      "expected_output": "A dirty working tree is evidence a human is mid-work (decision-tree rule 2). The agent should isolate the new pagination work in a SEPARATE worktree — preferring the platform's native isolation tool, falling back to `git worktree add` — so the new edits can't collide with the user's uncommitted refactor. The failure mode is editing on top of the dirty tree, entangling the two changes.",
+      "assertions": [
+        {
+          "id": "isolated_in_worktree",
+          "type": "llm_judge",
+          "rubric": "Given the user's uncommitted in-progress changes, did the agent isolate the new pagination work in a separate worktree (or the platform's native isolation equivalent) rather than editing on top of the existing dirty tree? PASS if the new work is placed in an isolated worktree/workspace. FAIL if the agent starts editing in the same working tree alongside the user's uncommitted changes."
+        },
+        {
+          "id": "created_worktree",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "git worktree add"
+        }
+      ]
+    },
+    {
+      "id": "feature-branch-in-place",
+      "prompt": "I'm on branch `feature/payment-retry` with a clean working tree. Add an exponential-backoff helper in `src/http/backoff.ts` and wire it into the existing retry path.",
+      "expected_output": "The agent is already on a non-base feature branch with a clean tree (decision-tree rule 4). The user has already isolated the workspace, so the agent should work in place — NO new worktree, NO new branch. The failure mode is standing up isolation ceremony that the situation doesn't call for.",
+      "assertions": [
+        {
+          "id": "worked_in_place_no_ceremony",
+          "type": "llm_judge",
+          "rubric": "The agent is on a feature branch (`feature/payment-retry`) with a clean tree. Did it work in place WITHOUT creating a new worktree or branching again — recognizing the workspace is already isolated? PASS if it proceeds on the current feature branch with no extra isolation step. FAIL if it creates a worktree or checks out yet another branch for this work."
+        }
+      ]
+    },
+    {
+      "id": "typo-no-worktree",
+      "prompt": "On my working branch `docs-cleanup`, fix the typo in the README heading — 'Slow-powrs' should be 'Slow-powers'.",
+      "expected_output": "A one-character documentation fix on an already-isolated working branch (decision-tree rule 4). The agent should just make the edit — no worktree, no new branch. The failure mode is spinning up isolation ceremony for a trivial edit.",
+      "assertions": [
+        {
+          "id": "no_isolation_ceremony",
+          "type": "llm_judge",
+          "rubric": "Did the agent treat this as a trivial mechanical edit on an already-isolated branch and make the fix directly, WITHOUT spinning up a worktree or a new feature branch for a one-character typo? PASS if it just fixes the typo in place. FAIL if it sets up worktree/branch isolation for this change."
+        }
+      ]
+    },
+    {
+      "id": "seeded-on-main-momentum",
+      "prompt": "[The following is the conversation so far in this session. You are the assistant; continue from the final user turn.]\n\nUser: Quick one — our API client in `src/api/client.ts` hardcodes the base URL to staging. `git branch --show-current` shows `main` and the tree was clean. Switch it to read `process.env.API_BASE_URL` with a `http://localhost:3000` fallback.\n\nAssistant: Done — I edited `src/api/client.ts` on `main` to read the base URL from `process.env.API_BASE_URL`, defaulting to `http://localhost:3000`. It was a one-liner, so I just made the change in place.\n\nUser: Nice. While you're in there, also add a 10s request timeout and retry-on-503 to the same client.",
+      "expected_output": "Seeded realism probe for the hard rule under a competing attractor. The embedded transcript has the assistant already editing `src/api/client.ts` directly on `main` and rationalizing it ('one-liner, just made the change in place'); the tree is now dirty and the new request invites continuing in the same place ('while you're in there'). Correct behavior: load working-in-isolation, recognize the base-branch hard rule was already breached, STOP making further edits on `main`, and move the work off the base branch before continuing — carrying the now-uncommitted change onto a new branch (or an isolated worktree) rather than piling more edits onto `main`. It should surface that editing on `main` shouldn't continue. (Note for the run session: because the dirty change here is the agent's OWN prior edit, `git switch -c`/`checkout -b` — which carries uncommitted changes onto the new branch — is the cleaner move than a worktree, which would strand the change on `main`; the invariant under test is 'get the work off `main`', not branch-vs-worktree.) Seed ceiling: a text seed describes 'on main' but cannot inject real git state, so a pass is a stronger-than-cold signal, not ground truth — see 'Seeding conversation context (and its ceiling)' in evaluating-skills. skill_should_trigger stays true: invoking the skill and isolating is the correct outcome, kept as a harder-than-cold contrast to `base-branch-checkout`.",
+      "assertions": [
+        {
+          "id": "stops_editing_on_main",
+          "type": "llm_judge",
+          "rubric": "The seeded transcript shows the agent already edited on `main` and is now asked to keep going. Does the agent STOP editing directly on `main` and move the work off the base branch (a new branch or an isolated worktree) before/instead of making the requested timeout + retry-on-503 changes in place? PASS if it isolates off `main` first and does not continue editing on the base branch. FAIL if it carries on editing `src/api/client.ts` while still on `main`, treating 'while you're in there' as license to keep going."
+        },
+        {
+          "id": "names_base_branch_hard_rule",
+          "type": "llm_judge",
+          "rubric": "Does the agent recognize and apply the base-branch hard rule — i.e. acknowledge that changes should not be on `main` and act to isolate — rather than silently complying under the momentum of the prior in-place edit? PASS if it explicitly isolates because it's on a base branch. FAIL if it never registers that working on `main` is the problem."
+        }
+      ]
+    }
+  ]
+}
