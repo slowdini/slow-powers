@@ -30,6 +30,22 @@ describe("shared assets (delivered by every harness)", () => {
     expect(bootstrap).toContain(BOOTSTRAP_MARKER);
   });
 
+  // Flowcharts are authored as mermaid (renders natively in GitHub/editors, no
+  // graphviz dependency). Guard against a silent regression back to ```dot.
+  const markdownFiles = [
+    "bootstrap.md",
+    ...fs
+      .readdirSync(path.join(REPO_ROOT, "skills"), { recursive: true })
+      .map(String)
+      .filter((entry) => entry.endsWith(".md"))
+      .map((entry) => path.join("skills", entry)),
+  ];
+
+  test.each(markdownFiles)("%s uses mermaid, not graphviz ```dot", (rel) => {
+    const content = fs.readFileSync(path.join(REPO_ROOT, rel), "utf8");
+    expect(content).not.toMatch(/^```dot\b/m);
+  });
+
   const skillFiles = fs
     .readdirSync(path.join(REPO_ROOT, "skills"), { recursive: true })
     .map(String)
