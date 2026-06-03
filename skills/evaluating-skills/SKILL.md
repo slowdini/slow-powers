@@ -132,7 +132,7 @@ Do not dispatch until the user confirms *this summary*. An earlier "run the eval
 
 ### Sandbox decision
 
-A subagent under test runs the real skill, and some skills write to disk — the skill that triggered this gate, `using-git-worktrees`, creates git worktrees in whatever repo it's pointed at. Without active enforcement those writes land in your working directory.
+A subagent under test runs the real skill, and some skills write to disk — the skill that triggered this gate, `working-in-isolation`, creates git worktrees in whatever repo it's pointed at. Without active enforcement those writes land in your working directory.
 
 - **Guard available (Claude Code):** arming `--guard` is the default. If you are about to run without it, STOP. Proceed unguarded **only** when the user actively opts out — and warn them that stray writes will then only be **detected after the fact** by `detect-stray-writes`, never blocked or reverted, so anything a subagent writes outside its `outputs/` dir (worktrees, installed packages, edited repo files) persists and is theirs to clean up.
 - **Guard unavailable (other harnesses):** there is no active write enforcement. Tell the user plainly: stray writes are detected and reported by `detect-stray-writes` but **not auto-cleaned** — they must review the report and remove anything that escaped. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.

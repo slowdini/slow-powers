@@ -85,7 +85,7 @@ git branch -D <feature-branch>
 
 ### Step 5: Clean Up Git Worktrees (Options 1 & 4 only)
 
-> **REQUIRED BACKGROUND:** You must understand `slow-powers:using-git-worktrees` for workspace isolation and worktree management.
+> **REQUIRED BACKGROUND:** You must understand `slow-powers:working-in-isolation` for workspace isolation and worktree management.
 
 If the workspace is a worktree that you created (under `.worktrees/`, `worktrees/`, or `~/.config/slow-powers/worktrees/`), clean it up from the main repository root:
 ```bash

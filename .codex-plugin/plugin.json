@@ -25,7 +25,7 @@
   "interface": {
     "displayName": "Slow-powers",
     "shortDescription": "TDD, debugging, and verification utilities for coding agents",
-    "longDescription": "Use Slow-powers to supercharge your coding agent with rigorous test-driven development (TDD), systematic scientific debugging, strict verification loops, isolated git worktrees, and clean branch-finishing hygiene.",
+    "longDescription": "Use Slow-powers to supercharge your coding agent with rigorous test-driven development (TDD), systematic scientific debugging, strict verification loops, isolated workspaces so new work doesn't collide with existing work, and clean branch-finishing hygiene.",
     "developerName": "Max Haarhaus",
     "category": "Coding",
     "capabilities": ["Interactive", "Read", "Write"],

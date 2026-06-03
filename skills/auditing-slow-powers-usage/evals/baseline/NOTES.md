@@ -4,6 +4,14 @@ Forward-looking observations from the run that produced this baseline. Provenanc
 `BASELINE.md`; numbers are in `benchmark.json`. This file is the "what a future iterator should
 know" companion.
 
+> **⚠️ Baseline is stale (as of the `working-in-isolation` rename, #156).** The fixtures and
+> `evals.json` rubrics were updated to rename `using-git-worktrees` → `working-in-isolation`, but
+> the committed `grading/*.json` and the observations below were produced against the *old* name and
+> are **not** re-graded — they're kept verbatim as the historical record. References to
+> `using-git-worktrees` / "worktrees" in this file and in `grading/*.json` describe that past run;
+> they are not live skill references. Re-run this eval to refresh the baseline before drawing new
+> conclusions from it.
+
 ## Why this baseline exists despite a negative delta
 
 Headline delta is `pass_rate −0.084` (with_skill 0.833 vs without_skill 0.917). We promoted anyway
