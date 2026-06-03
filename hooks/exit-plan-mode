@@ -18,6 +18,18 @@
 #   Result: the user only ever sees a hardened plan (trust guarantee preserved),
 #   and the agent is routed onto the correct workflow rail (→ TDD next).
 #
+# ALREADY-HARDENED SHORT-CIRCUIT (issue #153)
+#   Sometimes the agent invokes hardening-plans on its own *before* the first
+#   ExitPlanMode. Denying then would redundantly instruct it to redo completed
+#   work and read as an error. So before denying, we check the session transcript
+#   (transcript_path in the payload) for the hardening-plans Skill invocation and,
+#   if present, allow the plan straight through — no beat, no denial. We match the
+#   Skill tool-input shape ("skill":"slow-powers:hardening-plans"), NOT the bare
+#   string, so a prior denial's reason prose ("use the slow-powers:hardening-plans
+#   skill") never false-positives. If transcript_path is missing/unreadable or the
+#   Skill turn hasn't flushed yet, detection returns false and we fall back to the
+#   deny-once logic below — never worse than before.
+#
 # WHY DENY-ONCE (and not deny-until-proven-hardened)
 #   Keying the marker per session and allowing the second attempt guarantees we
 #   can never hard-lock a user inside plan mode. Worst case (agent re-submits
@@ -59,6 +71,23 @@ session_key=$(extract_field session_id)
 session_key=$(printf '%s' "$session_key" | tr -c 'A-Za-z0-9._-' '_')
 
 marker="${TMPDIR:-/tmp}/slow-powers-plan-gate-${session_key}"
+
+# Already-hardened short-circuit (issue #153): if the agent ran hardening-plans
+# on its own this session, the transcript holds the Skill tool-input shape
+# "skill":"slow-powers:hardening-plans". Match that, never the prose reason text
+# ("use the slow-powers:hardening-plans skill"), so a prior denial can't
+# false-positive. Missing/unreadable transcript -> false -> deny-once below.
+transcript_path=$(extract_field transcript_path)
+plan_already_hardened() {
+  [ -n "$transcript_path" ] || return 1
+  [ -r "$transcript_path" ] || return 1
+  grep -Eq '"skill"[[:space:]]*:[[:space:]]*"slow-powers:hardening-plans"' "$transcript_path"
+}
+
+if plan_already_hardened; then
+  # Agent already hardened the plan — let it through with no redundant beat.
+  exit 0
+fi
 
 if [ -e "$marker" ]; then
   # Re-submission after hardening — let the (now hardened) plan be presented.

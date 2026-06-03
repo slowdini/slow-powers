@@ -77,6 +77,64 @@ describe("exit-plan-mode hook", () => {
     expect(otherSession.stdout).toContain("deny");
   });
 
+  test("allows the first ExitPlanMode when the transcript shows an autonomous hardening-plans invocation", () => {
+    const tmp = freshTmp();
+    const transcript = path.join(tmp, "transcript.jsonl");
+    // A realistic assistant tool_use line for the Skill invocation.
+    fs.writeFileSync(
+      transcript,
+      `${JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [
+            {
+              type: "tool_use",
+              name: "Skill",
+              input: { skill: "slow-powers:hardening-plans" },
+            },
+          ],
+        },
+      })}\n`,
+    );
+
+    const { status, stdout } = runHook(
+      { ...planPayload("sess-E"), transcript_path: transcript },
+      tmp,
+    );
+
+    expect(status).toBe(0);
+    expect(stdout.trim()).toBe(""); // allowed straight through, no deny
+
+    // No deny-once marker should have been written for this session.
+    const markers = fs
+      .readdirSync(tmp)
+      .filter((f) => f.startsWith("slow-powers-plan-gate-"));
+    expect(markers).toEqual([]);
+  });
+
+  test("does not false-positive on the denial reason prose in the transcript", () => {
+    const tmp = freshTmp();
+    const transcript = path.join(tmp, "transcript.jsonl");
+    // Only the hook's own reason prose mentions the skill — not a real invocation.
+    fs.writeFileSync(
+      transcript,
+      `${JSON.stringify({
+        type: "user",
+        message: {
+          content:
+            "use the slow-powers:hardening-plans skill to review the plan file",
+        },
+      })}\n`,
+    );
+
+    const { stdout } = runHook(
+      { ...planPayload("sess-F"), transcript_path: transcript },
+      tmp,
+    );
+
+    expect(stdout).toContain("deny"); // still gated; prose must not count
+  });
+
   test("still denies-once when session_id is absent (no crash)", () => {
     const tmp = freshTmp();
     const payload = {
