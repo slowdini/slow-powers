@@ -197,11 +197,54 @@ type Args = {
   guard: boolean;
   stageName?: string;
   planMode: boolean;
+  ref?: string;
 };
 
 function die(msg: string): never {
   console.error(`error: ${msg}`);
   process.exit(1);
+}
+
+/**
+ * Reads the bytes of `<ref>:./<relPath>` from git, resolving `relPath` relative
+ * to `cwd` via the `./` prefix. Returns the raw stdout Buffer on success (write
+ * it directly — never `.toString()` — so binary assets round-trip intact), or
+ * `null` if the object doesn't exist at that ref (git exits non-zero). Mirrors
+ * the `Bun.spawnSync` git pattern in `promote-baseline.ts:gitHead`; runs git
+ * directly (no shell), so the ref/path aren't interpolated into a shell string.
+ */
+function gitShowBytes(
+  cwd: string,
+  ref: string,
+  relPath: string,
+): Buffer | null {
+  const res = Bun.spawnSync(["git", "show", `${ref}:./${relPath}`], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (res.exitCode !== 0) return null;
+  return Buffer.from(res.stdout);
+}
+
+/**
+ * Lists every file under `cwd` as it existed at `<ref>`, as paths relative to
+ * `cwd` (git's default ls-tree output strips the cwd prefix). `die`s with git's
+ * stderr on failure — a bad ref or a cwd outside any repo surfaces here.
+ */
+function gitLsFiles(cwd: string, ref: string): string[] {
+  const res = Bun.spawnSync(["git", "ls-tree", "-r", "--name-only", ref, "."], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (res.exitCode !== 0)
+    die(`git ls-tree failed for ref ${ref}: ${res.stderr.toString().trim()}`);
+  return res.stdout
+    .toString()
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function parseArgs(argv: string[]): Args {
@@ -252,6 +295,7 @@ function parseArgs(argv: string[]): Args {
     guard: has("guard"),
     stageName: flag("stage-name"),
     planMode: has("plan-mode"),
+    ref: flag("ref"),
   };
 }
 
@@ -289,8 +333,6 @@ function conditionNamesFor(mode: Mode): [string, string] {
 function commandSnapshot(args: Args, ctx: RunContext): void {
   if (!args.label) die("snapshot requires --label <name>");
   const skillDir = ctx.skillSubdir;
-  const skillMd = join(skillDir, "SKILL.md");
-  if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
 
   const destDir = join(
     ctx.workspaceRoot,
@@ -303,6 +345,14 @@ function commandSnapshot(args: Args, ctx: RunContext): void {
       `snapshot already exists: ${destDir}\n` +
         "  Use a different --label or delete the existing snapshot first.",
     );
+
+  if (args.ref !== undefined) {
+    snapshotFromRef(args.ref, skillDir, destDir, ctx.skillName);
+    return;
+  }
+
+  const skillMd = join(skillDir, "SKILL.md");
+  if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
   ensureDir(destDir);
 
   cpSync(skillMd, join(destDir, "SKILL.md"));
@@ -315,6 +365,42 @@ function commandSnapshot(args: Args, ctx: RunContext): void {
   }
 
   console.log(`Snapshotted ${ctx.skillName} → ${destDir}`);
+}
+
+/**
+ * Snapshots the skill (SKILL.md + sibling assets) as it existed at a git ref,
+ * read straight from the object database without touching the working tree
+ * (issue #122). The `evals/` directory is excluded to match the working-tree
+ * branch. Git runs from `skillDir`, which must sit inside a repo; a bad ref or a
+ * skill absent at that ref `die`s with a clear message.
+ */
+function snapshotFromRef(
+  ref: string,
+  skillDir: string,
+  destDir: string,
+  skillName: string,
+): void {
+  const skillMd = gitShowBytes(skillDir, ref, "SKILL.md");
+  if (skillMd === null)
+    die(
+      `skill not found at ${ref}: ${join(skillDir, "SKILL.md")}\n` +
+        "  Check the ref exists and that the skill was present there (and that this is a git repo).",
+    );
+
+  ensureDir(destDir);
+  writeFileSync(join(destDir, "SKILL.md"), skillMd);
+
+  for (const relPath of gitLsFiles(skillDir, ref)) {
+    if (relPath === "SKILL.md") continue;
+    if (relPath === "evals" || relPath.startsWith("evals/")) continue;
+    const bytes = gitShowBytes(skillDir, ref, relPath);
+    if (bytes === null) continue; // listed but unreadable (e.g. submodule/gitlink)
+    const dst = join(destDir, relPath);
+    ensureDir(dirname(dst));
+    writeFileSync(dst, bytes);
+  }
+
+  console.log(`Snapshotted ${skillName} at ${ref} → ${destDir}`);
 }
 
 function commandRun(args: Args, ctx: RunContext): void {

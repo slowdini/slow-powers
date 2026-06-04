@@ -22,6 +22,7 @@ Other flags:
 - `--workspace-dir <path>` (optional) — where iteration artifacts are written. Defaults to `<CWD>/skills-workspace`.
 - `--harness claude-code` (optional, default `claude-code`; the only supported harness).
 - `--no-stage`, `--dry-run`, `--iteration <N>`, `--mode <new-skill|revision>`, `--baseline <label>`, `--label <label>` — as before.
+- `--ref <git-ref>` (optional, `snapshot` only) — snapshot the skill (SKILL.md + sibling assets, excluding `evals/`) as it existed at a git ref, read straight from git without touching the working tree. Use it for the common edit-first Mode B order: edit the skill, *then* snapshot the old version with `--ref HEAD` (or any commit/tag/branch) as the baseline. Without `--ref`, `snapshot` reads the working tree as before.
 - `--only <id,id,...>` / `--skip <id,id,...>` (optional) — run only, or all-but, the named eval ids from `evals.json`. The two are mutually exclusive, and every named id must exist (the run aborts with the available ids listed otherwise). Use this for a cost-conscious reduced-set run instead of temporarily editing `evals.json` down. The pre-flight summary and the `N evals × 2 conditions` count reflect the filtered set.
 - `--plan-mode` (optional, Claude Code) — inject the harness's verbatim plan-mode procedure as an operating-context layer. When set, the runner reads `profiles/<harness>/plan-mode.md` and emits it (via the session adapter's `renderPlanModeContext`) as a `<system-reminder>` block in every dispatch, after the available-skills block and before the user request. It is identical across the with/without-skill arms and recorded as `plan_mode` in `dispatch.json`. This is issue #142's highest-fidelity in-runner approximation of a real plan mode — still text the agent reads, so a pass is necessary-not-sufficient; see *Seeding conversation context (and its ceiling)* in `../SKILL.md`. Opt-in, and meant only for plan-mode-relevant skills; a harness with no profile aborts the run, leaving the portable dispatch contract unchanged.
 
@@ -68,17 +69,23 @@ bun run evals:promote-baseline -- --skill <name> --iteration 1
 
 ### Mode B — Evaluate a language change to an existing skill
 
+The common case is edit-first: you've already changed the skill, then decide to eval.
+Snapshot the *old* version from git — no working-tree dance:
+
 ```bash
-# 1. Snapshot current SKILL.md before editing.
-bun run evals:snapshot -- --skill <name> --label baseline-2026-05-24
+# 1. Edit skills/<name>/SKILL.md (the "new" version is now in the working tree).
 
-# 2. Edit skills/<name>/SKILL.md.
+# 2. Snapshot the old version straight from git as the baseline.
+bun run evals:snapshot -- --skill <name> --label baseline-2026-05-24 --ref HEAD
 
-# 3. Build the iteration-N workspace, comparing snapshot vs current.
+# 3. Build the iteration-N workspace, comparing baseline (old) vs current (new).
 bun run evals -- --skill <name> --mode revision --baseline baseline-2026-05-24
 
 # 4-7. Same as Mode A.
 ```
+
+If you snapshot *before* editing instead, drop `--ref HEAD` from step 2 (it reads the
+working tree) and run it before step 1.
 
 ### Dry run (workspace prep only)
 
