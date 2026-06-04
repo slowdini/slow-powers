@@ -100,7 +100,7 @@ This is a required gate (see *Pre-flight gate* in `../SKILL.md`). Do not run the
 
 Run from the skill folder (so `CWD` is the eval root and staging lands at `<CWD>/.claude/skills/`).
 
-`--guard` is on in the commands below because it's the default posture (Step 7). It stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove it immediately, run `bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the slow-powers repo).
+`--guard` is on in the commands below because it's the default posture (Step 7). It stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. It denies out-of-bounds Write/Edit tool calls, and Bash that installs packages, mutates git (including **`git worktree add`**), redirects to a file, or creates paths under `.claude` / a bare `skills/`. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove just the guard immediately (e.g. mid-run), run `bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the slow-powers repo). The full end-of-run teardown — guard **and** staged skill set — is Step 12.
 
 New-skill mode (with vs without):
 
@@ -162,3 +162,15 @@ Read `<CWD>/skills-workspace/<name>/iteration-<N>/benchmark.json`. Surface to th
 - `run_summary` per condition (pass rate, tokens, duration)
 - `delta` (what the skill/change costs and what it buys — for a token-reduction eval, focus on `delta.total_tokens` alongside `delta.pass_rate`)
 - `validity_warnings` (read these before trusting the delta — a low skill-invocation rate means the result may not reflect the skill at all)
+
+## Step 12 — Tear down
+
+A run stages the full skill set into `<CWD>/.claude/skills/` (project-scope, required for discovery) and — under `--guard` — a `PreToolUse` hook in `.claude/settings.local.json`. These persist after dispatch, so the run isn't complete until you remove them. This is the normal end of every run, not an optional cleanup:
+
+```bash
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown --skill-dir <skill-dir> --skill <name>
+# or, in the slow-powers repo:
+bun run evals:teardown --skill <name>
+```
+
+`teardown` disarms the guard **and** removes the staged skill set. When the runner created `<CWD>/.claude/skills/` for this run it removes the whole tree (and prunes a `.claude` it emptied); a `.claude/skills` that pre-existed (your own project skills) keeps its contents, and `.claude/settings.json` is never touched. The artifacts under `skills-workspace/` (transcripts, `benchmark.json`) are deliberately left in place for later inspection.

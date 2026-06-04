@@ -78,6 +78,7 @@ export function registerStagedSkillForCleanup(
     manifest = {
       created_at: new Date().toISOString(),
       staged_under_test: name,
+      skills_dir_preexisting: true,
       created_entries: [],
     };
   }
@@ -89,6 +90,14 @@ export function registerStagedSkillForCleanup(
 type SiblingManifest = {
   created_at: string;
   staged_under_test: string;
+  /**
+   * Whether `.claude/skills` already existed when staging began. When false the
+   * runner created it, so {@link cleanupStagedSkills} may remove the whole tree
+   * (and prune an emptied `.claude`); when true (or absent, on older manifests)
+   * cleanup falls back to the surgical per-entry restore so a user's own
+   * project skills are left intact.
+   */
+  skills_dir_preexisting?: boolean;
   created_entries: Array<{
     name: string;
     preexisting: boolean;
@@ -102,6 +111,7 @@ export function stageSiblingSkills(opts: {
   repoRoot: string;
 }): SiblingManifest {
   const skillsDir = join(opts.repoRoot, ".claude", "skills");
+  const skillsDirPreexisting = existsSync(skillsDir);
   mkdirSync(skillsDir, { recursive: true });
 
   const siblings = readdirSync(opts.skillsSourceDir).filter((name) => {
@@ -114,6 +124,7 @@ export function stageSiblingSkills(opts: {
   const manifest: SiblingManifest = {
     created_at: new Date().toISOString(),
     staged_under_test: opts.skillUnderTest,
+    skills_dir_preexisting: skillsDirPreexisting,
     created_entries: [],
   };
 
@@ -153,8 +164,18 @@ export function stageSiblingSkills(opts: {
   return manifest;
 }
 
+/** Remove `dir` only if it exists and is empty. Used to prune a `.claude` the
+ * runner emptied without ever touching a `.claude` that still holds the user's
+ * own files (e.g. `settings.json`). */
+function pruneIfEmpty(dir: string): void {
+  if (existsSync(dir) && readdirSync(dir).length === 0) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export function cleanupStagedSkills(repoRoot: string): void {
-  const skillsDir = join(repoRoot, ".claude", "skills");
+  const claudeDir = join(repoRoot, ".claude");
+  const skillsDir = join(claudeDir, "skills");
   if (!existsSync(skillsDir)) return;
 
   for (const entry of readdirSync(skillsDir)) {
@@ -171,6 +192,18 @@ export function cleanupStagedSkills(repoRoot: string): void {
     rmSync(manifestPath, { force: true });
     return;
   }
+
+  // The runner created `.claude/skills` this run, so it can't be holding any of
+  // the user's own skills — remove the whole staged tree (including any stray,
+  // non-prefixed dirs a recursive eval left behind), then prune an emptied
+  // `.claude`. In a real project `.claude/settings.json` keeps `.claude`
+  // non-empty, so only the scaffolding we created is removed.
+  if (manifest.skills_dir_preexisting === false) {
+    rmSync(skillsDir, { recursive: true, force: true });
+    pruneIfEmpty(claudeDir);
+    return;
+  }
+
   for (const e of manifest.created_entries) {
     const target = join(skillsDir, e.name);
     rmSync(target, { recursive: true, force: true });
@@ -185,7 +218,7 @@ export function cleanupStagedSkills(repoRoot: string): void {
 type Mode = "new-skill" | "revision";
 
 type Args = {
-  command: "run" | "snapshot" | "teardown-guard";
+  command: "run" | "snapshot" | "teardown-guard" | "teardown";
   mode?: Mode;
   baseline?: string;
   label?: string;
@@ -254,7 +287,9 @@ function parseArgs(argv: string[]): Args {
       ? "snapshot"
       : positionals[0] === "teardown-guard"
         ? "teardown-guard"
-        : "run";
+        : positionals[0] === "teardown"
+          ? "teardown"
+          : "run";
 
   const flag = (name: string): string | undefined => {
     const i = argv.indexOf(`--${name}`);
@@ -1110,6 +1145,17 @@ if (import.meta.main) {
       torn
         ? "🛡 Write guard removed."
         : "No write guard was installed — nothing to remove.",
+    );
+  } else if (args.command === "teardown") {
+    // Full end-of-run teardown: disarm the guard, then remove the staged skill
+    // set (and prune a `.claude` the runner emptied), leaving the user's own
+    // `.claude/settings.json` and any pre-existing project skills intact.
+    const torn = teardownGuard(ctx.stageRoot);
+    cleanupStagedSkills(ctx.stageRoot);
+    console.log(
+      `🧹 Eval teardown complete: staged skill set removed${
+        torn ? " and write guard disarmed" : ""
+      }.`,
     );
   } else commandRun(args, ctx);
 }
