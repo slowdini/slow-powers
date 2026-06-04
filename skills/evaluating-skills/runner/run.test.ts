@@ -125,6 +125,83 @@ describe("stageSkillForCC", () => {
     expect(readFileSync(stagedPath, "utf8")).toBe("second");
   });
 
+  test("copies sibling assets from assetsDir alongside the staged SKILL.md", () => {
+    const repoRoot = join(FIXTURE_ROOT, "stage-assets");
+    const assetsDir = join(FIXTURE_ROOT, "stage-assets-src");
+    mkdirSync(repoRoot, { recursive: true });
+    mkdirSync(join(assetsDir, "scripts"), { recursive: true });
+    writeFileSync(join(assetsDir, "SKILL.md"), "the source skill md");
+    writeFileSync(join(assetsDir, "code-review.md"), "review guidance");
+    writeFileSync(
+      join(assetsDir, "scripts", "helper.ts"),
+      "export const x = 1",
+    );
+
+    const slug = stageSkillForCC({
+      content: "staged content",
+      iteration: 1,
+      condition: "new_skill",
+      skillName: "s",
+      repoRoot,
+      assetsDir,
+    });
+
+    const stagedDir = join(repoRoot, ".claude", "skills", slug);
+    // SKILL.md comes from `content`, not the assetsDir copy.
+    expect(readFileSync(join(stagedDir, "SKILL.md"), "utf8")).toBe(
+      "staged content",
+    );
+    expect(readFileSync(join(stagedDir, "code-review.md"), "utf8")).toBe(
+      "review guidance",
+    );
+    expect(readFileSync(join(stagedDir, "scripts", "helper.ts"), "utf8")).toBe(
+      "export const x = 1",
+    );
+  });
+
+  test("excludes SKILL.md, evals/, and the snapshot meta file from the asset copy", () => {
+    const repoRoot = join(FIXTURE_ROOT, "stage-assets-excludes");
+    const assetsDir = join(FIXTURE_ROOT, "stage-assets-excludes-src");
+    mkdirSync(join(assetsDir, "evals", "fixtures"), { recursive: true });
+    mkdirSync(repoRoot, { recursive: true });
+    writeFileSync(join(assetsDir, "SKILL.md"), "src skill md");
+    writeFileSync(join(assetsDir, "code-review.md"), "keep me");
+    writeFileSync(join(assetsDir, SNAPSHOT_META), '{"source":"ref"}');
+    writeFileSync(join(assetsDir, "evals", "evals.json"), "{}");
+
+    const slug = stageSkillForCC({
+      content: "staged",
+      iteration: 1,
+      condition: "old_skill",
+      skillName: "s",
+      repoRoot,
+      assetsDir,
+    });
+
+    const stagedDir = join(repoRoot, ".claude", "skills", slug);
+    expect(existsSync(join(stagedDir, "code-review.md"))).toBe(true);
+    expect(existsSync(join(stagedDir, "evals"))).toBe(false);
+    expect(existsSync(join(stagedDir, SNAPSHOT_META))).toBe(false);
+    // SKILL.md exists (from content) but the assetsDir SKILL.md didn't overwrite it.
+    expect(readFileSync(join(stagedDir, "SKILL.md"), "utf8")).toBe("staged");
+  });
+
+  test("stages SKILL.md alone when assetsDir is omitted", () => {
+    const repoRoot = join(FIXTURE_ROOT, "stage-no-assets");
+    mkdirSync(repoRoot, { recursive: true });
+
+    const slug = stageSkillForCC({
+      content: "solo",
+      iteration: 1,
+      condition: "with_skill",
+      skillName: "s",
+      repoRoot,
+    });
+
+    const stagedDir = join(repoRoot, ".claude", "skills", slug);
+    expect(readdirSync(stagedDir)).toEqual(["SKILL.md"]);
+  });
+
   test("stageNameOverride stages under the verbatim name instead of the eval slug", () => {
     const repoRoot = join(FIXTURE_ROOT, "stage-override");
     mkdirSync(repoRoot, { recursive: true });
