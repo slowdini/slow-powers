@@ -219,7 +219,13 @@ export function cleanupStagedSkills(repoRoot: string): void {
 type Mode = "new-skill" | "revision";
 
 type Args = {
-  command: "run" | "snapshot" | "teardown-guard" | "teardown";
+  command:
+    | "run"
+    | "snapshot"
+    | "teardown-guard"
+    | "teardown"
+    | "ingest"
+    | "finalize";
   mode?: Mode;
   baseline?: string;
   label?: string;
@@ -232,6 +238,7 @@ type Args = {
   stageName?: string;
   planMode: boolean;
   ref?: string;
+  subagentsDir?: string;
 };
 
 function die(msg: string): never {
@@ -283,14 +290,15 @@ function gitLsFiles(cwd: string, ref: string): string[] {
 
 function parseArgs(argv: string[]): Args {
   const positionals = argv.filter((a) => !a.startsWith("--"));
+  const COMMANDS: Args["command"][] = [
+    "snapshot",
+    "teardown-guard",
+    "teardown",
+    "ingest",
+    "finalize",
+  ];
   const command: Args["command"] =
-    positionals[0] === "snapshot"
-      ? "snapshot"
-      : positionals[0] === "teardown-guard"
-        ? "teardown-guard"
-        : positionals[0] === "teardown"
-          ? "teardown"
-          : "run";
+    COMMANDS.find((c) => c === positionals[0]) ?? "run";
 
   const flag = (name: string): string | undefined => {
     const i = argv.indexOf(`--${name}`);
@@ -332,6 +340,7 @@ function parseArgs(argv: string[]): Args {
     stageName: flag("stage-name"),
     planMode: has("plan-mode"),
     ref: flag("ref"),
+    subagentsDir: flag("subagents-dir"),
   };
 }
 
@@ -1135,6 +1144,174 @@ function buildManifest(opts: {
   return header + entries;
 }
 
+// ---------------------------------------------------------------------------
+// ingest / finalize — fixed-order orchestrators over the sibling commands.
+//
+// The eval loop has exactly two points where only the in-harness agent can act
+// (dispatching eval subagents, dispatching judge subagents). Everything between
+// them is mechanical, so each stretch is one command: `ingest` runs the
+// post-dispatch chain and stops at the judge hand-off; `finalize` runs the
+// post-judge chain and prints the benchmark. No workspace-state inference —
+// each always runs the same steps in the same order, and every sub-step keeps
+// its own skip-if-done guard, so re-running after a fix is safe.
+// ---------------------------------------------------------------------------
+
+export type StepCommand = { label: string; argv: string[] };
+
+export function buildIngestCommands(opts: {
+  runnerDir: string;
+  skillDir: string;
+  skill: string;
+  iteration: number;
+  subagentsDir: string;
+}): StepCommand[] {
+  const shared = [
+    "--skill-dir",
+    opts.skillDir,
+    "--skill",
+    opts.skill,
+    "--iteration",
+    String(opts.iteration),
+  ];
+  const transcripts = ["--subagents-dir", opts.subagentsDir];
+  const script = (name: string) => [
+    "bun",
+    "run",
+    join(opts.runnerDir, `${name}.ts`),
+  ];
+  return [
+    {
+      label: "record-runs",
+      argv: [...script("record-runs"), ...shared, ...transcripts],
+    },
+    // record-runs subsumes this for the records it wrote; it still fills any
+    // pre-existing (agent-written) run.json with empty tool_invocations.
+    {
+      label: "fill-transcripts",
+      argv: [...script("fill-transcripts"), ...shared, ...transcripts],
+    },
+    {
+      label: "detect-stray-writes",
+      argv: [...script("detect-stray-writes"), ...shared],
+    },
+    { label: "grade", argv: [...script("grade"), ...shared] },
+  ];
+}
+
+export function buildFinalizeCommands(opts: {
+  runnerDir: string;
+  skillDir: string;
+  skill: string;
+  iteration: number;
+}): StepCommand[] {
+  const shared = [
+    "--skill-dir",
+    opts.skillDir,
+    "--skill",
+    opts.skill,
+    "--iteration",
+    String(opts.iteration),
+  ];
+  return [
+    {
+      label: "grade --finalize",
+      argv: [
+        "bun",
+        "run",
+        join(opts.runnerDir, "grade.ts"),
+        ...shared,
+        "--finalize",
+      ],
+    },
+    {
+      label: "aggregate",
+      argv: ["bun", "run", join(opts.runnerDir, "aggregate.ts"), ...shared],
+    },
+  ];
+}
+
+/**
+ * Runs steps in order, stopping at the first non-zero exit. A failure must
+ * halt the chain: grade's `__skill_invoked` code-check silently degrades to an
+ * LLM judge when `tool_invocations` is missing, so grading after a failed
+ * record/fill step would quietly lose the deterministic check.
+ */
+export function runSteps(
+  steps: StepCommand[],
+  spawn: (step: StepCommand) => number = (step) =>
+    Bun.spawnSync(step.argv, { stdout: "inherit", stderr: "inherit" })
+      .exitCode ?? 1,
+): { failedAt: string | null } {
+  for (const step of steps) {
+    console.log(`\n── ${step.label} ──`);
+    if (spawn(step) !== 0) return { failedAt: step.label };
+  }
+  return { failedAt: null };
+}
+
+function commandIngest(args: Args, ctx: RunContext): void {
+  if (args.iteration === undefined) die("ingest requires --iteration <N>");
+  if (!args.subagentsDir)
+    die(
+      "ingest requires --subagents-dir <path> (Claude Code persists subagent transcripts under ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/)",
+    );
+  const { failedAt } = runSteps(
+    buildIngestCommands({
+      runnerDir: import.meta.dir,
+      skillDir: ctx.skillDir,
+      skill: ctx.skillName,
+      iteration: args.iteration,
+      subagentsDir: args.subagentsDir,
+    }),
+  );
+  if (failedAt)
+    die(
+      `ingest stopped at '${failedAt}'. Fix the failure and re-run ingest — completed steps skip work that's already done.`,
+    );
+
+  const judgeTasksPath = join(
+    ctx.workspaceRoot,
+    ctx.skillName,
+    `iteration-${args.iteration}`,
+    "judge-tasks.json",
+  );
+  let totalTasks: number | null = null;
+  try {
+    totalTasks =
+      readJson<{ total_tasks?: number }>(judgeTasksPath).total_tasks ?? null;
+  } catch {
+    // grade always writes judge-tasks.json; treat a read failure as unknown.
+  }
+  if (totalTasks === 0) {
+    console.log(
+      `\n✅ Ingest complete — no judge dispatches needed.\nNext: bun run evals:finalize -- --skill ${ctx.skillName} --iteration ${args.iteration}`,
+    );
+  } else {
+    console.log(
+      `\n✅ Ingest complete. Dispatch the ${totalTasks ?? ""} judge task(s) grade listed above (judge-tasks.json), then:\n  bun run evals:finalize -- --skill ${ctx.skillName} --iteration ${args.iteration}`,
+    );
+  }
+}
+
+function commandFinalize(args: Args, ctx: RunContext): void {
+  if (args.iteration === undefined) die("finalize requires --iteration <N>");
+  const { failedAt } = runSteps(
+    buildFinalizeCommands({
+      runnerDir: import.meta.dir,
+      skillDir: ctx.skillDir,
+      skill: ctx.skillName,
+      iteration: args.iteration,
+    }),
+  );
+  if (failedAt)
+    die(
+      `finalize stopped at '${failedAt}'. Fix the failure and re-run finalize.`,
+    );
+  console.log(
+    `\n✅ Finalize complete. Read the benchmark above, then tear down: bun run evals:teardown --skill ${ctx.skillName}`,
+  );
+}
+
 if (import.meta.main) {
   const argv = Bun.argv.slice(2);
   const args = parseArgs(argv);
@@ -1145,6 +1322,8 @@ if (import.meta.main) {
     die(err instanceof Error ? err.message : String(err));
   }
   if (args.command === "snapshot") commandSnapshot(args, ctx);
+  else if (args.command === "ingest") commandIngest(args, ctx);
+  else if (args.command === "finalize") commandFinalize(args, ctx);
   else if (args.command === "teardown-guard") {
     const torn = teardownGuard(ctx.stageRoot);
     console.log(

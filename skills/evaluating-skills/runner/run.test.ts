@@ -11,9 +11,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   buildDispatchTask,
+  buildFinalizeCommands,
+  buildIngestCommands,
   cleanupStagedSkills,
   redactSkillFromBootstrap,
   registerStagedSkillForCleanup,
+  runSteps,
   STAGED_SIBLING_MANIFEST,
   STAGED_SKILL_PREFIX,
   selectEvals,
@@ -1538,5 +1541,86 @@ describe("snapshot --ref (read baseline from a git ref, issue #122)", () => {
       readFileSync(snapshotPath(cwd, "wt", SNAPSHOT_META), "utf8"),
     ) as { source: string };
     expect(meta.source).toBe("working-tree");
+  });
+});
+
+describe("ingest / finalize step plans", () => {
+  const opts = {
+    runnerDir: "/runner",
+    skillDir: "/skills",
+    skill: "mr-review",
+    iteration: 2,
+    subagentsDir: "/subagents",
+  };
+
+  test("buildIngestCommands runs record → fill → stray-writes → grade, in order", () => {
+    const steps = buildIngestCommands(opts);
+    expect(steps.map((s) => s.label)).toEqual([
+      "record-runs",
+      "fill-transcripts",
+      "detect-stray-writes",
+      "grade",
+    ]);
+    // Every step is a bun invocation of the sibling script with the shared flags.
+    for (const step of steps) {
+      expect(step.argv.slice(0, 2)).toEqual(["bun", "run"]);
+      expect(step.argv[2]).toBe(`/runner/${step.label}.ts`);
+      expect(step.argv).toContain("--skill-dir");
+      expect(step.argv).toContain("/skills");
+      expect(step.argv).toContain("--skill");
+      expect(step.argv).toContain("mr-review");
+      expect(step.argv).toContain("--iteration");
+      expect(step.argv).toContain("2");
+    }
+    // The transcript-reading steps get --subagents-dir; the others must not.
+    const byLabel = Object.fromEntries(steps.map((s) => [s.label, s.argv]));
+    expect(byLabel["record-runs"]).toContain("--subagents-dir");
+    expect(byLabel["fill-transcripts"]).toContain("--subagents-dir");
+    expect(byLabel["detect-stray-writes"]).not.toContain("--subagents-dir");
+    expect(byLabel.grade).not.toContain("--subagents-dir");
+  });
+
+  test("buildFinalizeCommands runs grade --finalize then aggregate", () => {
+    const steps = buildFinalizeCommands({
+      runnerDir: "/runner",
+      skillDir: "/skills",
+      skill: "mr-review",
+      iteration: 2,
+    });
+    expect(steps.map((s) => s.label)).toEqual([
+      "grade --finalize",
+      "aggregate",
+    ]);
+    expect(steps[0].argv[2]).toBe("/runner/grade.ts");
+    expect(steps[0].argv).toContain("--finalize");
+    expect(steps[1].argv[2]).toBe("/runner/aggregate.ts");
+  });
+
+  test("runSteps stops at the first failing step and reports it", () => {
+    const ran: string[] = [];
+    const result = runSteps(
+      [
+        { label: "a", argv: ["x"] },
+        { label: "b", argv: ["y"] },
+        { label: "c", argv: ["z"] },
+      ],
+      (step) => {
+        ran.push(step.label);
+        return step.label === "b" ? 1 : 0;
+      },
+    );
+    expect(ran).toEqual(["a", "b"]); // c never runs after b fails
+    expect(result.failedAt).toBe("b");
+  });
+
+  test("runSteps runs everything and reports no failure on success", () => {
+    const result = runSteps(
+      [
+        { label: "a", argv: ["x"] },
+        { label: "b", argv: ["y"] },
+      ],
+      () => 0,
+    );
+    expect(result.failedAt).toBeNull();
   });
 });
