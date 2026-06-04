@@ -21,6 +21,7 @@ import {
   stageSkillForCC,
 } from "./run";
 import type { Eval } from "./types";
+import { SNAPSHOT_META } from "./workspace-teardown";
 
 const FIXTURE_ROOT = join(tmpdir(), `slow-powers-run-test-${process.pid}`);
 
@@ -1110,6 +1111,46 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     expect(existsSync(settingsPath)).toBe(false);
     expect(existsSync(stagedSkillsDir)).toBe(false);
     expect(existsSync(join(cwd, ".claude"))).toBe(false);
+    // The run only produced scaffolding (no results), so teardown reclaims the
+    // workspace too — a completed run leaves nothing uncommitted behind.
+    expect(existsSync(join(cwd, "skills-workspace"))).toBe(false);
+  });
+
+  test("teardown preserves an iteration with uncommitted results and warns", () => {
+    const { skillDir, cwd } = setup("usermode-teardown-keep");
+
+    const res = runCli(
+      ["--skill-dir", skillDir, "--skill", "mr-review", "--mode", "new-skill"],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    // Simulate a graded-but-not-promoted run: drop an aggregate into the
+    // iteration the runner just created.
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    writeFileSync(
+      join(iterationDir, "benchmark.json"),
+      `${JSON.stringify({ delta: { pass_rate: 0.4 } })}\n`,
+    );
+
+    const down = runCli(
+      ["teardown", "--skill-dir", skillDir, "--skill", "mr-review"],
+      cwd,
+    );
+    expect(down.exitCode).toBe(0);
+
+    // Uncommitted results are preserved, and the user is told how to commit.
+    expect(existsSync(iterationDir)).toBe(true);
+    const out =
+      new TextDecoder().decode(down.stdout) +
+      new TextDecoder().decode(down.stderr);
+    expect(out).toContain("iteration-1");
+    expect(out).toContain("promote-baseline");
   });
 
   test("a normal run does not install a guard", () => {
@@ -1412,6 +1453,31 @@ describe("snapshot --ref (read baseline from a git ref, issue #122)", () => {
     expect(existsSync(snapshotPath(cwd, "old", "evals"))).toBe(false);
   });
 
+  test("records ref provenance so teardown can reclaim the snapshot", () => {
+    const { skillDir, cwd } = setupRepo("ref-meta");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "old",
+        "--ref",
+        "HEAD",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const meta = JSON.parse(
+      readFileSync(snapshotPath(cwd, "old", SNAPSHOT_META), "utf8"),
+    ) as { source: string; ref: string };
+    expect(meta.source).toBe("ref");
+    expect(meta.ref).toBe("HEAD");
+  });
+
   test("a ref that does not exist fails with a clear message", () => {
     const { skillDir, cwd } = setupRepo("ref-bad");
     const res = runCli(
@@ -1450,5 +1516,27 @@ describe("snapshot --ref (read baseline from a git ref, issue #122)", () => {
     expect(readFileSync(snapshotPath(cwd, "wt", "SKILL.md"), "utf8")).toBe(
       "v2 working tree\n",
     );
+  });
+
+  test("records working-tree provenance so teardown preserves the snapshot", () => {
+    const { skillDir, cwd } = setupRepo("wt-meta");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "wt",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const meta = JSON.parse(
+      readFileSync(snapshotPath(cwd, "wt", SNAPSHOT_META), "utf8"),
+    ) as { source: string };
+    expect(meta.source).toBe("working-tree");
   });
 });

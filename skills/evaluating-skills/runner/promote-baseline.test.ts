@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PROMOTED_MARKER } from "./workspace-teardown";
 
 const FIXTURE_ROOT = join(tmpdir(), `slow-powers-promote-test-${process.pid}`);
 const PROMOTE_TS = join(import.meta.dir, "promote-baseline.ts");
@@ -135,6 +136,56 @@ describe("promote-baseline.ts (--skill-dir, isolated CWD)", () => {
     // Model rows default to "unspecified" when no flags are passed.
     expect(provenance).toContain("Agent model | unspecified");
     expect(provenance).toContain("Judge model | unspecified");
+  });
+
+  test("drops a .promoted.json marker into the iteration dir for teardown", () => {
+    const root = join(FIXTURE_ROOT, "promote-marker");
+
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, "mr-review");
+    mkdirSync(skillSub, { recursive: true });
+    writeFileSync(
+      join(skillSub, "SKILL.md"),
+      "---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+    );
+
+    const cwd = join(root, "work");
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-3",
+    );
+    mkdirSync(iterationDir, { recursive: true });
+    writeJson(join(iterationDir, "benchmark.json"), {
+      delta: { pass_rate: 0 },
+    });
+
+    const res = Bun.spawnSync(
+      [
+        "bun",
+        "run",
+        PROMOTE_TS,
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--iteration",
+        "3",
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(res.stderr.toString()).toBe("");
+    expect(res.exitCode).toBe(0);
+
+    const markerPath = join(iterationDir, PROMOTED_MARKER);
+    expect(existsSync(markerPath)).toBe(true);
+    const marker = JSON.parse(readFileSync(markerPath, "utf8")) as {
+      promoted_at: string;
+      baseline_dir: string;
+    };
+    expect(marker.promoted_at).toBeTruthy();
+    expect(marker.baseline_dir).toBe(join(skillSub, "evals", "baseline"));
   });
 
   test("records agent and judge models in provenance when flags are passed", () => {

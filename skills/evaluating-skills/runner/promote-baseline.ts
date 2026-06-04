@@ -10,6 +10,7 @@ import {
 import { join } from "node:path";
 import { detectRunContext } from "./context";
 import type { ConditionsRecord } from "./types";
+import { PROMOTED_MARKER } from "./workspace-teardown";
 
 function die(msg: string): never {
   console.error(`error: ${msg}`);
@@ -120,7 +121,8 @@ export function promoteBaseline(opts: PromoteOptions): {
     "`bun run evals:promote-baseline -- --skill " +
       `${opts.skillName} --iteration <N>` +
       "` after aggregating. The ephemeral workspace (run records, timing,",
-    "dispatch files, produced outputs) stays gitignored under `skills-workspace/`.",
+    "dispatch files, produced outputs) stays gitignored under `skills-workspace/`",
+    "and is reclaimable by `evals:teardown` once promoted (this commit's marker).",
     "",
     "| Field | Value |",
     "|-------|-------|",
@@ -140,6 +142,22 @@ export function promoteBaseline(opts: PromoteOptions): {
     "",
   ].join("\n");
   writeFileSync(join(baselineDir, "BASELINE.md"), `${provenance}\n`);
+
+  // Mark the iteration as committed so `teardown` can safely reclaim its
+  // workspace — without this marker teardown preserves the iteration as
+  // uncommitted results.
+  writeFileSync(
+    join(iterationDir, PROMOTED_MARKER),
+    `${JSON.stringify(
+      {
+        promoted_at: new Date().toISOString(),
+        baseline_dir: baselineDir,
+        commit: head,
+      },
+      null,
+      2,
+    )}\n`,
+  );
 
   return { baselineDir, gradingsCopied };
 }

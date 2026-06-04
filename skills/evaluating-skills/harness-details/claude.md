@@ -173,4 +173,11 @@ bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown --skill-dir <skill-dir> --ski
 bun run evals:teardown --skill <name>
 ```
 
-`teardown` disarms the guard **and** removes the staged skill set. When the runner created `<CWD>/.claude/skills/` for this run it removes the whole tree (and prunes a `.claude` it emptied); a `.claude/skills` that pre-existed (your own project skills) keeps its contents, and `.claude/settings.json` is never touched. The artifacts under `skills-workspace/` (transcripts, `benchmark.json`) are deliberately left in place for later inspection.
+`teardown` disarms the guard, removes the staged skill set, **and** reclaims the skill's `skills-workspace/` artifacts. When the runner created `<CWD>/.claude/skills/` for this run it removes the whole tree (and prunes a `.claude` it emptied); a `.claude/skills` that pre-existed (your own project skills) keeps its contents, and `.claude/settings.json` is never touched.
+
+Workspace reclamation is conservative — a completed run leaves behind nothing that wasn't meant to be committed, but it never destroys results you haven't moved into version control:
+
+- **Iterations** whose results are committed are removed. Teardown keys off the `.promoted.json` marker `promote-baseline` writes into the iteration. An iteration that still holds uncommitted results (a `benchmark.json`, run record, or grading with no marker — e.g. a graded run you never promoted) is **kept**, and teardown warns you, naming it and the `evals:promote-baseline` command to commit it (or delete `skills-workspace/<name>/` manually to discard). Iterations holding only reproducible scaffolding (a `--dry-run`, or a run staged but never dispatched) are removed.
+- **Snapshots** materialized from a git ref (`snapshot --ref`) are removed — they regenerate on demand. Working-tree snapshots (no `--ref`), which can't be regenerated, are kept.
+
+If you ran with a custom `--workspace-dir`, pass the same value to `teardown` so it reclaims the right tree.
