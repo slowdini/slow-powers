@@ -16,11 +16,11 @@ Give your agent superpowers with slow-powers: [Claude Code](#claude-code) · [Co
 
 ## Feature support
 
-| Harness         | Status   | Notes                                                          |
-|-----------------|----------|----------------------------------------------------------------|
-| Claude Code     | Full     | Reference implementation                                       |
-| Codex CLI       | Partial  | Plugin manifest + shared hooks; no eval transcript adapter     |
-| OpenCode        | Partial  | JS plugin with bootstrap injection; no eval transcript adapter |
+| Harness         | Status   | Notes                                                                             |
+|-----------------|----------|-----------------------------------------------------------------------------------|
+| Claude Code     | Full     | Reference implementation                                                          |
+| Codex CLI       | Partial  | Plugin manifest + shared hooks; no eval transcript adapter (manual run records)   |
+| OpenCode        | Partial  | JS plugin with bootstrap injection; no eval transcript adapter (manual run records) |
 
 Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md): it audits which Slow-powers features are wired up for a given harness and preps an agent to close one gap.
 

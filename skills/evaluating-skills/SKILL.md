@@ -159,13 +159,13 @@ For each test case, dispatch fresh general-purpose subagents — one per conditi
 
 Subagents MUST start with clean context. State leaking from previous runs invalidates the comparison.
 
-When a subagent completes, capture:
+Each run needs a portable **run record** (`run.json`, matching `schema/run-record.schema.json`) and a timing record (`timing.json`) holding:
 
-- `total_tokens` and `duration_ms` from the harness's task completion event — **these may not be persisted anywhere else; save them immediately**
+- `total_tokens` and `duration_ms`
 - The final user-facing message
 - The tool invocations (best effort — see "Transcript access" below)
 
-Convert these into a portable **run record** (`run.json`) using `schema/run-record.schema.json`. Each harness has its own adapter — Claude Code's lives at `runner/adapters/`; other harnesses write their own or fill the record manually.
+On a harness with persisted transcripts (Claude Code), `record-runs` assembles both records from disk after the dispatches — nothing is captured by hand. On a transcript-less harness, capture them manually when each subagent completes: tokens/duration come from the harness's task completion event (**these may not be persisted anywhere else; save them immediately**), and the record is written via that harness's adapter or by hand.
 
 ### Driving the eval loop
 
@@ -173,9 +173,9 @@ The agent itself drives the entire loop from inside a normal agent session:
 
 1. The agent invokes the runner via Bash to build the workspace (same command as above).
 2. The agent reads the generated `dispatch.json` (machine-readable sibling of the manifest). Each task object points at a `dispatch_prompt_path` (a file holding the full prompt), an `agent_description` to pass through as the dispatch description, and exact `run_record_path` and `timing_path` to write to. The prompt lives in a file rather than inline in `dispatch.json` so the agent never has to reproduce kilobytes of prompt text per dispatch. The `agent_description` is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) so transcripts from different iterations sharing one session's subagents dir can't collide — **pass it verbatim; do not reconstruct it from the eval id and condition.**
-3. For each task, the agent dispatches a fresh subagent using its host's primitive, instructing it to read the file at `dispatch_prompt_path` and follow it exactly, and passing `agent_description` verbatim as the dispatch `description`. Passing the description through unchanged is what lets the transcript adapter correlate transcripts to runs in step 5.
-4. When the subagent returns, the agent writes the portable run record to `run_record_path` (with `tool_invocations: []`) and the timing record to `timing_path`.
-5. (Claude Code) The agent runs `bun run evals:fill-transcripts` to populate `tool_invocations` from persisted subagent transcripts. Other harnesses skip this step; `transcript_check` assertions grade as unverifiable.
+3. For each task, the agent dispatches a fresh subagent using its host's primitive, instructing it to read the file at `dispatch_prompt_path` and follow it exactly, and passing `agent_description` verbatim as the dispatch `description`. Passing the description through unchanged is what lets the transcript adapter correlate transcripts to runs in step 4.
+4. (Claude Code) After all dispatches return, the agent runs `bun run evals:record-runs` once — it assembles every task's `run.json` (carry-over fields from `dispatch.json`, `final_message` from the subagent's own `outputs/final-message.md`, `tool_invocations` from the persisted transcript) and backfills `timing.json` with transcript-derived tokens/duration (`"source": "transcript"`). It never clobbers a record that already exists.
+5. (Other harnesses) When each subagent returns, the agent writes the portable run record to `run_record_path` and the timing record to `timing_path` by hand; without a transcript adapter, `tool_invocations` stays `[]` and `transcript_check` assertions grade as unverifiable.
 6. (Optional, where transcripts were filled) The agent runs `bun run evals:detect-stray-writes --skill <name> --iteration <N>` to flag any subagent writes or installs that landed outside the run's `outputs/` dir. See *Sandboxing eval subagents* below.
 7. The agent runs the grader (Bash) and then dispatches judge subagents for any `llm_judge` assertions — same pattern: read a tasks file, dispatch, write results back to a path.
 8. The agent runs the aggregator.

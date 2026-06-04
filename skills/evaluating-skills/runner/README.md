@@ -30,7 +30,7 @@ Staging is written under the current working directory: `<CWD>/.claude/skills/`.
 
 ## Driving the loop
 
-Every run produces both a `dispatch-manifest.md` (human-readable) and a `dispatch.json` (machine-readable). An agent in a session reads `dispatch.json`, dispatches each task itself, and writes the run/timing records to the paths in each task.
+Every run produces both a `dispatch-manifest.md` (human-readable) and a `dispatch.json` (machine-readable). An agent in a session reads `dispatch.json` and dispatches each task itself. On Claude Code, `record-runs` then assembles each task's run/timing records from disk; on harnesses without persisted transcripts, the agent writes the records to the paths in each task by hand (the portable path).
 
 ## Quickstart (internal / repo use)
 
@@ -45,11 +45,12 @@ Maintainers run from the repo root; the npm scripts supply `--skill-dir ./skills
 bun run evals -- --skill <name> --mode new-skill
 
 # 3. Read skills-workspace/<name>/iteration-1/dispatch.json and dispatch each
-#    task as a fresh general-purpose subagent, writing run.json + timing.json
-#    to the paths in each task.
+#    task as a fresh general-purpose subagent (each writes its own
+#    outputs/final-message.md).
 
-# 4. Fill tool_invocations from subagent transcripts:
-bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
+# 4. Assemble run.json + timing.json for every task from dispatch.json,
+#    final-message.md, and the persisted transcripts:
+bun run evals:record-runs -- --skill <name> --iteration 1 \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
 
 # 5. Grade:
@@ -113,8 +114,9 @@ If you have the slow-powers plugin installed and a personal skill, you do **not*
 - `grade.ts` — evaluates `transcript_check` assertions directly (regex against `tool_invocations`), emits judge-task files for `llm_judge` assertions, then finalizes by merging judge responses into per-run `grading.json`. The `__skill_invoked` meta-check is code-based on Claude Code when the staged-skill slug is known and `tool_invocations` is populated (deterministic scan for a `Skill` tool call with matching slug); it falls back to an LLM judge looking for behavioral fingerprints when either signal is missing.
 - `aggregate.ts` — reads grading.json + timing.json from an iteration, writes `benchmark.json` with pass-rate / duration / token stats keyed by condition name.
 - `promote-baseline.ts` — copies the durable subset of an iteration (`benchmark.json` + each run's `grading.json` + a `BASELINE.md` provenance file) into the skill's version-controlled `evals/baseline/`. Flags: `--skill-dir`/`--skill` (as everywhere), `--iteration <N>` (required), `--label <tag>` (optional, recorded in provenance). Everything else in the workspace stays gitignored.
-- `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a subagent transcript by description, parses the transcript with the appropriate adapter, populates `tool_invocations` in `run.json`.
-- `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
+- `record-runs.ts` — assembles a schema-valid `run.json` and backfills `timing.json` for every task in a runner-built iteration, from `dispatch.json` (carry-over fields) + `outputs/final-message.md` (`final_message`, transcript fallback) + the persisted transcript (`tool_invocations`, tokens, duration). Never clobbers existing records without `--overwrite`; transcript-derived timing carries `"source": "transcript"`. Claude-Code-tier, like `fill-transcripts` — transcript-less harnesses keep authoring records manually (the portable path).
+- `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a subagent transcript by description, parses the transcript with the appropriate adapter, populates `tool_invocations` in `run.json`. Subsumed by `record-runs` for runner-built iterations; still the tool for filling a pre-existing (hand- or agent-written) `run.json`.
+- `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]` (`parseTranscript`), or the full summary with usage tokens deduped by message id, wall-clock duration, and the last assistant text (`parseTranscriptFull`). Also exposes `listSubagents` / `findByDescription` for transcript correlation.
 - `types.ts` — shared TypeScript types matching `../schema/*.json`.
 - `validate.ts` / `validate-all.ts` — validator for `evals.json` against the JSON Schema rules. `validate-all.ts` takes `--skill-dir` and validates every skill's `evals.json` in it.
 
