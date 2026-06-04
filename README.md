@@ -107,6 +107,16 @@ Slow-powers provides a set of highly focused, execution-level skills that ensure
 
 **Meta & Extension** — `writing-skills`
 
+## Intended Workflows
+
+The skills declare lightweight prerequisite / next-step gates so the agent knows the intended sequence. These gates **suggest** what comes before and after a skill once it is invoked; they do **not** restrict when any skill can be invoked. An agent may invoke `test-driven-development`, `verifying-development-work`, or any other skill at any point.
+
+**Plan mode:** plan mode → `hardening-plans` → `working-in-isolation` → `test-driven-development` → `verifying-development-work`
+
+**Debugging:** (`working-in-isolation`) → `systematic-debugging` → `verifying-development-work`
+
+`hardening-plans` points to `test-driven-development` as its next step, and `test-driven-development` requires `working-in-isolation` first — so isolation is reached as TDD's prerequisite, producing the plan-mode order above.
+
 ## Philosophy
 
 - Test-Driven Development — write tests first, always

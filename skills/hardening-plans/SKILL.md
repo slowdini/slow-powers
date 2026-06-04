@@ -44,7 +44,7 @@ Before the plan leaves your hands, re-read the whole draft once, top to bottom, 
 
 When the plan is approved, implementation begins — and implementation has its own gate.
 
-> **REQUIRED NEXT SKILL:** Use `slow-powers:test-driven-development` for the implementation phase.
+> **REQUIRED NEXT SKILL:** You must complete `slow-powers:test-driven-development` next for the implementation phase.
 
 The plan should carry a tests section so the reader can see *what* will be verified. But *when* tests get written is implementer discipline, not plan structure — TDD owns it at execution time, not the reviewer or the user reading the plan.
 
