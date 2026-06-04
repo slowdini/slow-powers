@@ -42,7 +42,7 @@ Before claiming any task is finished, making a success claim, or declaring a bug
 
 The Gate Function above is your discipline at *every* completion claim. When you believe the work itself is done, run this finishing sequence in order — review **before** the final verification, so the evidence you hand back covers the exact code being returned:
 
-1. **Review the diff.** Invoke your harness's built-in code-review capability over the change. Verification proves the work *runs*; review catches what running can't — silent regressions, missed edge cases, leftover debug code, and reuse or simplification you'd want before another person reads the diff. This is a quick final check, not a second project. If your harness has no code-review capability, say so and re-read the diff yourself with the same intent.
+1. **Review the diff.** Run a review pass over the change following [`code-review.md`](code-review.md). Verification proves the work *runs*; review catches what running can't — silent regressions, missed edge cases, leftover debug code, reuse or simplification, and narrative comments that shouldn't reach a human reader. Size the review to the change: a quick check, not a second project.
 2. **Address what it surfaces.** Fix or explicitly flag each finding. Any fix changes the code.
 3. **Run the final verification last, on the result.** Now apply the Gate Function fresh to the post-review code and present *that* output as your evidence. Running verification before review would prove a version of the code you then changed — the check the user sees must be the check on the code the user gets.
 
