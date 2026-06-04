@@ -1,9 +1,9 @@
 ---
-name: verification-before-completion
-description: Use before claiming any task is complete, fixed, or passing.
+name: verifying-development-work
+description: Use before claiming any task is complete, fixed, or passing, and before handing finished work back to the user.
 ---
 
-# Verification Before Completion
+# Verifying Development Work
 
 Claiming work is complete without verification is an assumption, not a fact. Always verify before presenting success.
 
@@ -38,6 +38,26 @@ Before claiming any task is finished, making a success claim, or declaring a bug
 
 ---
 
+## Finishing: Review First, Then Verify
+
+The Gate Function above is your discipline at *every* completion claim. When you believe the work itself is done, run this finishing sequence in order — review **before** the final verification, so the evidence you hand back covers the exact code being returned:
+
+1. **Review the diff.** Invoke your harness's built-in code-review capability over the change. Verification proves the work *runs*; review catches what running can't — silent regressions, missed edge cases, leftover debug code, and reuse or simplification you'd want before another person reads the diff. This is a quick final check, not a second project. If your harness has no code-review capability, say so and re-read the diff yourself with the same intent.
+2. **Address what it surfaces.** Fix or explicitly flag each finding. Any fix changes the code.
+3. **Run the final verification last, on the result.** Now apply the Gate Function fresh to the post-review code and present *that* output as your evidence. Running verification before review would prove a version of the code you then changed — the check the user sees must be the check on the code the user gets.
+
+---
+
+## Don't Finish the Branch Unilaterally
+
+Verified, reviewed work is still *your* checkpoint, not a decision to merge. Integrating, publishing, or discarding work is the user's call.
+
+- **Never merge, push, open a PR, or delete a branch or worktree on your own initiative.** Surface the options and let the user choose.
+- **Present the choices, don't pick one.** State that the work is verified and reviewed, then lay out what could happen next (merge, push/PR, leave as-is, discard) and ask which they want.
+- **Never run a destructive or irreversible git action without explicit confirmation.** A discard that throws away work, a force action, anything you can't undo — name exactly what will be lost and wait for an unambiguous "yes" before doing it.
+
+---
+
 ## Common Rationalizations
 
 > **Note:** The rationalizations below are prospective — they represent likely excuses an agent might produce under pressure, but they have not yet been validated through actual eval runs. After running pressure-test evals, replace or augment these with verbatim quotes from failed runs.
@@ -50,6 +70,7 @@ Before claiming any task is finished, making a success claim, or declaring a bug
 | "It's obvious this is correct" | Obvious bugs are the most embarrassing. |
 | "I'll verify after committing" | Verification after the claim is too late. |
 | "The build should be fine" | "Should" is not evidence. |
+| "The user said ship it, so I'll just merge" | "Ship it" authorizes the user's choice, not a unilateral merge or push. |
 
 ---
 
@@ -61,5 +82,6 @@ Before claiming any task is finished, making a success claim, or declaring a bug
 - Claiming completion before running verification
 - Relying on partial or scoped test runs
 - "The code was updated successfully" without execution evidence
+- About to merge, push, or discard without asking — or without a fresh test run first
 
 All of these mean: STOP. Run the command, analyze the output, and present the evidence.

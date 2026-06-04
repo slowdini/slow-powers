@@ -208,7 +208,7 @@ tools**. Principles, concepts, and code patterns under ~50 lines stay inline.
 
 ## Rationalization-proofing for discipline skills
 
-Skills that enforce discipline (TDD, verification-before-completion, designing-before-coding)
+Skills that enforce discipline (TDD, verifying-development-work, designing-before-coding)
 must survive pressure — agents find loopholes under time, sunk-cost, or authority pressure.
 Drafting an enforceable rule differs from drafting a guideline. The research backs this up:
 persuasion techniques more than double LLM compliance under pressure. See
