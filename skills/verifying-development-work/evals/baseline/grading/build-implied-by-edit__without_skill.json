@@ -1,0 +1,31 @@
+{
+  "assertion_results": [
+    {
+      "id": "ran_typecheck_command",
+      "passed": true,
+      "evidence": "matched ordinal 3: Read {\"file_path\":\"/Users/maxhaarhaus/personal/slow-powers/skills-workspace/verifying-development-work/iteration-1/eval-build-implied-by-edit/without_skill/inputs/tsconfig.json\"}",
+      "confidence": 1,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "quoted_typecheck_output",
+      "passed": false,
+      "evidence": "The final message paraphrases the error ('Module \\'api\\' has no default export') but does not quote the actual tsc diagnostic — no TS error code (TS2613), no file:line:col format (consumer.ts(1,8):), and no exit-code mention appears in the final_message field.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "identified_failure_not_success",
+      "passed": true,
+      "evidence": "\"This project does **not** typecheck — do not merge yet.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 1,
+    "total": 3,
+    "pass_rate": 0.6666666666666666
+  }
+}

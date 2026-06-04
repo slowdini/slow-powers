@@ -94,17 +94,16 @@ Slow-powers provides a set of highly focused, execution-level skills that ensure
 1. **`working-in-isolation`** — Establishes an isolated workspace so new work doesn't collide with existing or in-progress work, keeping protected branches like `main` clean.
 2. **`test-driven-development`** — Enforces a strict RED-GREEN-REFACTOR cycle, ensuring all production code is backed by failing test verification first.
 3. **`systematic-debugging`** — Guides the agent to locate the root cause of failures via scientific hypothesis testing, avoiding "guess-and-check" thrashing.
-4. **`verification-before-completion`** — Requires running actual test/build commands and presenting concrete evidence before making any success claims.
-5. **`finishing-a-development-branch`** — Manages local branch hygiene, runs final test verifications, and cleans up git worktrees.
-6. **`writing-skills`** — Handles future custom skill authoring and updates.
+4. **`verifying-development-work`** — Requires running actual test/build commands and presenting concrete evidence before any success claim, with a final review pass over the change before work is handed back.
+5. **`writing-skills`** — Handles future custom skill authoring and updates.
 
 ## What's inside
 
-**Testing & Verification** — `test-driven-development`, `verification-before-completion`
+**Testing & Verification** — `test-driven-development`, `verifying-development-work`
 
 **Debugging** — `systematic-debugging`
 
-**Workspace & Git Hygiene** — `working-in-isolation`, `finishing-a-development-branch`
+**Workspace & Git Hygiene** — `working-in-isolation`
 
 **Meta & Extension** — `writing-skills`
 
