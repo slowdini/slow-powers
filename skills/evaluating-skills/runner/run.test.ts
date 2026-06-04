@@ -396,6 +396,81 @@ describe("cleanupStagedSkills (manifest-aware)", () => {
   });
 });
 
+describe("cleanupStagedSkills (runner-created .claude/skills)", () => {
+  test("removes the whole .claude/skills tree when the runner created it, and prunes an empty .claude", () => {
+    const root = join(FIXTURE_ROOT, "cleanup-created");
+    mkdirSync(root, { recursive: true });
+    const src = join(root, "src-skills");
+    mkdirSync(join(src, "alpha"), { recursive: true });
+    writeFileSync(join(src, "alpha", "SKILL.md"), "alpha");
+
+    // .claude/skills did NOT pre-exist — stageSiblingSkills creates it.
+    stageSiblingSkills({
+      skillUnderTest: "x",
+      skillsSourceDir: src,
+      repoRoot: root,
+    });
+    // A stray, non-prefixed dir a recursive eval might have left behind.
+    mkdirSync(join(root, ".claude", "skills", "stray-leftover"), {
+      recursive: true,
+    });
+
+    cleanupStagedSkills(root);
+
+    expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
+    // .claude held nothing else, so it is pruned too.
+    expect(existsSync(join(root, ".claude"))).toBe(false);
+  });
+
+  test("keeps .claude (and settings.json) when the runner created only skills/", () => {
+    const root = join(FIXTURE_ROOT, "cleanup-keep-settings");
+    const claudeDir = join(root, ".claude");
+    mkdirSync(claudeDir, { recursive: true });
+    writeFileSync(join(claudeDir, "settings.json"), "{}");
+    const src = join(root, "src-skills");
+    mkdirSync(join(src, "alpha"), { recursive: true });
+    writeFileSync(join(src, "alpha", "SKILL.md"), "alpha");
+
+    // .claude exists but .claude/skills does not — runner creates skills/.
+    stageSiblingSkills({
+      skillUnderTest: "x",
+      skillsSourceDir: src,
+      repoRoot: root,
+    });
+
+    cleanupStagedSkills(root);
+
+    expect(existsSync(join(claudeDir, "skills"))).toBe(false);
+    expect(existsSync(claudeDir)).toBe(true);
+    expect(existsSync(join(claudeDir, "settings.json"))).toBe(true);
+  });
+
+  test("leaves a pre-existing .claude/skills dir in place (surgical restore only)", () => {
+    const root = join(FIXTURE_ROOT, "cleanup-preexisting-skillsdir");
+    const skillsDir = join(root, ".claude", "skills");
+    // The user already had a .claude/skills with their own skill.
+    mkdirSync(join(skillsDir, "user-owned"), { recursive: true });
+    writeFileSync(join(skillsDir, "user-owned", "SKILL.md"), "USER");
+    const src = join(root, "src-skills");
+    mkdirSync(join(src, "alpha"), { recursive: true });
+    writeFileSync(join(src, "alpha", "SKILL.md"), "alpha");
+
+    stageSiblingSkills({
+      skillUnderTest: "x",
+      skillsSourceDir: src,
+      repoRoot: root,
+    });
+
+    cleanupStagedSkills(root);
+
+    expect(existsSync(skillsDir)).toBe(true);
+    expect(
+      readFileSync(join(skillsDir, "user-owned", "SKILL.md"), "utf8"),
+    ).toBe("USER");
+    expect(existsSync(join(skillsDir, "alpha"))).toBe(false);
+  });
+});
+
 describe("buildDispatchTask bootstrap injection", () => {
   const baseOpts = {
     evalId: "e1",
@@ -1002,6 +1077,39 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     );
     expect(down.exitCode).toBe(0);
     expect(existsSync(settingsPath)).toBe(false);
+  });
+
+  test("teardown removes the guard AND the staged skill set the runner created", () => {
+    const { skillDir, cwd } = setup("usermode-teardown");
+    const settingsPath = join(cwd, ".claude", "settings.local.json");
+    const stagedSkillsDir = join(cwd, ".claude", "skills");
+
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--guard",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+    expect(existsSync(settingsPath)).toBe(true);
+    expect(existsSync(stagedSkillsDir)).toBe(true);
+
+    const down = runCli(
+      ["teardown", "--skill-dir", skillDir, "--skill", "mr-review"],
+      cwd,
+    );
+    expect(down.exitCode).toBe(0);
+    // Guard gone, staged skills gone, and the .claude scaffolding the runner
+    // created in this throwaway cwd (no settings.json) is pruned entirely.
+    expect(existsSync(settingsPath)).toBe(false);
+    expect(existsSync(stagedSkillsDir)).toBe(false);
+    expect(existsSync(join(cwd, ".claude"))).toBe(false);
   });
 
   test("a normal run does not install a guard", () => {

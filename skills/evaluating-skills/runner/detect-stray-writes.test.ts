@@ -87,6 +87,32 @@ describe("detectStrayWrites", () => {
     expect(findings.warnings).toHaveLength(0);
   });
 
+  test("git worktree add is a warning (working tree outside the sandbox)", () => {
+    const findings = detectStrayWrites(
+      [
+        {
+          name: "Bash",
+          args: { command: "git worktree add ../wt -b scratch" },
+          ordinal: 0,
+        },
+      ],
+      OUTPUTS,
+      REPO,
+    );
+    expect(findings.warnings).toHaveLength(1);
+    expect(findings.warnings[0].reason).toMatch(/worktree/i);
+  });
+
+  test("creating a path under .claude is a warning", () => {
+    const findings = detectStrayWrites(
+      [{ name: "Bash", args: { command: "mkdir -p .claude/foo" }, ordinal: 0 }],
+      OUTPUTS,
+      REPO,
+    );
+    expect(findings.warnings).toHaveLength(1);
+    expect(findings.warnings[0].reason).toMatch(/\.claude/i);
+  });
+
   test("read-only tools are never flagged", () => {
     const findings = detectStrayWrites(
       [

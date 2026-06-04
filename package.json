@@ -42,6 +42,7 @@
     "evals:fill-transcripts": "bun run skills/evaluating-skills/runner/fill-transcripts.ts --skill-dir ./skills",
     "evals:detect-stray-writes": "bun run skills/evaluating-skills/runner/detect-stray-writes.ts --skill-dir ./skills",
     "evals:teardown-guard": "bun run skills/evaluating-skills/runner/run.ts teardown-guard --skill-dir ./skills",
+    "evals:teardown": "bun run skills/evaluating-skills/runner/run.ts teardown --skill-dir ./skills",
     "evals:grade": "bun run skills/evaluating-skills/runner/grade.ts --skill-dir ./skills",
     "evals:aggregate": "bun run skills/evaluating-skills/runner/aggregate.ts --skill-dir ./skills",
     "evals:promote-baseline": "bun run skills/evaluating-skills/runner/promote-baseline.ts --skill-dir ./skills",
