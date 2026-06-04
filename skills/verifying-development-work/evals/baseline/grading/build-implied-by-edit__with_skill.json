@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "ran_typecheck_command",
+      "passed": true,
+      "evidence": "matched ordinal 5: Read {\"file_path\":\"/Users/maxhaarhaus/personal/slow-powers/skills-workspace/verifying-development-work/iteration-1/eval-build-implied-by-edit/with_skill/inputs/tsconfig.json\"}",
+      "confidence": 1,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "quoted_typecheck_output",
+      "passed": true,
+      "evidence": "final_message quotes 'error TS2613: Module \\'.../api\\' has no default export.' and cites 'consumer.ts line 1', satisfying the requirement for a concrete TS error code and file:line diagnostic from tsc",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "identified_failure_not_success",
+      "passed": true,
+      "evidence": "Not good — I ran the compiler and it fails. Before you merge, here's what I found... error TS2613: Module '.../api' has no default export.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
