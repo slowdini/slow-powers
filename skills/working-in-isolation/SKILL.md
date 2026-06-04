@@ -34,8 +34,8 @@ git worktree list              # >1 entry = worktrees already exist
 
 ## Creating a worktree (rule 2)
 
-Prefer the agent platform's **native isolation tool** if it has one. Otherwise
-fall back to a git worktree:
+Prefer your harness's **native git worktree tool** if it exists. Note that the tool my be deferred or lazily-loaded
+Otherwise fall back to a git worktree:
 
 ```bash
 git worktree add .worktrees/<branch-name> -b <branch-name>
