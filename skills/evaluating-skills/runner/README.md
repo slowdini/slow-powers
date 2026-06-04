@@ -30,7 +30,7 @@ Staging is written under the current working directory: `<CWD>/.claude/skills/`.
 
 ## Driving the loop
 
-Every run produces both a `dispatch-manifest.md` (human-readable) and a `dispatch.json` (machine-readable). An agent in a session reads `dispatch.json` and dispatches each task itself. On Claude Code, `record-runs` then assembles each task's run/timing records from disk; on harnesses without persisted transcripts, the agent writes the records to the paths in each task by hand (the portable path).
+Every run produces both a `dispatch-manifest.md` (human-readable) and a `dispatch.json` (machine-readable). An agent in a session reads `dispatch.json` and dispatches each task itself. On Claude Code the rest is two fixed-order commands around the judge dispatches — `ingest` (record-runs → fill-transcripts → detect-stray-writes → grade) and `finalize` (grade --finalize → aggregate) — so the whole loop is three runner calls and two dispatch batches. On harnesses without persisted transcripts, the agent writes the records to the paths in each task by hand and runs the chained steps individually (the portable path).
 
 ## Quickstart (internal / repo use)
 
@@ -48,18 +48,17 @@ bun run evals -- --skill <name> --mode new-skill
 #    task as a fresh general-purpose subagent (each writes its own
 #    outputs/final-message.md).
 
-# 4. Assemble run.json + timing.json for every task from dispatch.json,
-#    final-message.md, and the persisted transcripts:
-bun run evals:record-runs -- --skill <name> --iteration 1 \
+# 4. Ingest — record-runs → fill-transcripts → detect-stray-writes → grade,
+#    in fixed order (assembles run.json + timing.json from dispatch.json,
+#    final-message.md, and the persisted transcripts, then emits judge tasks):
+bun run evals:ingest -- --skill <name> --iteration 1 \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
 
-# 5. Grade:
-bun run evals:grade -- --skill <name> --iteration 1
-# (After judge subagents complete and their responses are written, finalize:)
-bun run evals:grade -- --skill <name> --iteration 1 --finalize
+# 5. Dispatch each judge task ingest listed, writing responses to their
+#    response_path.
 
-# 6. Aggregate:
-bun run evals:aggregate -- --skill <name> --iteration 1
+# 6. Finalize — grade --finalize → aggregate:
+bun run evals:finalize -- --skill <name> --iteration 1
 
 # 7. Read skills-workspace/<name>/iteration-1/benchmark.json.
 
@@ -110,7 +109,7 @@ If you have the slow-powers plugin installed and a personal skill, you do **not*
 ## Layout
 
 - `context.ts` — `detectRunContext(argv)` builds the `RunContext` every command shares: resolves `--skill-dir`/`--skill`, enumerates sibling skills, resolves `--bootstrap`/`--workspace-dir`, and derives `stageRoot` (CWD) and `workspaceRoot`.
-- `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. On Claude Code (default), also stages each condition's snapshot at `<stageRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md` so the subagent can discover and invoke it via the Skill tool, stages every *other* skill found in `--skill-dir` at its natural name so cross-references resolve, and builds the `<session-start-context>` block (see *Environment parity* below). Pass `--no-stage` to opt out and fall back to inlining the SKILL.md into the dispatch prompt. Also handles the `snapshot` subcommand.
+- `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. On Claude Code (default), also stages each condition's snapshot at `<stageRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md` so the subagent can discover and invoke it via the Skill tool, stages every *other* skill found in `--skill-dir` at its natural name so cross-references resolve, and builds the `<session-start-context>` block (see *Environment parity* below). Pass `--no-stage` to opt out and fall back to inlining the SKILL.md into the dispatch prompt. Also handles the `snapshot`, `ingest`/`finalize` (fixed-order post-dispatch chains over the sibling commands), and `teardown` subcommands.
 - `grade.ts` — evaluates `transcript_check` assertions directly (regex against `tool_invocations`), emits judge-task files for `llm_judge` assertions, then finalizes by merging judge responses into per-run `grading.json`. The `__skill_invoked` meta-check is code-based on Claude Code when the staged-skill slug is known and `tool_invocations` is populated (deterministic scan for a `Skill` tool call with matching slug); it falls back to an LLM judge looking for behavioral fingerprints when either signal is missing.
 - `aggregate.ts` — reads grading.json + timing.json from an iteration, writes `benchmark.json` with pass-rate / duration / token stats keyed by condition name.
 - `promote-baseline.ts` — copies the durable subset of an iteration (`benchmark.json` + each run's `grading.json` + a `BASELINE.md` provenance file) into the skill's version-controlled `evals/baseline/`. Flags: `--skill-dir`/`--skill` (as everywhere), `--iteration <N>` (required), `--label <tag>` (optional, recorded in provenance). Everything else in the workspace stays gitignored.
