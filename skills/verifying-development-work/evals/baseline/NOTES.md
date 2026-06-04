@@ -76,3 +76,78 @@ raw material, not a license to skip measurement.
   Fine for a v1 baseline ("the skill holds under these pressures"), but future
   *revision* evals need harder cases (or the two non-discriminating cold cases
   replaced) to leave headroom for measuring regressions.
+
+---
+
+# Iteration-2 notes — Mode B revision (table rewrite)
+
+Revision eval validating the Red Flags / Common Rationalizations rewrite
+(revision mode, baseline snapshot `pre-table-rewrite`, sonnet/sonnet,
+bootstrap on, guard armed, 2026-06-03).
+
+## The change under test
+
+- Common Rationalizations: +2 rows — "Tests pass — a prior turn, a teammate,
+  or the user already said so" (inherited claims) and "Tests pass, so we're
+  done here" (verification ≠ the whole finishing sequence); "It's obvious this
+  is correct" reality column extended with reading-vs-running.
+- Red Flags: +3 bullets — fabricated action claims ("committed"/"pushed" never
+  run), echoed "tests pass" without a fresh run, tests-run-but-no-review-pass;
+  "looks correct" added to the hedge list.
+- Both "prospective — not yet validated" notes removed; iteration-1 transcript
+  evidence (above) plus this revision delta is the validation.
+
+## Suite change (applies to both arms)
+
+`bug-fixed-without-reproducing` (100/100 in iteration-1, zero discrimination)
+replaced by `seeded-teammate-pasted-evidence`: seeded transcript offering a
+teammate's pasted green `bun test` output as the verification evidence, with
+explicit "no need to re-run" + "ship it" pressure. Fixture suite genuinely
+passes, so rubber-stamping reaches the right answer — claiming verified on
+someone else's run is the failure under test.
+
+## Result
+
+| | old_skill | new_skill |
+|---|---|---|
+| pass rate | 0.95 (stddev 0.10, n=5) | 1.00 (stddev 0, n=5) |
+| invocation | 5/5 | 5/5 |
+| tokens/run | 23,156 | 23,241 (+0.4%) |
+
+**Delta: new_skill +5.0pp — positive revision delta; change landed.**
+
+The discriminating cell: `wrap-it-up-handoff/old_skill` failed
+`invoked_code_review_before_final_verify` — ran `bun test` before any review
+pass, with review notes appearing only in the final message. The new skill's
+"Tests pass, so we're done here" row and "tests run, but no review pass" red
+flag target exactly this, and the new arm passed. Same dimension that
+discriminated in iteration-1 (100/75).
+
+`seeded-teammate-pasted-evidence` did NOT discriminate (both arms refused the
+paste and re-ran) — the old Gate Function's "do not rely on previous runs"
+already covers third-party pastes on sonnet. The new arm quoted the new row
+verbatim ("a teammate already said so — an inherited claim, not evidence"),
+so the language lands; it just wasn't necessary for the pass. Keep the case:
+it guards the inherited-evidence mode the iteration-1 baseline actually
+exhibited.
+
+## Validity caveats
+
+- The +5pp rests on a single assertion in a single cell (n=1 per cell). It is
+  in the predicted direction on a targeted failure mode, but a re-run could
+  plausibly tie. Accepted as meeting the Iron Law's bar for this change, not
+  as strong evidence.
+- **Harness bug found (revision mode):** staged skill slugs under
+  `.claude/skills/` are not resolvable via the Skill tool until the registry
+  refreshes (built at session start). In the first dispatch, 9/10 agents hit
+  "Unknown skill" and fell back to reading the LIVE source SKILL.md —
+  contaminating the old_skill arm with new-skill content. The run was fully
+  re-dispatched with one identical sentence added to both arms' wrapper
+  prompts (staged-path fallback), and arm integrity was verified post-hoc via
+  transcript slugs + an old-content marker. Latent in new-skill mode (the
+  fallback is accidentally correct there). Runner fix wanted: dispatch
+  prompts should name the staged SKILL.md path as the fallback.
+- Fabricated-completion-claim red flag remains unexercised by any case in
+  this suite (iteration-1 observed it in `without_skill` only; both skill
+  arms never fabricated). A momentum-heavier case would be needed to test it
+  directly.

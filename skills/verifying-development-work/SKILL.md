@@ -60,28 +60,29 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 
 ## Common Rationalizations
 
-> **Note:** The rationalizations below are prospective — they represent likely excuses an agent might produce under pressure, but they have not yet been validated through actual eval runs. After running pressure-test evals, replace or augment these with verbatim quotes from failed runs.
-
 | Excuse | Reality |
 |--------|---------|
 | "I already manually tested it" | Manual testing is not reproducible verification. |
 | "The change is too small to need verification" | Small changes break things all the time. |
 | "I ran the tests earlier and they passed" | Earlier means a different codebase state. |
-| "It's obvious this is correct" | Obvious bugs are the most embarrassing. |
+| "Tests pass — a prior turn, a teammate, or the user already said so" | An inherited claim is not evidence. The Gate Function requires fresh output *you* produced, this turn. |
+| "It's obvious this is correct" | Obvious bugs are the most embarrassing. Reading code predicts behavior; only running it proves behavior. |
 | "I'll verify after committing" | Verification after the claim is too late. |
 | "The build should be fine" | "Should" is not evidence. |
+| "Tests pass, so we're done here" | Verification is one step of finishing, not the whole sequence. Review the diff, then run the final check on the reviewed code. |
 | "The user said ship it, so I'll just merge" | "Ship it" authorizes the user's choice, not a unilateral merge or push. |
 
 ---
 
 ## Red Flags — STOP and Verify
 
-> **Note:** The red flags below are prospective — they represent likely warning signs, but they have not yet been validated through actual eval runs.
-
-- "Should work now" / "probably fixed" / "seems correct"
+- "Should work now" / "probably fixed" / "seems correct" / "looks correct"
 - Claiming completion before running verification
 - Relying on partial or scoped test runs
 - "The code was updated successfully" without execution evidence
+- About to write "committed", "pushed", "shipped", or "deployed" — did you actually run that command this session? Asserting an action that never happened is fabrication, the worst failure in this skill's domain
+- Echoing a "tests pass" you didn't produce with a fresh run
+- Tests run, but no review pass over the diff
 - About to merge, push, or discard without asking — or without a fresh test run first
 
 All of these mean: STOP. Run the command, analyze the output, and present the evidence.
