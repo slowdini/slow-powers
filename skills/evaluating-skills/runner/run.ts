@@ -791,7 +791,7 @@ function commandRun(args: Args, ctx: RunContext): void {
   if (args.dryRun) console.log("\n--dry-run: stopping after workspace prep.");
   else
     console.log(
-      "\nNext: read dispatch.json and dispatch each task as a subagent. Then assemble run.json + timing.json for every task with record-runs (Claude Code), or write them to the paths in each task by hand (transcript-less harnesses).",
+      "\nNext: read dispatch.json and dispatch each task as a subagent. Then run `ingest --iteration <N> --subagents-dir <path>` (Claude Code), or write run.json + timing.json to the paths in each task by hand and run the chained steps individually (transcript-less harnesses).",
     );
 }
 
@@ -1116,8 +1116,8 @@ function buildManifest(opts: {
     "",
     "After all dispatches (Claude Code):",
     "",
-    '1. Run `bun run evals:record-runs --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` — it assembles every task\'s `run.json` (carry-over fields from `dispatch.json`, `final_message` from the subagent\'s own `outputs/final-message.md`, `tool_invocations` from the persisted transcript) and backfills `timing.json` with transcript-derived tokens/duration. It never clobbers an existing record. Optional higher-fidelity timing: write `{ "total_tokens": <n>, "duration_ms": <n>, "source": "completion-event" }` from the task completion event to `timing.json` right after a dispatch — completion-event numbers always win over the backfill.',
-    "2. Run `bun run evals:grade --skill <name> --iteration <N>` to grade.",
+    '1. Run `bun run evals:ingest -- --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` — a fixed-order chain of record-runs (assembles every task\'s `run.json` from `dispatch.json` + the subagent\'s own `outputs/final-message.md` + the persisted transcript, and backfills `timing.json` with transcript-derived tokens/duration; never clobbers an existing record), fill-transcripts, detect-stray-writes, and grade. Optional higher-fidelity timing: write `{ "total_tokens": <n>, "duration_ms": <n>, "source": "completion-event" }` from the task completion event to `timing.json` right after a dispatch — completion-event numbers always win over the backfill.',
+    "2. Dispatch the judge tasks ingest lists, then run `bun run evals:finalize -- --skill <name> --iteration <N>` for the benchmark.",
     "",
     "On a harness without persisted transcripts, instead write each task's `run.json` (matching `skills/evaluating-skills/schema/run-record.schema.json`, enforced at runtime by grade/fill-transcripts/detect-stray-writes) and `timing.json` by hand when its subagent returns: carry over `eval_id`, `condition`, `skill_path` (`null` on the without_skill arm), `prompt`, and `files` from the task; populate `final_message` from the subagent's reply; leave `tool_invocations` as `[]`; capture `total_tokens`/`duration_ms` from the task completion event immediately — they may not be persisted anywhere else.",
     "",
