@@ -137,28 +137,28 @@ Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task 
 1. Dispatch a fresh subagent via the **Task tool** with the prompt `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (substituting the task's `dispatch_prompt_path`), and pass `agent_description` verbatim as the description. The full prompt lives in that file rather than inline in `dispatch.json`, so you never reproduce ~KB of text per dispatch. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 10 without cross-matching an agent from another iteration.
 2. That's it — you do **not** write `run.json` or `timing.json` yourself. The subagent writes its own `outputs/final-message.md` (the dispatch prompt instructs it to), and `record-runs` in Step 10 assembles both records from disk. Optional, higher-fidelity timing: if you want billing-grade numbers, write `{ "total_tokens": <n>, "duration_ms": <n>, "source": "completion-event" }` from the Task tool's completion event to `timing_path` right after each dispatch — `record-runs` never overwrites an existing `timing.json`, so completion-event numbers always win over its transcript-derived backfill (which includes cache accounting — a different metric).
 
-## Step 10 — Record, grade, aggregate
+## Step 10 — Ingest, judge, finalize
 
-Claude Code persists subagent transcripts under `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/`. Find that directory for the current session, then:
+Claude Code persists subagent transcripts under `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/`. Find that directory for the current session, then run the post-dispatch chain as one command:
 
 ```bash
-# Assemble run.json + timing.json for every task from dispatch.json,
-# outputs/final-message.md, and the persisted transcripts (tool_invocations,
-# tokens, duration). Existing records are never clobbered (--overwrite to force).
-bun run "$SLOW_POWERS_RUNNER_ROOT/record-runs.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> \
+# record-runs → fill-transcripts → detect-stray-writes → grade, in fixed order.
+# Assembles run.json + timing.json for every task from dispatch.json,
+# outputs/final-message.md, and the persisted transcripts; existing records are
+# never clobbered. Stops on the first failure (re-running after a fix is safe —
+# every sub-step skips work that's already done).
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" ingest --skill-dir <skill-dir> --skill <name> --iteration <N> \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
 
-# Optional: flag any subagent writes/installs that escaped the outputs/ dir.
-bun run "$SLOW_POWERS_RUNNER_ROOT/detect-stray-writes.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
-
-bun run "$SLOW_POWERS_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
-# Dispatch a fresh judge subagent for each emitted judge task — prompt it with `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (the prompt tells the judge where to write its response). Then:
-bun run "$SLOW_POWERS_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> --finalize
-
-bun run "$SLOW_POWERS_RUNNER_ROOT/aggregate.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
+# Dispatch a fresh judge subagent for each judge task ingest listed — prompt it
+# with `Read the file at <dispatch_prompt_path> and follow its instructions
+# exactly.` (the prompt tells the judge where to write its response). Then:
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" finalize --skill-dir <skill-dir> --skill <name> --iteration <N>
 ```
 
-`record-runs` subsumes `fill-transcripts` for runner-built iterations — it writes `tool_invocations` as part of assembling each record. `fill-transcripts` remains the tool for a pre-existing `run.json` that `record-runs` won't touch (hand-authored, or written by the agent at dispatch time) whose `tool_invocations` you want populated after the fact.
+`finalize` runs `grade --finalize` then `aggregate` and prints the benchmark. With Step 9's dispatches, the whole loop is three runner calls around the two dispatch batches: build (Step 8) → dispatch agents → `ingest` → dispatch judges → `finalize`.
+
+The chained steps remain independently callable for inspection or recovery — `record-runs.ts`, `fill-transcripts.ts`, `detect-stray-writes.ts`, `grade.ts` (`--finalize`), `aggregate.ts`, each taking the same `--skill-dir`/`--skill`/`--iteration` flags (plus `--subagents-dir` for the two transcript readers). `record-runs` subsumes `fill-transcripts` for runner-built iterations — it writes `tool_invocations` as part of assembling each record; `fill-transcripts` remains the tool for a pre-existing `run.json` that `record-runs` won't touch (hand-authored, or written by the agent at dispatch time) whose `tool_invocations` you want populated after the fact.
 
 ## Step 11 — Present results
 

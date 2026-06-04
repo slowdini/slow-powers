@@ -39,6 +39,8 @@
     "evals": "bun run skills/evaluating-skills/runner/run.ts --skill-dir ./skills --bootstrap ./bootstrap.md",
     "evals:snapshot": "bun run skills/evaluating-skills/runner/run.ts snapshot --skill-dir ./skills",
     "evals:validate": "bun run skills/evaluating-skills/runner/validate-all.ts --skill-dir ./skills",
+    "evals:ingest": "bun run skills/evaluating-skills/runner/run.ts ingest --skill-dir ./skills",
+    "evals:finalize": "bun run skills/evaluating-skills/runner/run.ts finalize --skill-dir ./skills",
     "evals:record-runs": "bun run skills/evaluating-skills/runner/record-runs.ts --skill-dir ./skills",
     "evals:fill-transcripts": "bun run skills/evaluating-skills/runner/fill-transcripts.ts --skill-dir ./skills",
     "evals:detect-stray-writes": "bun run skills/evaluating-skills/runner/detect-stray-writes.ts --skill-dir ./skills",
