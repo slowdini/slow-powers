@@ -11,6 +11,10 @@ Avoid "guess-and-check" coding. Always identify the root cause before making cha
 
 > **Violating the letter of the rules is violating the spirit of the rules.**
 
+> **REQUIRED PREREQUISITE:** You must have already completed `slow-powers:working-in-isolation` — debug from an isolated workspace.
+
+> **REQUIRED BACKGROUND:** You must understand `slow-powers:test-driven-development` — Phase 4 captures the bug with a failing test before fixing it.
+
 ---
 
 ## Phase 1: Root Cause Investigation
