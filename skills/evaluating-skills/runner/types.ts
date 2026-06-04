@@ -109,4 +109,13 @@ export const SKILL_INVOKED_META_ID = "__skill_invoked";
 export type TimingRecord = {
   total_tokens?: number | null;
   duration_ms?: number | null;
+  /**
+   * Where the numbers came from. "completion-event" = captured by the
+   * dispatching agent from the harness's task completion event;
+   * "transcript" = derived by record-runs from the persisted transcript
+   * (includes cache accounting — a different metric, not comparable 1:1).
+   * Absent on records written before provenance was tracked
+   * (completion-event in practice).
+   */
+  source?: "completion-event" | "transcript";
 };
