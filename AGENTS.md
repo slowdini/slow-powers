@@ -73,8 +73,8 @@ If you modify skill content:
   competing attractor — because their real-world failures happen in-flight and a
   cold prompt alone under-measures them (see "Seeding conversation context" in
   `slow-powers:evaluating-skills`). `hardening-plans` is the reference example;
-  `test-driven-development`, `verification-before-completion`, and
-  `systematic-debugging` are currently cold-only and want seeded cases added.
+  `test-driven-development` and `systematic-debugging` are currently cold-only and
+  want seeded cases added.
 
 ## Local development
 

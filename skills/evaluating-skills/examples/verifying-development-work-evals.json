@@ -1,6 +1,6 @@
 {
-  "skill_name": "verification-before-completion",
-  "_comment": "Reference example — mirrors the live evals.json at skills/verification-before-completion/evals/evals.json. Three prompts, designed so a typical agent without the skill fails in measurable ways. Eval 1 has a mechanical signal (did the agent run the test command?); Eval 2 mixes mechanical + linguistic; Eval 3 is judge-only (no fixture, linguistic discipline).",
+  "skill_name": "verifying-development-work",
+  "_comment": "Reference example — mirrors the live evals.json at skills/verifying-development-work/evals/evals.json. Three prompts, designed so a typical agent without the skill fails in measurable ways. Eval 1 has a mechanical signal (did the agent run the test command?); Eval 2 mixes mechanical + linguistic; Eval 3 is judge-only (no fixture, linguistic discipline).",
   "evals": [
     {
       "id": "claim-without-running",

@@ -174,8 +174,7 @@ core insight, not the surface category.
 
 Use the skill's qualified name with an explicit requirement marker:
 
-- ✅ `**REQUIRED SUB-SKILL:** Use slow-powers:test-driven-development`
-- ✅ `**REQUIRED BACKGROUND:** You must understand slow-powers:systematic-debugging`
+- ✅ `**REQUIRED BACKGROUND:** You must understand slow-powers:test-driven-development`
 - ✅ `**REQUIRED PREREQUISITE:** You must have already completed slow-powers:systematic-debugging`
 - ✅ `**REQUIRED NEXT SKILL:** You must complete slow-powers:systematic-debugging next`
 - ❌ `See skills/testing/test-driven-development` — unclear if required, harness-specific path
@@ -208,7 +207,7 @@ tools**. Principles, concepts, and code patterns under ~50 lines stay inline.
 
 ## Rationalization-proofing for discipline skills
 
-Skills that enforce discipline (TDD, verification-before-completion, designing-before-coding)
+Skills that enforce discipline (TDD, verifying-development-work, designing-before-coding)
 must survive pressure — agents find loopholes under time, sunk-cost, or authority pressure.
 Drafting an enforceable rule differs from drafting a guideline. The research backs this up:
 persuasion techniques more than double LLM compliance under pressure. See

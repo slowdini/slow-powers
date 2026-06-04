@@ -66,7 +66,7 @@ A test case has three parts:
 - **files** (optional): fixture files the prompt references
 - **skill_should_trigger** (optional, default `true`): set `false` for a *negative* eval where correct behavior is the skill **not** firing (e.g. an over-trigger guard — a feature request that shouldn't launch a debugging investigation). Negative evals are excluded from the skill-invocation rate and its validity warning, so a correct non-invocation isn't mistaken for the skill failing to fire.
 
-Stored in `<skill>/evals/evals.json`. See `templates/evals.json.example` and `examples/verification-before-completion-evals.json`.
+Stored in `<skill>/evals/evals.json`. See `templates/evals.json.example` and `examples/verifying-development-work-evals.json`.
 
 Tips for writing good prompts:
 
@@ -82,7 +82,7 @@ Tips for writing good prompts:
 
 What "stresses the skill" depends on what kind of skill it is. The four types from `slow-powers:writing-skills` each need a different style of prompt:
 
-- **Discipline-enforcing skills** (TDD, verification-before-completion). Test with pressure — academic prompts ("explain how TDD works") will pass without measuring anything useful. Combine multiple pressures (time + sunk cost + authority + exhaustion) and force a choice. See `pressure-scenarios.md` for the taxonomy. The wild failure for these skills is almost always *mid-session* — the agent is already committed to a skill-free approach when the trigger arrives — so a cold prompt under-measures them; pair each cold case with a **seeded** one (see *Seeding conversation context* below). Success = the rule holds under maximum pressure.
+- **Discipline-enforcing skills** (TDD, verifying-development-work). Test with pressure — academic prompts ("explain how TDD works") will pass without measuring anything useful. Combine multiple pressures (time + sunk cost + authority + exhaustion) and force a choice. See `pressure-scenarios.md` for the taxonomy. The wild failure for these skills is almost always *mid-session* — the agent is already committed to a skill-free approach when the trigger arrives — so a cold prompt under-measures them; pair each cold case with a **seeded** one (see *Seeding conversation context* below). Success = the rule holds under maximum pressure.
 - **Technique skills** (condition-based-waiting, root-cause-tracing). Test application: hand the agent a new scenario where the technique applies and check it gets used correctly. Include at least one edge-case variation. Success = the technique transfers to a situation the skill didn't explicitly describe.
 - **Pattern skills** (flatten-with-flags, information-hiding). Test recognition: include prompts where the pattern applies and prompts where it doesn't. Success = the agent applies the pattern when warranted and refrains when it isn't.
 - **Reference skills** (API docs, syntax guides). Test retrieval: ask questions whose answers are in the reference, including a few that hit gaps you suspect. Success = the agent finds the right section and uses it correctly.
@@ -439,7 +439,7 @@ Excuses for skipping an eval on a change you've already judged behavior-shaping.
 - `templates/eval-task-prompt.md` — scaffold for dispatching a subagent to execute a test case
 - `templates/judge-prompt.md` — scaffold for dispatching a judge subagent
 - `templates/revise-skill-prompt.md` — scaffold for the iteration step
-- `examples/verification-before-completion-evals.json` — committed real example
+- `examples/verifying-development-work-evals.json` — committed real example
 - `pressure-scenarios.md` — pressure-scenario taxonomy for authoring prompts that stress discipline-enforcing skills
 - `runner/` — the Bun eval runner (orchestrator, grader, aggregator, transcript adapters) that executes the methodology; ships with the skill so users can run evals on their own skills
 - `harness-details/claude.md` — Claude Code-specific step-by-step for running an eval (resolving the runner, dispatching subagents, grading)

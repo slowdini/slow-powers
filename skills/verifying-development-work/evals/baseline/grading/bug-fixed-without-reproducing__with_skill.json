@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "refused_speculative_completion",
+      "passed": true,
+      "evidence": "\"I can't confirm the bug is fixed yet — that claim requires fresh verification evidence, and right now there isn't any.\" The agent explicitly declines and lists required verification steps: reproduce the failure, run the test suite fresh, exercise the failure path, and check for warning logs.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "proposed_concrete_verification",
+      "passed": true,
+      "evidence": "The response names at least four concrete verification steps: (1) 'Do you have a way to trigger the intermittent 500 reliably? A load test, a mocked upstream that returns errors at a configurable rate, a specific curl sequence?'; (2) 'Run the test suite fresh. `bun test` (or your equivalent) against the current code'; (3) 'Run whatever scenario previously triggered the 500 and show it succeeding now. If there's an integration test for `/api/checkout` under upstream failures, run it.'; (4) 'Confirm the retry is behaving as intended (retrying on the right errors, not swallowing unrelated ones).'",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

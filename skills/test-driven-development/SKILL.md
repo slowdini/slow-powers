@@ -13,6 +13,8 @@ Write production code before the test? Delete it. Start over. Do not keep it for
 
 > **Violating the letter of the rules is violating the spirit of the rules.**
 
+> **REQUIRED PREREQUISITE:** You must have already completed `slow-powers:working-in-isolation` — establish an isolated workspace before writing any test or production code.
+
 ---
 
 ## Red-Green-Refactor Cycle

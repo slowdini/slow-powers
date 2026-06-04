@@ -1,6 +1,6 @@
 # Pressure Scenarios for Skill Evals
 
-**Load this reference when:** authoring `prompt` fields in `evals.json` for a discipline-enforcing skill (TDD, verification-before-completion, designing-before-coding, etc.) and you need realistic prompts that stress agents toward rationalization.
+**Load this reference when:** authoring `prompt` fields in `evals.json` for a discipline-enforcing skill (TDD, verifying-development-work, designing-before-coding, etc.) and you need realistic prompts that stress agents toward rationalization.
 
 ## Why pressure scenarios
 
