@@ -31,6 +31,7 @@ import type {
   EvalsConfig,
 } from "./types";
 import { validateEvalsConfig } from "./validate";
+import { cleanupWorkspace, SNAPSHOT_META } from "./workspace-teardown";
 
 export const STAGED_SKILL_PREFIX = "slow-powers-eval-";
 export const STAGED_SIBLING_MANIFEST = ".slow-powers-eval-manifest.json";
@@ -399,6 +400,10 @@ function commandSnapshot(args: Args, ctx: RunContext): void {
     else cpSync(src, dst);
   }
 
+  // Record provenance so teardown keeps this (working-tree) snapshot — unlike a
+  // ref snapshot, it can't be regenerated from git.
+  writeJson(join(destDir, SNAPSHOT_META), { source: "working-tree" });
+
   console.log(`Snapshotted ${ctx.skillName} → ${destDir}`);
 }
 
@@ -434,6 +439,10 @@ function snapshotFromRef(
     ensureDir(dirname(dst));
     writeFileSync(dst, bytes);
   }
+
+  // Record provenance so teardown can reclaim this snapshot — it's fully
+  // reproducible from the ref.
+  writeJson(join(destDir, SNAPSHOT_META), { source: "ref", ref });
 
   console.log(`Snapshotted ${skillName} at ${ref} → ${destDir}`);
 }
@@ -1147,15 +1156,36 @@ if (import.meta.main) {
         : "No write guard was installed — nothing to remove.",
     );
   } else if (args.command === "teardown") {
-    // Full end-of-run teardown: disarm the guard, then remove the staged skill
-    // set (and prune a `.claude` the runner emptied), leaving the user's own
-    // `.claude/settings.json` and any pre-existing project skills intact.
+    // Full end-of-run teardown: disarm the guard, remove the staged skill set
+    // (and prune a `.claude` the runner emptied), then reclaim the workspace —
+    // leaving the user's own `.claude/settings.json`, pre-existing project
+    // skills, and any uncommitted eval results intact.
     const torn = teardownGuard(ctx.stageRoot);
     cleanupStagedSkills(ctx.stageRoot);
+    const ws = cleanupWorkspace(ctx.workspaceRoot, ctx.skillName);
     console.log(
       `🧹 Eval teardown complete: staged skill set removed${
         torn ? " and write guard disarmed" : ""
       }.`,
     );
+    const reclaimed = ws.removedIterations.length + ws.removedSnapshots.length;
+    if (reclaimed > 0) {
+      console.log(
+        `   Reclaimed ${ws.removedIterations.length} workspace iteration(s)` +
+          ` and ${ws.removedSnapshots.length} reproducible snapshot(s).`,
+      );
+    }
+    if (ws.keptIterations.length > 0) {
+      const lines = ws.keptIterations.map(
+        (k) => `     - ${k.iteration} (${k.reason})`,
+      );
+      console.warn(
+        `⚠ Kept ${ws.keptIterations.length} workspace iteration(s) with results ` +
+          `not yet committed:\n${lines.join("\n")}\n` +
+          `   Commit them, e.g.:\n` +
+          `     bun run evals:promote-baseline --skill ${ctx.skillName} --iteration <N>\n` +
+          `   or delete ${join("skills-workspace", ctx.skillName)}/ manually to discard.`,
+      );
+    }
   } else commandRun(args, ctx);
 }
