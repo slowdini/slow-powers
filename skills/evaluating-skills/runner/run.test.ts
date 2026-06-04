@@ -1178,3 +1178,169 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     );
   });
 });
+
+describe("snapshot --ref (read baseline from a git ref, issue #122)", () => {
+  const RUN_TS = join(import.meta.dir, "run.ts");
+
+  function git(args: string[], cwd: string) {
+    const res = Bun.spawnSync(
+      [
+        "git",
+        "-c",
+        "user.email=eval@test",
+        "-c",
+        "user.name=eval",
+        "-c",
+        "commit.gpgsign=false",
+        ...args,
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    if (res.exitCode !== 0)
+      throw new Error(`git ${args.join(" ")} failed: ${res.stderr.toString()}`);
+    return res;
+  }
+
+  function runCli(args: string[], cwd: string) {
+    return Bun.spawnSync(["bun", "run", RUN_TS, ...args], {
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+  }
+
+  /**
+   * Builds a git repo at <root> containing a `mr-review` skill committed as v1,
+   * then overwrites the working-tree SKILL.md with v2 (uncommitted). Returns the
+   * paths a snapshot needs, so a test can assert `--ref HEAD` reads v1 while the
+   * working tree keeps v2.
+   */
+  function setupRepo(
+    name: string,
+    opts: { extraCommitted?: Record<string, string> } = {},
+  ): { root: string; skillDir: string; skillSub: string; cwd: string } {
+    const root = join(FIXTURE_ROOT, name);
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, "mr-review");
+    mkdirSync(skillSub, { recursive: true });
+    writeFileSync(join(skillSub, "SKILL.md"), "v1 baseline\n");
+    for (const [rel, content] of Object.entries(opts.extraCommitted ?? {})) {
+      const p = join(skillSub, rel);
+      mkdirSync(join(p, ".."), { recursive: true });
+      writeFileSync(p, content);
+    }
+
+    git(["init", "-q"], root);
+    git(["add", "-A"], root);
+    git(["commit", "-q", "-m", "v1"], root);
+
+    // Working tree diverges to v2; the commit still holds v1.
+    writeFileSync(join(skillSub, "SKILL.md"), "v2 working tree\n");
+
+    const cwd = join(root, "work");
+    mkdirSync(cwd, { recursive: true });
+    return { root, skillDir, skillSub, cwd };
+  }
+
+  function snapshotPath(cwd: string, label: string, rel: string): string {
+    return join(cwd, "skills-workspace", "mr-review", "snapshots", label, rel);
+  }
+
+  test("snapshots the SKILL.md committed at the ref, leaving the working tree untouched", () => {
+    const { skillDir, skillSub, cwd } = setupRepo("ref-old-content");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "old",
+        "--ref",
+        "HEAD",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    // Snapshot holds the committed v1...
+    expect(readFileSync(snapshotPath(cwd, "old", "SKILL.md"), "utf8")).toBe(
+      "v1 baseline\n",
+    );
+    // ...and the working tree still holds the edited v2 (no clobber).
+    expect(readFileSync(join(skillSub, "SKILL.md"), "utf8")).toBe(
+      "v2 working tree\n",
+    );
+  });
+
+  test("captures sibling assets at the ref but excludes evals/", () => {
+    const { skillDir, cwd } = setupRepo("ref-assets", {
+      extraCommitted: {
+        "assets/notes.md": "asset body\n",
+        "evals/evals.json": '{"skill_name":"mr-review","evals":[]}',
+      },
+    });
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "old",
+        "--ref",
+        "HEAD",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    expect(existsSync(snapshotPath(cwd, "old", "assets/notes.md"))).toBe(true);
+    expect(
+      readFileSync(snapshotPath(cwd, "old", "assets/notes.md"), "utf8"),
+    ).toBe("asset body\n");
+    expect(existsSync(snapshotPath(cwd, "old", "evals"))).toBe(false);
+  });
+
+  test("a ref that does not exist fails with a clear message", () => {
+    const { skillDir, cwd } = setupRepo("ref-bad");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "old",
+        "--ref",
+        "does-not-exist",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).not.toBe(0);
+    expect(new TextDecoder().decode(res.stderr)).toContain("does-not-exist");
+  });
+
+  test("without --ref, snapshot still reads the working tree (v2)", () => {
+    const { skillDir, cwd } = setupRepo("ref-default-path");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "wt",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+    expect(readFileSync(snapshotPath(cwd, "wt", "SKILL.md"), "utf8")).toBe(
+      "v2 working tree\n",
+    );
+  });
+});

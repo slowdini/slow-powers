@@ -21,13 +21,15 @@ Compares `with_skill/` vs `without_skill/`. Use when validating a brand-new skil
 
 ### Mode B — Revision comparison
 
-Compares `old_skill/` vs `new_skill/`. **This is the common case.** Use when testing a language change to an existing skill — snapshot the current SKILL.md before editing, make changes, run both variants against the same prompts.
+Compares `old_skill/` vs `new_skill/`. **This is the common case.** Use when testing a language change to an existing skill — snapshot the old SKILL.md as a baseline, then run both variants against the same prompts.
 
-Mode B workflow:
-1. Snapshot current SKILL.md (label the snapshot with a date or short tag)
-2. Edit the skill
+Mode B workflow (edit-first — the usual order):
+1. Edit the skill (the new version is now in the working tree)
+2. Snapshot the old version straight from git: `snapshot --label <tag> --ref HEAD` (any commit/tag/branch works; `--ref` reads git without touching the working tree)
 3. Run the eval with `--mode revision --baseline <snapshot-label>`
 4. Grade and aggregate; review the delta
+
+If you snapshot *before* editing, omit `--ref` in step 2 (it reads the working tree) and do it ahead of step 1.
 
 A negative or zero delta is a signal to revert the change — the new language did not improve behavior.
 

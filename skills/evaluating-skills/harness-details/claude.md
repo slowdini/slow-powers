@@ -108,13 +108,19 @@ New-skill mode (with vs without):
 bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode new-skill --guard
 ```
 
-Revision mode (test a change to an existing skill):
+Revision mode (test a change to an existing skill). The usual order is edit-first — the
+skill is already changed when the user asks to eval — so snapshot the *old* version
+straight from git with `--ref`, which reads the object database without touching the
+working tree:
 
 ```bash
-bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" snapshot --skill-dir <skill-dir> --skill <name> --label baseline
-# ...edit the SKILL.md...
+# ...the edited SKILL.md is already in the working tree...
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" snapshot --skill-dir <skill-dir> --skill <name> --label baseline --ref HEAD
 bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode revision --baseline baseline --guard
 ```
+
+`--ref` takes any commit/tag/branch. If instead you snapshot *before* editing, drop
+`--ref HEAD` (the snapshot then reads the working tree) and run it ahead of the edit.
 
 Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built available-skills block (rendered the way Claude Code surfaces discoverable skills, so the dispatch reads like a real session).
 
