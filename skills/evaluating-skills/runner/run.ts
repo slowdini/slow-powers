@@ -43,6 +43,16 @@ export function stageSkillForCC(opts: {
   skillName: string;
   repoRoot: string;
   /**
+   * Source skill directory whose sibling assets are copied alongside the staged
+   * SKILL.md — everything next to SKILL.md except SKILL.md itself, the `evals/`
+   * dir, and the snapshot bookkeeping file. A multi-file skill whose SKILL.md
+   * links a sibling (e.g. `[code-review.md](code-review.md)`) would otherwise be
+   * staged with a dangling link: the agent can't resolve the reference relative
+   * to the staged dir, so the linked guidance is silently unreachable. Mirrors
+   * the sibling-asset copy in `snapshot`. Omit to stage SKILL.md alone.
+   */
+  assetsDir?: string;
+  /**
    * When set, stage under this verbatim identifier instead of the conspicuous
    * `slow-powers-eval-…` slug. Used by `--stage-name` to A/B a natural name
    * against the eval-flagged one (issue #144 Step 2). A custom name is not
@@ -57,6 +67,16 @@ export function stageSkillForCC(opts: {
   const skillDir = join(opts.repoRoot, ".claude", "skills", slug);
   mkdirSync(skillDir, { recursive: true });
   writeFileSync(join(skillDir, "SKILL.md"), opts.content);
+  if (opts.assetsDir !== undefined && existsSync(opts.assetsDir)) {
+    for (const entry of readdirSync(opts.assetsDir)) {
+      if (entry === "SKILL.md" || entry === "evals" || entry === SNAPSHOT_META)
+        continue;
+      const src = join(opts.assetsDir, entry);
+      const dst = join(skillDir, entry);
+      if (statSync(src).isDirectory()) cpSync(src, dst, { recursive: true });
+      else cpSync(src, dst);
+    }
+  }
   return slug;
 }
 
@@ -620,6 +640,7 @@ function commandRun(args: Args, ctx: RunContext): void {
       condition: condName,
       skillName: ctx.skillName,
       repoRoot: ctx.stageRoot,
+      assetsDir: dirname(condSkillPath),
       stageNameOverride: args.stageName,
     });
   };
