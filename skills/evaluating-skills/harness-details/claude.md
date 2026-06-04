@@ -135,14 +135,17 @@ Only when the user has opted out of the guard, drop `--guard` from the command a
 Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task object:
 
 1. Dispatch a fresh subagent via the **Task tool** with the prompt `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (substituting the task's `dispatch_prompt_path`), and pass `agent_description` verbatim as the description. The full prompt lives in that file rather than inline in `dispatch.json`, so you never reproduce ~KB of text per dispatch. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 10 without cross-matching an agent from another iteration.
-2. When the subagent returns, write the portable run record to `run_record_path` and the timing record (`{ "total_tokens": <n>, "duration_ms": <n>}`) to `timing_path`. Capture tokens/duration from the task completion event — they may not be persisted elsewhere. The run record must satisfy `schema/run-record.schema.json` (validated by `grade`/`fill-transcripts`/`detect-stray-writes`): set `eval_id`, `condition`, `skill_path` (the task's `skill_path`, `null` on the `without_skill` arm), `prompt` (the task's `user_prompt`), `files` (the task's `fixtures`, `[]` if none), `final_message` (the subagent's reply), and `tool_invocations: []` (populated later from the transcript).
+2. That's it — you do **not** write `run.json` or `timing.json` yourself. The subagent writes its own `outputs/final-message.md` (the dispatch prompt instructs it to), and `record-runs` in Step 10 assembles both records from disk. Optional, higher-fidelity timing: if you want billing-grade numbers, write `{ "total_tokens": <n>, "duration_ms": <n>, "source": "completion-event" }` from the Task tool's completion event to `timing_path` right after each dispatch — `record-runs` never overwrites an existing `timing.json`, so completion-event numbers always win over its transcript-derived backfill (which includes cache accounting — a different metric).
 
-## Step 10 — Fill transcripts, grade, aggregate
+## Step 10 — Record, grade, aggregate
 
 Claude Code persists subagent transcripts under `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/`. Find that directory for the current session, then:
 
 ```bash
-bun run "$SLOW_POWERS_RUNNER_ROOT/fill-transcripts.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> \
+# Assemble run.json + timing.json for every task from dispatch.json,
+# outputs/final-message.md, and the persisted transcripts (tool_invocations,
+# tokens, duration). Existing records are never clobbered (--overwrite to force).
+bun run "$SLOW_POWERS_RUNNER_ROOT/record-runs.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
 
 # Optional: flag any subagent writes/installs that escaped the outputs/ dir.
@@ -154,6 +157,8 @@ bun run "$SLOW_POWERS_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <nam
 
 bun run "$SLOW_POWERS_RUNNER_ROOT/aggregate.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
 ```
+
+`record-runs` subsumes `fill-transcripts` for runner-built iterations — it writes `tool_invocations` as part of assembling each record. `fill-transcripts` remains the tool for a pre-existing `run.json` that `record-runs` won't touch (hand-authored, or written by the agent at dispatch time) whose `tool_invocations` you want populated after the fact.
 
 ## Step 11 — Present results
 

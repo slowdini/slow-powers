@@ -70,11 +70,11 @@
     },
     "total_tokens": {
       "type": ["integer", "null"],
-      "description": "From the harness's task completion event. May be null if the harness does not surface this."
+      "description": "From the harness's task completion event, or derived from the persisted transcript by record-runs (usage summed across unique message ids, including cache creation/read tokens — a different accounting than the completion event). Canonical timing lives in the sibling timing.json, whose `source` field records which origin produced it. May be null if neither source is available."
     },
     "duration_ms": {
       "type": ["integer", "null"],
-      "description": "From the harness's task completion event. May be null if the harness does not surface this."
+      "description": "From the harness's task completion event, or derived from the persisted transcript by record-runs (wall clock between the first and last transcript timestamps). Canonical timing lives in the sibling timing.json. May be null if neither source is available."
     }
   }
 }

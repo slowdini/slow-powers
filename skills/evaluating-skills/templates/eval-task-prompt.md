@@ -61,7 +61,9 @@ User request:
 
 ## After the subagent completes
 
-The operator (or the runner) must capture:
+Two records must exist per run: `{{output_dir}}/../run.json` (matching `schema/run-record.schema.json`) and `{{output_dir}}/../timing.json`.
 
-1. The full transcript / tool invocations → convert via the harness adapter into `{{output_dir}}/../run.json` matching `schema/run-record.schema.json`.
-2. `total_tokens` and `duration_ms` from the harness's task completion event → `{{output_dir}}/../timing.json`. **These values may not be persisted anywhere else — save them immediately.**
+- **Harnesses with persisted transcripts (Claude Code):** `record-runs` assembles both from disk after all dispatches — carry-over fields from `dispatch.json`, `final_message` from `{{output_dir}}/final-message.md`, `tool_invocations`/tokens/duration from the transcript. The operator captures nothing per-task. Optionally, completion-event timing written to `timing.json` at dispatch time (with `"source": "completion-event"`) takes precedence — `record-runs` only backfills, never overwrites.
+- **Transcript-less harnesses:** the operator (or the runner) captures manually, as before:
+  1. The full transcript / tool invocations → convert via the harness adapter into `{{output_dir}}/../run.json`.
+  2. `total_tokens` and `duration_ms` from the harness's task completion event → `{{output_dir}}/../timing.json`. **These values may not be persisted anywhere else — save them immediately.**

@@ -186,6 +186,140 @@ describe("aggregate.ts user-mode (--skill-dir, isolated CWD)", () => {
     ).toBe(true);
   });
 
+  test("warns when timing sources are mixed across the compared runs", () => {
+    const root = join(FIXTURE_ROOT, "agg-mixed-timing");
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, "mr-review");
+    mkdirSync(skillSub, { recursive: true });
+    writeFileSync(
+      join(skillSub, "SKILL.md"),
+      "---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+    );
+
+    const cwd = join(root, "work");
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    mkdirSync(iterationDir, { recursive: true });
+    writeJson(join(iterationDir, "conditions.json"), {
+      mode: "new-skill",
+      conditions: [
+        { name: "with_skill", skill_path: join(skillSub, "SKILL.md") },
+        { name: "without_skill", skill_path: null },
+      ],
+      timestamp: new Date().toISOString(),
+      harness: "claude-code",
+    });
+    // One arm has agent-captured completion-event timing (no source field, the
+    // pre-provenance shape); the other was backfilled from the transcript.
+    const mkCond = (cond: string, timing: unknown) => {
+      const condDir = join(iterationDir, "eval-e1", cond);
+      mkdirSync(condDir, { recursive: true });
+      writeJson(join(condDir, "grading.json"), {
+        assertion_results: [],
+        summary: { passed: 1, failed: 0, total: 1, pass_rate: 1 },
+      });
+      writeJson(join(condDir, "timing.json"), timing);
+    };
+    mkCond("with_skill", { total_tokens: 5000, duration_ms: 1000 });
+    mkCond("without_skill", {
+      total_tokens: 90000,
+      duration_ms: 1200,
+      source: "transcript",
+    });
+
+    const res = Bun.spawnSync(
+      [
+        "bun",
+        "run",
+        AGGREGATE_TS,
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--iteration",
+        "1",
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(res.exitCode).toBe(0);
+    const benchmark = JSON.parse(
+      readFileSync(join(iterationDir, "benchmark.json"), "utf8"),
+    ) as { validity_warnings: string[] };
+    expect(
+      benchmark.validity_warnings.some(
+        (w) => w.includes("timing source") && w.includes("transcript"),
+      ),
+    ).toBe(true);
+  });
+
+  test("does not warn when all timing comes from one source", () => {
+    const root = join(FIXTURE_ROOT, "agg-same-timing");
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, "mr-review");
+    mkdirSync(skillSub, { recursive: true });
+    writeFileSync(
+      join(skillSub, "SKILL.md"),
+      "---\nname: mr-review\ndescription: review MRs\n---\n\nbody\n",
+    );
+
+    const cwd = join(root, "work");
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    mkdirSync(iterationDir, { recursive: true });
+    writeJson(join(iterationDir, "conditions.json"), {
+      mode: "new-skill",
+      conditions: [
+        { name: "with_skill", skill_path: join(skillSub, "SKILL.md") },
+        { name: "without_skill", skill_path: null },
+      ],
+      timestamp: new Date().toISOString(),
+      harness: "claude-code",
+    });
+    for (const cond of ["with_skill", "without_skill"]) {
+      const condDir = join(iterationDir, "eval-e1", cond);
+      mkdirSync(condDir, { recursive: true });
+      writeJson(join(condDir, "grading.json"), {
+        assertion_results: [],
+        summary: { passed: 1, failed: 0, total: 1, pass_rate: 1 },
+      });
+      writeJson(join(condDir, "timing.json"), {
+        total_tokens: 100,
+        duration_ms: 1,
+        source: "transcript",
+      });
+    }
+
+    const res = Bun.spawnSync(
+      [
+        "bun",
+        "run",
+        AGGREGATE_TS,
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--iteration",
+        "1",
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(res.exitCode).toBe(0);
+    const benchmark = JSON.parse(
+      readFileSync(join(iterationDir, "benchmark.json"), "utf8"),
+    ) as { validity_warnings: string[] };
+    expect(
+      benchmark.validity_warnings.some((w) => w.includes("timing source")),
+    ).toBe(false);
+  });
+
   test("surfaces plugin-shadow findings as validity_warnings", () => {
     const root = join(FIXTURE_ROOT, "agg-shadow");
     const skillDir = join(root, "skill-dir");

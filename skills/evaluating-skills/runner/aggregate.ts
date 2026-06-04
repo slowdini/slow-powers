@@ -94,6 +94,11 @@ for (const c of conditions.conditions) {
 }
 
 let missingGradings = 0;
+// Timing provenance across all runs in the comparison. "completion-event"
+// (the agent-captured default, also assumed when `source` is absent) and
+// "transcript" (record-runs backfill, includes cache accounting) measure
+// different things — a delta mixing them is comparing two metrics.
+const timingSources = new Set<string>();
 for (const evalDir of evalDirs) {
   for (const cond of conditionNames) {
     const condDir = join(iterationDir, evalDir, cond);
@@ -116,6 +121,11 @@ for (const evalDir of evalDirs) {
         byCondition[cond].tokens.push(timing.total_tokens);
       if (typeof timing.duration_ms === "number")
         byCondition[cond].durations.push(timing.duration_ms);
+      if (
+        typeof timing.total_tokens === "number" ||
+        typeof timing.duration_ms === "number"
+      )
+        timingSources.add(timing.source ?? "completion-event");
     }
   }
 }
@@ -168,6 +178,11 @@ const delta = {
 };
 
 const validityWarnings: string[] = [];
+if (timingSources.size > 1) {
+  validityWarnings.push(
+    `runs mix timing sources (${[...timingSources].sort().join(", ")}) — transcript-derived totals include cache accounting, so the token/duration delta compares two different metrics. Re-record one side or read the delta as a rough signal only.`,
+  );
+}
 for (const cond of conditionNames) {
   const s = runSummary[cond];
   if (s.skill_invocation_rate != null && s.skill_invocation_rate < 1) {

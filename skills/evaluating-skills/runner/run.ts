@@ -782,7 +782,7 @@ function commandRun(args: Args, ctx: RunContext): void {
   if (args.dryRun) console.log("\n--dry-run: stopping after workspace prep.");
   else
     console.log(
-      "\nNext: read dispatch.json, dispatch each task as a subagent, write run.json + timing.json to the paths in each task.",
+      "\nNext: read dispatch.json and dispatch each task as a subagent. Then assemble run.json + timing.json for every task with record-runs (Claude Code), or write them to the paths in each task by hand (transcript-less harnesses).",
     );
 }
 
@@ -1105,15 +1105,12 @@ function buildManifest(opts: {
     "",
     "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>:i<N>-<nonce>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string verbatim as the dispatch `description` — do not reconstruct it. The per-run nonce keeps descriptions unique across iterations sharing one session's subagents dir, so the transcript adapter correlates each subagent's persisted transcript back to the right `(eval, condition)` slot without collisions.",
     "",
-    "After every dispatch:",
+    "After all dispatches (Claude Code):",
     "",
-    "1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json` (enforced at runtime by grade/fill-transcripts/detect-stray-writes). Carry over `eval_id`, `condition`, `skill_path` (`null` on the without_skill arm), `prompt`, and `files` from the task; populate `final_message` from the subagent's reply; leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
-    "2. Capture `total_tokens` and `duration_ms` from the harness's task completion event into `timing.json`. These values may not be persisted anywhere else — save them immediately.",
+    '1. Run `bun run evals:record-runs --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` — it assembles every task\'s `run.json` (carry-over fields from `dispatch.json`, `final_message` from the subagent\'s own `outputs/final-message.md`, `tool_invocations` from the persisted transcript) and backfills `timing.json` with transcript-derived tokens/duration. It never clobbers an existing record. Optional higher-fidelity timing: write `{ "total_tokens": <n>, "duration_ms": <n>, "source": "completion-event" }` from the task completion event to `timing.json` right after a dispatch — completion-event numbers always win over the backfill.',
+    "2. Run `bun run evals:grade --skill <name> --iteration <N>` to grade.",
     "",
-    "After all dispatches:",
-    "",
-    "3. (Claude Code only, optional) Run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` to fill `tool_invocations` from each subagent's persisted transcript. Skipping this step leaves `transcript_check` assertions unverifiable.",
-    "4. Run `bun run evals:grade --skill <name> --iteration <N>` to grade.",
+    "On a harness without persisted transcripts, instead write each task's `run.json` (matching `skills/evaluating-skills/schema/run-record.schema.json`, enforced at runtime by grade/fill-transcripts/detect-stray-writes) and `timing.json` by hand when its subagent returns: carry over `eval_id`, `condition`, `skill_path` (`null` on the without_skill arm), `prompt`, and `files` from the task; populate `final_message` from the subagent's reply; leave `tool_invocations` as `[]`; capture `total_tokens`/`duration_ms` from the task completion event immediately — they may not be persisted anywhere else.",
     "",
     "## Dispatches",
     "",
