@@ -102,6 +102,8 @@ Run from the skill folder (so `CWD` is the eval root and staging lands at `<CWD>
 
 `--guard` is on in the commands below because it's the default posture (Step 7). It stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. It denies out-of-bounds Write/Edit tool calls, and Bash that installs packages, mutates git (including **`git worktree add`**), redirects to a file, or creates paths under `.claude` / a bare `skills/`. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove just the guard immediately (e.g. mid-run), run `bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the slow-powers repo). The full end-of-run teardown — guard **and** staged skill set — is Step 12.
 
+While armed, the hook fires on **your** tool calls too, not just subagents' — so hand-authoring files under the skill's own folder (e.g. `skills/<name>/evals/NOTES.md`) with Write/Edit is denied until you disarm it. Run `teardown-guard` (or the full Step 12 teardown) before any post-run hand-authoring; Bash-driven runner commands like `promote-baseline` are unaffected.
+
 New-skill mode (with vs without):
 
 ```bash
@@ -121,6 +123,8 @@ bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name>
 
 `--ref` takes any commit/tag/branch. If instead you snapshot *before* editing, drop
 `--ref HEAD` (the snapshot then reads the working tree) and run it ahead of the edit.
+
+Add `--stage-name <name>` to stage the skill-under-test under a verbatim name instead of the conspicuous `slow-powers-eval-…` slug (built for the issue #144 name-confound experiments: A/B a natural name against the eval slug). It applies only when exactly one condition stages the skill (e.g. `--mode new-skill`) — the runner rejects it in revision mode, where both conditions stage — and refuses to clobber an existing dir of that name. The custom dir is registered for cleanup at the next run.
 
 Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built available-skills block (rendered the way Claude Code surfaces discoverable skills, so the dispatch reads like a real session).
 
@@ -157,6 +161,8 @@ bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" finalize --skill-dir <skill-dir> --ski
 ```
 
 `finalize` runs `grade --finalize` then `aggregate` and prints the benchmark. With Step 9's dispatches, the whole loop is three runner calls around the two dispatch batches: build (Step 8) → dispatch agents → `ingest` → dispatch judges → `finalize`.
+
+Besides out-of-bounds writes, `detect-stray-writes` also flags **live-source reads**: any arm whose subagent read the live `skills/<name>/` source instead of its staged copy. That usually means the Skill tool couldn't resolve the staged slug yet (skills staged mid-session race against the registry, which is built at session start) and the agent improvised — fatal in revision mode, where the old_skill arm then sees new-skill content. The findings land in `stray-writes.json` and surface as `validity_warnings` in `benchmark.json`; treat a flagged cell's arm as contaminated.
 
 The chained steps remain independently callable for inspection or recovery — `record-runs.ts`, `fill-transcripts.ts`, `detect-stray-writes.ts`, `grade.ts` (`--finalize`), `aggregate.ts`, each taking the same `--skill-dir`/`--skill`/`--iteration` flags (plus `--subagents-dir` for the two transcript readers). `record-runs` subsumes `fill-transcripts` for runner-built iterations — it writes `tool_invocations` as part of assembling each record; `fill-transcripts` remains the tool for a pre-existing `run.json` that `record-runs` won't touch (hand-authored, or written by the agent at dispatch time) whose `tool_invocations` you want populated after the fact.
 
