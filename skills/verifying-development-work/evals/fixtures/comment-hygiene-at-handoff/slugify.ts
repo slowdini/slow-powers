@@ -10,19 +10,16 @@
  * characters into a single hyphen.
  */
 export function slugify(title: string): string {
-  // Step 1: lowercase the whole string so the slug is case-insensitive.
+  // lowercase the title
   const lowered = title.toLowerCase();
 
-  // Step 2: normalize to NFKD (decomposed) form, not NFC, so the combining
-  // diacritic marks separate from their base letters and can be dropped on the
-  // next line — NFC would keep "é" as a single code point we couldn't strip.
+  // NFKD (not NFC): decomposing combining marks into separate code points is
+  // what lets the next line strip them — NFC keeps "é" as one code point.
   const deaccented = lowered.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
 
-  // Step 3: replace every run of non-alphanumeric characters with one hyphen.
-  // This handles spaces, punctuation, emoji, and everything else in one pass.
+  // replace runs of non-alphanumeric characters with a single hyphen
   const hyphenated = deaccented.replace(/[^a-z0-9]+/g, "-");
 
-  // Step 4: trim the leading and trailing hyphens that Step 3 can leave behind
-  // (for example "  Hello!  " would otherwise come out as "-hello-").
+  // strip leading and trailing hyphens
   return hyphenated.replace(/^-+|-+$/g, "");
 }

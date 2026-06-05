@@ -38,13 +38,24 @@ Before claiming any task is finished, making a success claim, or declaring a bug
 
 ---
 
-## Finishing: Review First, Then Verify
+## Finishing: Review Code, Verify, Then Review Comments
 
-The Gate Function above is your discipline at *every* completion claim. When you believe the work itself is done, run this finishing sequence in order — review **before** the final verification, so the evidence you hand back covers the exact code being returned:
+The Gate Function above is your discipline at *every* completion claim. When you believe the work itself is done, run these three finishing phases **in order**. The order is deliberate: every code change happens in phase 1, *before* the verification, so the evidence you hand back is guaranteed to cover the exact code being returned — and comment cleanup comes *after*, where it can't disturb that check.
 
-1. **Review the diff.** Run a review pass over the change following [`code-review.md`](code-review.md). Verification proves the work *runs*; review catches what running can't — silent regressions, missed edge cases, leftover debug code, reuse or simplification, and narrative comments that shouldn't reach a human reader. Size the review to the change: a quick check, not a second project.
-2. **Address what it surfaces.** Fix or explicitly flag each finding. Any fix changes the code.
-3. **Run the final verification last, on the result.** Now apply the Gate Function fresh to the post-review code and present *that* output as your evidence. Running verification before review would prove a version of the code you then changed — the check the user sees must be the check on the code the user gets.
+1. **Review and fix the code** — follow [`code-review.md`](code-review.md). This is the only phase that changes behavior. Review catches what running can't — silent regressions, missed edge cases, leftover debug code, reuse or simplification — then you fix or flag each finding, and *the code is now frozen*. Size the review to the change: a quick check, not a second project. (Comments are **not** reviewed here — they get phase 3.)
+2. **Run the final verification** — apply the Gate Function fresh to the now-frozen code and present *that* output as your evidence. Because all code changes happened in phase 1, this check covers exactly what the user gets.
+3. **Review and clean the comments** — follow [`comment-review.md`](comment-review.md). This pass touches *only* comments, so it changes no behavior and needs **no re-verification**: delete narrative / step-by-step / ticket comments, keeping only true Explanation or exported-member Documentation, before the diff reaches a human.
+
+**Copy this checklist into your task tracker the moment you start finishing, and tick each box in order.** The ordering *is* the discipline — and an untracked checklist is one whose middle steps get skipped under momentum:
+
+```
+- [ ] Phase 1 — reviewed the CODE against intent, ranked findings, fixed/flagged each (per code-review.md); code is now frozen
+- [ ] Phase 2 — ran the final verification fresh on the frozen code, and presented that output as evidence
+- [ ] Phase 3 — reviewed the COMMENTS (per comment-review.md): deleted narrative / step-by-step / ticket comments, kept only true Explanation or exported Documentation
+- [ ] Surfaced integration options (merge / push+PR / leave as-is / discard) — did not merge or push on my own
+```
+
+The last box is its own gate; the section below is why it's never yours to skip.
 
 ---
 
@@ -69,7 +80,7 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 | "It's obvious this is correct" | Obvious bugs are the most embarrassing. Reading code predicts behavior; only running it proves behavior. |
 | "I'll verify after committing" | Verification after the claim is too late. |
 | "The build should be fine" | "Should" is not evidence. |
-| "Tests pass, so we're done here" | Verification is one step of finishing, not the whole sequence. Review the diff, then run the final check on the reviewed code. |
+| "Tests pass, so we're done here" | Verification is one phase of finishing, not the whole sequence — review and fix the code, verify the frozen result, then clean the comments. |
 | "The user said ship it, so I'll just merge" | "Ship it" authorizes the user's choice, not a unilateral merge or push. |
 
 ---
