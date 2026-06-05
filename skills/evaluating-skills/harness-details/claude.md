@@ -100,7 +100,9 @@ This is a required gate (see *Pre-flight gate* in `../SKILL.md`). Do not run the
 
 Run from the skill folder (so `CWD` is the eval root and staging lands at `<CWD>/.claude/skills/`).
 
-`--guard` is on in the commands below because it's the default posture (Step 7). It stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove it immediately, run `bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the slow-powers repo).
+`--guard` is on in the commands below because it's the default posture (Step 7). It stages a `PreToolUse` hook into `.claude/settings.local.json` that *blocks* subagent writes/installs outside the eval sandbox (the workspace, the staged-skills dir, and `$TMPDIR`) while dispatches run. It denies out-of-bounds Write/Edit tool calls, and Bash that installs packages, mutates git (including **`git worktree add`**), redirects to a file, or creates paths under `.claude` / a bare `skills/`. The hook is gated by a marker that auto-expires after 6h and is torn down at the start of the next run; to remove just the guard immediately (e.g. mid-run), run `bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown-guard --skill-dir <skill-dir> --skill <name>` (or `bun run evals:teardown-guard` in the slow-powers repo). The full end-of-run teardown — guard **and** staged skill set — is Step 12.
+
+While armed, the hook fires on **your** tool calls too, not just subagents' — so hand-authoring files under the skill's own folder (e.g. `skills/<name>/evals/NOTES.md`) with Write/Edit is denied until you disarm it. Run `teardown-guard` (or the full Step 12 teardown) before any post-run hand-authoring; Bash-driven runner commands like `promote-baseline` are unaffected.
 
 New-skill mode (with vs without):
 
@@ -108,13 +110,21 @@ New-skill mode (with vs without):
 bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode new-skill --guard
 ```
 
-Revision mode (test a change to an existing skill):
+Revision mode (test a change to an existing skill). The usual order is edit-first — the
+skill is already changed when the user asks to eval — so snapshot the *old* version
+straight from git with `--ref`, which reads the object database without touching the
+working tree:
 
 ```bash
-bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" snapshot --skill-dir <skill-dir> --skill <name> --label baseline
-# ...edit the SKILL.md...
+# ...the edited SKILL.md is already in the working tree...
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" snapshot --skill-dir <skill-dir> --skill <name> --label baseline --ref HEAD
 bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" --skill-dir <skill-dir> --skill <name> --mode revision --baseline baseline --guard
 ```
+
+`--ref` takes any commit/tag/branch. If instead you snapshot *before* editing, drop
+`--ref HEAD` (the snapshot then reads the working tree) and run it ahead of the edit.
+
+Add `--stage-name <name>` to stage the skill-under-test under a verbatim name instead of the conspicuous `slow-powers-eval-…` slug (built for the issue #144 name-confound experiments: A/B a natural name against the eval slug). It applies only when exactly one condition stages the skill (e.g. `--mode new-skill`) — the runner rejects it in revision mode, where both conditions stage — and refuses to clobber an existing dir of that name. The custom dir is registered for cleanup at the next run.
 
 Add `--bootstrap <path>` if the user has authored a framing file they want prepended to every dispatch. Without it, dispatches carry only the auto-built available-skills block (rendered the way Claude Code surfaces discoverable skills, so the dispatch reads like a real session).
 
@@ -129,25 +139,32 @@ Only when the user has opted out of the guard, drop `--guard` from the command a
 Read `<CWD>/skills-workspace/<name>/iteration-<N>/dispatch.json`. For each task object:
 
 1. Dispatch a fresh subagent via the **Task tool** with the prompt `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (substituting the task's `dispatch_prompt_path`), and pass `agent_description` verbatim as the description. The full prompt lives in that file rather than inline in `dispatch.json`, so you never reproduce ~KB of text per dispatch. The description is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) — pass it through unchanged; do not reconstruct it. Passing it verbatim is what lets transcript correlation work in Step 10 without cross-matching an agent from another iteration.
-2. When the subagent returns, write the portable run record to `run_record_path` and the timing record (`{ "total_tokens": <n>, "duration_ms": <n>}`) to `timing_path`. Capture tokens/duration from the task completion event — they may not be persisted elsewhere. The run record must satisfy `schema/run-record.schema.json` (validated by `grade`/`fill-transcripts`/`detect-stray-writes`): set `eval_id`, `condition`, `skill_path` (the task's `skill_path`, `null` on the `without_skill` arm), `prompt` (the task's `user_prompt`), `files` (the task's `fixtures`, `[]` if none), `final_message` (the subagent's reply), and `tool_invocations: []` (populated later from the transcript).
+2. That's it — you do **not** write `run.json` or `timing.json` yourself. The subagent writes its own `outputs/final-message.md` (the dispatch prompt instructs it to), and `record-runs` in Step 10 assembles both records from disk. Optional, higher-fidelity timing: if you want billing-grade numbers, write `{ "total_tokens": <n>, "duration_ms": <n>, "source": "completion-event" }` from the Task tool's completion event to `timing_path` right after each dispatch — `record-runs` never overwrites an existing `timing.json`, so completion-event numbers always win over its transcript-derived backfill (which includes cache accounting — a different metric).
 
-## Step 10 — Fill transcripts, grade, aggregate
+## Step 10 — Ingest, judge, finalize
 
-Claude Code persists subagent transcripts under `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/`. Find that directory for the current session, then:
+Claude Code persists subagent transcripts under `~/.claude/projects/<project-slug>/<parent-session-id>/subagents/`. Find that directory for the current session, then run the post-dispatch chain as one command:
 
 ```bash
-bun run "$SLOW_POWERS_RUNNER_ROOT/fill-transcripts.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> \
+# record-runs → fill-transcripts → detect-stray-writes → grade, in fixed order.
+# Assembles run.json + timing.json for every task from dispatch.json,
+# outputs/final-message.md, and the persisted transcripts; existing records are
+# never clobbered. Stops on the first failure (re-running after a fix is safe —
+# every sub-step skips work that's already done).
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" ingest --skill-dir <skill-dir> --skill <name> --iteration <N> \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
 
-# Optional: flag any subagent writes/installs that escaped the outputs/ dir.
-bun run "$SLOW_POWERS_RUNNER_ROOT/detect-stray-writes.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
-
-bun run "$SLOW_POWERS_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
-# Dispatch a fresh judge subagent for each emitted judge task — prompt it with `Read the file at <dispatch_prompt_path> and follow its instructions exactly.` (the prompt tells the judge where to write its response). Then:
-bun run "$SLOW_POWERS_RUNNER_ROOT/grade.ts" --skill-dir <skill-dir> --skill <name> --iteration <N> --finalize
-
-bun run "$SLOW_POWERS_RUNNER_ROOT/aggregate.ts" --skill-dir <skill-dir> --skill <name> --iteration <N>
+# Dispatch a fresh judge subagent for each judge task ingest listed — prompt it
+# with `Read the file at <dispatch_prompt_path> and follow its instructions
+# exactly.` (the prompt tells the judge where to write its response). Then:
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" finalize --skill-dir <skill-dir> --skill <name> --iteration <N>
 ```
+
+`finalize` runs `grade --finalize` then `aggregate` and prints the benchmark. With Step 9's dispatches, the whole loop is three runner calls around the two dispatch batches: build (Step 8) → dispatch agents → `ingest` → dispatch judges → `finalize`.
+
+Besides out-of-bounds writes, `detect-stray-writes` also flags **live-source reads**: any arm whose subagent read the live `skills/<name>/` source instead of its staged copy. That usually means the Skill tool couldn't resolve the staged slug yet (skills staged mid-session race against the registry, which is built at session start) and the agent improvised — fatal in revision mode, where the old_skill arm then sees new-skill content. The findings land in `stray-writes.json` and surface as `validity_warnings` in `benchmark.json`; treat a flagged cell's arm as contaminated.
+
+The chained steps remain independently callable for inspection or recovery — `record-runs.ts`, `fill-transcripts.ts`, `detect-stray-writes.ts`, `grade.ts` (`--finalize`), `aggregate.ts`, each taking the same `--skill-dir`/`--skill`/`--iteration` flags (plus `--subagents-dir` for the two transcript readers). `record-runs` subsumes `fill-transcripts` for runner-built iterations — it writes `tool_invocations` as part of assembling each record; `fill-transcripts` remains the tool for a pre-existing `run.json` that `record-runs` won't touch (hand-authored, or written by the agent at dispatch time) whose `tool_invocations` you want populated after the fact.
 
 ## Step 11 — Present results
 
@@ -156,3 +173,22 @@ Read `<CWD>/skills-workspace/<name>/iteration-<N>/benchmark.json`. Surface to th
 - `run_summary` per condition (pass rate, tokens, duration)
 - `delta` (what the skill/change costs and what it buys — for a token-reduction eval, focus on `delta.total_tokens` alongside `delta.pass_rate`)
 - `validity_warnings` (read these before trusting the delta — a low skill-invocation rate means the result may not reflect the skill at all)
+
+## Step 12 — Tear down
+
+A run stages the full skill set into `<CWD>/.claude/skills/` (project-scope, required for discovery) and — under `--guard` — a `PreToolUse` hook in `.claude/settings.local.json`. These persist after dispatch, so the run isn't complete until you remove them. This is the normal end of every run, not an optional cleanup:
+
+```bash
+bun run "$SLOW_POWERS_RUNNER_ROOT/run.ts" teardown --skill-dir <skill-dir> --skill <name>
+# or, in the slow-powers repo:
+bun run evals:teardown --skill <name>
+```
+
+`teardown` disarms the guard, removes the staged skill set, **and** reclaims the skill's `skills-workspace/` artifacts. When the runner created `<CWD>/.claude/skills/` for this run it removes the whole tree (and prunes a `.claude` it emptied); a `.claude/skills` that pre-existed (your own project skills) keeps its contents, and `.claude/settings.json` is never touched.
+
+Workspace reclamation is conservative — a completed run leaves behind nothing that wasn't meant to be committed, but it never destroys results you haven't moved into version control:
+
+- **Iterations** whose results are committed are removed. Teardown keys off the `.promoted.json` marker `promote-baseline` writes into the iteration. An iteration that still holds uncommitted results (a `benchmark.json`, run record, or grading with no marker — e.g. a graded run you never promoted) is **kept**, and teardown warns you, naming it and the `evals:promote-baseline` command to commit it (or delete `skills-workspace/<name>/` manually to discard). Iterations holding only reproducible scaffolding (a `--dry-run`, or a run staged but never dispatched) are removed.
+- **Snapshots** materialized from a git ref (`snapshot --ref`) are removed — they regenerate on demand. Working-tree snapshots (no `--ref`), which can't be regenerated, are kept.
+
+If you ran with a custom `--workspace-dir`, pass the same value to `teardown` so it reclaims the right tree.

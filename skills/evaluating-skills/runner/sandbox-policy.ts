@@ -25,6 +25,26 @@ export const BASH_MUTATION_PATTERNS: Array<{ re: RegExp; reason: string }> = [
     re: /\bgit\s+(commit|add|push|checkout|reset|restore|merge|rebase)\b/,
     reason: "git mutation",
   },
+  {
+    re: /\bgit\s+worktree\s+add\b/,
+    reason: "git worktree add (working tree outside the sandbox)",
+  },
+  // A create/copy/move/link verb whose operand is a path under `.claude` —
+  // catches stray writes to the harness config dir that aren't a `>` redirect
+  // (those are caught below). Read-only verbs (`cat`, `ls`) aren't listed, so
+  // inspecting `.claude` stays allowed.
+  {
+    re: /\b(cp|mv|mkdir|touch|ln|rsync|install)\b[^|;&\n]*\.claude(\/|\b)/,
+    reason: "path under .claude",
+  },
+  // The same create verbs whose operand is a top-level `skills/` directory —
+  // catches a bare `skills/` left in the cwd. `skills-workspace` and other
+  // `skills`-prefixed names are excluded by the trailing `/`, whitespace, or
+  // end-of-string boundary.
+  {
+    re: /\b(cp|mv|mkdir|touch|ln|rsync)\b[^|;&\n]*[\s'"=/]\.{0,2}\/?skills(\/|\s|$)/,
+    reason: "creates a bare skills/ dir",
+  },
   { re: /(^|\s)(>>?|tee)\s/, reason: "output redirection to a file" },
 ];
 

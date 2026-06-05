@@ -6,6 +6,7 @@ import {
   findByDescription,
   listSubagents,
   parseTranscript,
+  parseTranscriptFull,
 } from "./claude-code-transcript";
 
 const FIXTURE_ROOT = join(tmpdir(), `claude-code-adapter-test-${process.pid}`);
@@ -190,6 +191,227 @@ describe("parseTranscript", () => {
     const result = parseTranscript(path);
     expect(result).toHaveLength(1);
     expect(result[0].result).toBe("hi");
+  });
+});
+
+describe("parseTranscriptFull", () => {
+  const usage = (output: number) => ({
+    input_tokens: 100,
+    cache_creation_input_tokens: 50,
+    cache_read_input_tokens: 200,
+    output_tokens: output,
+  });
+
+  test("sums usage across unique message ids, deduping repeated ids", () => {
+    // One API response spans multiple jsonl lines (one per content block) and
+    // repeats the same message.id + usage on each — it must be counted once.
+    const path = join(FIXTURE_ROOT, "full-dedup.jsonl");
+    writeFileSync(
+      path,
+      jsonl([
+        {
+          type: "user",
+          timestamp: "2026-06-04T10:00:00.000Z",
+          message: { role: "user", content: "go" },
+        },
+        {
+          type: "assistant",
+          timestamp: "2026-06-04T10:00:05.000Z",
+          message: {
+            id: "msg_aaa",
+            role: "assistant",
+            usage: usage(10),
+            content: [{ type: "text", text: "first block" }],
+          },
+        },
+        {
+          type: "assistant",
+          timestamp: "2026-06-04T10:00:06.000Z",
+          message: {
+            id: "msg_aaa",
+            role: "assistant",
+            usage: usage(10),
+            content: [
+              {
+                type: "tool_use",
+                id: "toolu_1",
+                name: "Bash",
+                input: { command: "ls" },
+              },
+            ],
+          },
+        },
+        {
+          type: "assistant",
+          timestamp: "2026-06-04T10:01:00.000Z",
+          message: {
+            id: "msg_bbb",
+            role: "assistant",
+            usage: usage(40),
+            content: [{ type: "text", text: "done" }],
+          },
+        },
+      ]),
+    );
+
+    const full = parseTranscriptFull(path);
+    // msg_aaa counted once (100+50+200+10) + msg_bbb (100+50+200+40) = 750
+    expect(full.total_tokens).toBe(750);
+  });
+
+  test("returns null total_tokens when no usage objects present", () => {
+    const path = join(FIXTURE_ROOT, "full-no-usage.jsonl");
+    writeFileSync(
+      path,
+      jsonl([
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "hi" }],
+          },
+        },
+      ]),
+    );
+    expect(parseTranscriptFull(path).total_tokens).toBeNull();
+  });
+
+  test("derives duration_ms from first and last line timestamps", () => {
+    const path = join(FIXTURE_ROOT, "full-duration.jsonl");
+    writeFileSync(
+      path,
+      jsonl([
+        {
+          type: "user",
+          timestamp: "2026-06-04T10:00:00.000Z",
+          message: { role: "user", content: "go" },
+        },
+        {
+          type: "assistant",
+          timestamp: "2026-06-04T10:02:30.500Z",
+          message: {
+            id: "msg_x",
+            role: "assistant",
+            content: [{ type: "text", text: "done" }],
+          },
+        },
+      ]),
+    );
+    expect(parseTranscriptFull(path).duration_ms).toBe(150_500);
+  });
+
+  test("returns null duration_ms with fewer than two timestamps", () => {
+    const path = join(FIXTURE_ROOT, "full-one-ts.jsonl");
+    writeFileSync(
+      path,
+      jsonl([
+        {
+          type: "assistant",
+          timestamp: "2026-06-04T10:00:00.000Z",
+          message: { role: "assistant", content: [] },
+        },
+        { type: "assistant", message: { role: "assistant", content: [] } },
+      ]),
+    );
+    expect(parseTranscriptFull(path).duration_ms).toBeNull();
+  });
+
+  test("final_text is the concatenated text of the last assistant message", () => {
+    const path = join(FIXTURE_ROOT, "full-final-text.jsonl");
+    writeFileSync(
+      path,
+      jsonl([
+        {
+          type: "assistant",
+          message: {
+            id: "msg_1",
+            role: "assistant",
+            content: [{ type: "text", text: "intermediate" }],
+          },
+        },
+        {
+          type: "assistant",
+          message: {
+            id: "msg_2",
+            role: "assistant",
+            content: [
+              { type: "text", text: "All tests pass." },
+              {
+                type: "tool_use",
+                id: "toolu_z",
+                name: "Bash",
+                input: { command: "true" },
+              },
+              { type: "text", text: "Wrapping up." },
+            ],
+          },
+        },
+        {
+          type: "user",
+          message: {
+            role: "user",
+            content: [
+              { type: "tool_result", tool_use_id: "toolu_z", content: "ok" },
+            ],
+          },
+        },
+      ]),
+    );
+    expect(parseTranscriptFull(path).final_text).toBe(
+      "All tests pass.\nWrapping up.",
+    );
+  });
+
+  test("final_text is null when no assistant text exists", () => {
+    const path = join(FIXTURE_ROOT, "full-no-text.jsonl");
+    writeFileSync(
+      path,
+      jsonl([{ type: "user", message: { role: "user", content: "hi" } }]),
+    );
+    expect(parseTranscriptFull(path).final_text).toBeNull();
+  });
+
+  test("tool_invocations matches parseTranscript output", () => {
+    const path = join(FIXTURE_ROOT, "full-invocations.jsonl");
+    writeFileSync(
+      path,
+      jsonl([
+        {
+          type: "assistant",
+          timestamp: "2026-06-04T10:00:00.000Z",
+          message: {
+            id: "msg_1",
+            role: "assistant",
+            usage: usage(5),
+            content: [
+              {
+                type: "tool_use",
+                id: "toolu_q",
+                name: "Read",
+                input: { file_path: "/tmp/a" },
+              },
+            ],
+          },
+        },
+        {
+          type: "user",
+          timestamp: "2026-06-04T10:00:02.000Z",
+          message: {
+            role: "user",
+            content: [
+              {
+                type: "tool_result",
+                tool_use_id: "toolu_q",
+                content: "contents",
+              },
+            ],
+          },
+        },
+      ]),
+    );
+    expect(parseTranscriptFull(path).tool_invocations).toEqual(
+      parseTranscript(path),
+    );
   });
 });
 

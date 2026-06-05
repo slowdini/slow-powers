@@ -31,6 +31,7 @@ import type {
   EvalsConfig,
 } from "./types";
 import { validateEvalsConfig } from "./validate";
+import { cleanupWorkspace, SNAPSHOT_META } from "./workspace-teardown";
 
 export const STAGED_SKILL_PREFIX = "slow-powers-eval-";
 export const STAGED_SIBLING_MANIFEST = ".slow-powers-eval-manifest.json";
@@ -41,6 +42,16 @@ export function stageSkillForCC(opts: {
   condition: string;
   skillName: string;
   repoRoot: string;
+  /**
+   * Source skill directory whose sibling assets are copied alongside the staged
+   * SKILL.md — everything next to SKILL.md except SKILL.md itself, the `evals/`
+   * dir, and the snapshot bookkeeping file. A multi-file skill whose SKILL.md
+   * links a sibling (e.g. `[code-review.md](code-review.md)`) would otherwise be
+   * staged with a dangling link: the agent can't resolve the reference relative
+   * to the staged dir, so the linked guidance is silently unreachable. Mirrors
+   * the sibling-asset copy in `snapshot`. Omit to stage SKILL.md alone.
+   */
+  assetsDir?: string;
   /**
    * When set, stage under this verbatim identifier instead of the conspicuous
    * `slow-powers-eval-…` slug. Used by `--stage-name` to A/B a natural name
@@ -56,6 +67,16 @@ export function stageSkillForCC(opts: {
   const skillDir = join(opts.repoRoot, ".claude", "skills", slug);
   mkdirSync(skillDir, { recursive: true });
   writeFileSync(join(skillDir, "SKILL.md"), opts.content);
+  if (opts.assetsDir !== undefined && existsSync(opts.assetsDir)) {
+    for (const entry of readdirSync(opts.assetsDir)) {
+      if (entry === "SKILL.md" || entry === "evals" || entry === SNAPSHOT_META)
+        continue;
+      const src = join(opts.assetsDir, entry);
+      const dst = join(skillDir, entry);
+      if (statSync(src).isDirectory()) cpSync(src, dst, { recursive: true });
+      else cpSync(src, dst);
+    }
+  }
   return slug;
 }
 
@@ -78,6 +99,7 @@ export function registerStagedSkillForCleanup(
     manifest = {
       created_at: new Date().toISOString(),
       staged_under_test: name,
+      skills_dir_preexisting: true,
       created_entries: [],
     };
   }
@@ -89,6 +111,14 @@ export function registerStagedSkillForCleanup(
 type SiblingManifest = {
   created_at: string;
   staged_under_test: string;
+  /**
+   * Whether `.claude/skills` already existed when staging began. When false the
+   * runner created it, so {@link cleanupStagedSkills} may remove the whole tree
+   * (and prune an emptied `.claude`); when true (or absent, on older manifests)
+   * cleanup falls back to the surgical per-entry restore so a user's own
+   * project skills are left intact.
+   */
+  skills_dir_preexisting?: boolean;
   created_entries: Array<{
     name: string;
     preexisting: boolean;
@@ -102,6 +132,7 @@ export function stageSiblingSkills(opts: {
   repoRoot: string;
 }): SiblingManifest {
   const skillsDir = join(opts.repoRoot, ".claude", "skills");
+  const skillsDirPreexisting = existsSync(skillsDir);
   mkdirSync(skillsDir, { recursive: true });
 
   const siblings = readdirSync(opts.skillsSourceDir).filter((name) => {
@@ -114,6 +145,7 @@ export function stageSiblingSkills(opts: {
   const manifest: SiblingManifest = {
     created_at: new Date().toISOString(),
     staged_under_test: opts.skillUnderTest,
+    skills_dir_preexisting: skillsDirPreexisting,
     created_entries: [],
   };
 
@@ -153,8 +185,18 @@ export function stageSiblingSkills(opts: {
   return manifest;
 }
 
+/** Remove `dir` only if it exists and is empty. Used to prune a `.claude` the
+ * runner emptied without ever touching a `.claude` that still holds the user's
+ * own files (e.g. `settings.json`). */
+function pruneIfEmpty(dir: string): void {
+  if (existsSync(dir) && readdirSync(dir).length === 0) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export function cleanupStagedSkills(repoRoot: string): void {
-  const skillsDir = join(repoRoot, ".claude", "skills");
+  const claudeDir = join(repoRoot, ".claude");
+  const skillsDir = join(claudeDir, "skills");
   if (!existsSync(skillsDir)) return;
 
   for (const entry of readdirSync(skillsDir)) {
@@ -171,6 +213,18 @@ export function cleanupStagedSkills(repoRoot: string): void {
     rmSync(manifestPath, { force: true });
     return;
   }
+
+  // The runner created `.claude/skills` this run, so it can't be holding any of
+  // the user's own skills — remove the whole staged tree (including any stray,
+  // non-prefixed dirs a recursive eval left behind), then prune an emptied
+  // `.claude`. In a real project `.claude/settings.json` keeps `.claude`
+  // non-empty, so only the scaffolding we created is removed.
+  if (manifest.skills_dir_preexisting === false) {
+    rmSync(skillsDir, { recursive: true, force: true });
+    pruneIfEmpty(claudeDir);
+    return;
+  }
+
   for (const e of manifest.created_entries) {
     const target = join(skillsDir, e.name);
     rmSync(target, { recursive: true, force: true });
@@ -185,7 +239,13 @@ export function cleanupStagedSkills(repoRoot: string): void {
 type Mode = "new-skill" | "revision";
 
 type Args = {
-  command: "run" | "snapshot" | "teardown-guard";
+  command:
+    | "run"
+    | "snapshot"
+    | "teardown-guard"
+    | "teardown"
+    | "ingest"
+    | "finalize";
   mode?: Mode;
   baseline?: string;
   label?: string;
@@ -197,6 +257,8 @@ type Args = {
   guard: boolean;
   stageName?: string;
   planMode: boolean;
+  ref?: string;
+  subagentsDir?: string;
 };
 
 function die(msg: string): never {
@@ -204,14 +266,59 @@ function die(msg: string): never {
   process.exit(1);
 }
 
+/**
+ * Reads the bytes of `<ref>:./<relPath>` from git, resolving `relPath` relative
+ * to `cwd` via the `./` prefix. Returns the raw stdout Buffer on success (write
+ * it directly — never `.toString()` — so binary assets round-trip intact), or
+ * `null` if the object doesn't exist at that ref (git exits non-zero). Mirrors
+ * the `Bun.spawnSync` git pattern in `promote-baseline.ts:gitHead`; runs git
+ * directly (no shell), so the ref/path aren't interpolated into a shell string.
+ */
+function gitShowBytes(
+  cwd: string,
+  ref: string,
+  relPath: string,
+): Buffer | null {
+  const res = Bun.spawnSync(["git", "show", `${ref}:./${relPath}`], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (res.exitCode !== 0) return null;
+  return Buffer.from(res.stdout);
+}
+
+/**
+ * Lists every file under `cwd` as it existed at `<ref>`, as paths relative to
+ * `cwd` (git's default ls-tree output strips the cwd prefix). `die`s with git's
+ * stderr on failure — a bad ref or a cwd outside any repo surfaces here.
+ */
+function gitLsFiles(cwd: string, ref: string): string[] {
+  const res = Bun.spawnSync(["git", "ls-tree", "-r", "--name-only", ref, "."], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (res.exitCode !== 0)
+    die(`git ls-tree failed for ref ${ref}: ${res.stderr.toString().trim()}`);
+  return res.stdout
+    .toString()
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function parseArgs(argv: string[]): Args {
   const positionals = argv.filter((a) => !a.startsWith("--"));
+  const COMMANDS: Args["command"][] = [
+    "snapshot",
+    "teardown-guard",
+    "teardown",
+    "ingest",
+    "finalize",
+  ];
   const command: Args["command"] =
-    positionals[0] === "snapshot"
-      ? "snapshot"
-      : positionals[0] === "teardown-guard"
-        ? "teardown-guard"
-        : "run";
+    COMMANDS.find((c) => c === positionals[0]) ?? "run";
 
   const flag = (name: string): string | undefined => {
     const i = argv.indexOf(`--${name}`);
@@ -252,6 +359,8 @@ function parseArgs(argv: string[]): Args {
     guard: has("guard"),
     stageName: flag("stage-name"),
     planMode: has("plan-mode"),
+    ref: flag("ref"),
+    subagentsDir: flag("subagents-dir"),
   };
 }
 
@@ -289,8 +398,6 @@ function conditionNamesFor(mode: Mode): [string, string] {
 function commandSnapshot(args: Args, ctx: RunContext): void {
   if (!args.label) die("snapshot requires --label <name>");
   const skillDir = ctx.skillSubdir;
-  const skillMd = join(skillDir, "SKILL.md");
-  if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
 
   const destDir = join(
     ctx.workspaceRoot,
@@ -303,6 +410,14 @@ function commandSnapshot(args: Args, ctx: RunContext): void {
       `snapshot already exists: ${destDir}\n` +
         "  Use a different --label or delete the existing snapshot first.",
     );
+
+  if (args.ref !== undefined) {
+    snapshotFromRef(args.ref, skillDir, destDir, ctx.skillName);
+    return;
+  }
+
+  const skillMd = join(skillDir, "SKILL.md");
+  if (!existsSync(skillMd)) die(`skill not found: ${skillMd}`);
   ensureDir(destDir);
 
   cpSync(skillMd, join(destDir, "SKILL.md"));
@@ -314,7 +429,51 @@ function commandSnapshot(args: Args, ctx: RunContext): void {
     else cpSync(src, dst);
   }
 
+  // Record provenance so teardown keeps this (working-tree) snapshot — unlike a
+  // ref snapshot, it can't be regenerated from git.
+  writeJson(join(destDir, SNAPSHOT_META), { source: "working-tree" });
+
   console.log(`Snapshotted ${ctx.skillName} → ${destDir}`);
+}
+
+/**
+ * Snapshots the skill (SKILL.md + sibling assets) as it existed at a git ref,
+ * read straight from the object database without touching the working tree
+ * (issue #122). The `evals/` directory is excluded to match the working-tree
+ * branch. Git runs from `skillDir`, which must sit inside a repo; a bad ref or a
+ * skill absent at that ref `die`s with a clear message.
+ */
+function snapshotFromRef(
+  ref: string,
+  skillDir: string,
+  destDir: string,
+  skillName: string,
+): void {
+  const skillMd = gitShowBytes(skillDir, ref, "SKILL.md");
+  if (skillMd === null)
+    die(
+      `skill not found at ${ref}: ${join(skillDir, "SKILL.md")}\n` +
+        "  Check the ref exists and that the skill was present there (and that this is a git repo).",
+    );
+
+  ensureDir(destDir);
+  writeFileSync(join(destDir, "SKILL.md"), skillMd);
+
+  for (const relPath of gitLsFiles(skillDir, ref)) {
+    if (relPath === "SKILL.md") continue;
+    if (relPath === "evals" || relPath.startsWith("evals/")) continue;
+    const bytes = gitShowBytes(skillDir, ref, relPath);
+    if (bytes === null) continue; // listed but unreadable (e.g. submodule/gitlink)
+    const dst = join(destDir, relPath);
+    ensureDir(dirname(dst));
+    writeFileSync(dst, bytes);
+  }
+
+  // Record provenance so teardown can reclaim this snapshot — it's fully
+  // reproducible from the ref.
+  writeJson(join(destDir, SNAPSHOT_META), { source: "ref", ref });
+
+  console.log(`Snapshotted ${skillName} at ${ref} → ${destDir}`);
 }
 
 function commandRun(args: Args, ctx: RunContext): void {
@@ -481,6 +640,7 @@ function commandRun(args: Args, ctx: RunContext): void {
       condition: condName,
       skillName: ctx.skillName,
       repoRoot: ctx.stageRoot,
+      assetsDir: dirname(condSkillPath),
       stageNameOverride: args.stageName,
     });
   };
@@ -652,7 +812,7 @@ function commandRun(args: Args, ctx: RunContext): void {
   if (args.dryRun) console.log("\n--dry-run: stopping after workspace prep.");
   else
     console.log(
-      "\nNext: read dispatch.json, dispatch each task as a subagent, write run.json + timing.json to the paths in each task.",
+      "\nNext: read dispatch.json and dispatch each task as a subagent. Then run `ingest --iteration <N> --subagents-dir <path>` (Claude Code), or write run.json + timing.json to the paths in each task by hand and run the chained steps individually (transcript-less harnesses).",
     );
 }
 
@@ -975,15 +1135,12 @@ function buildManifest(opts: {
     "",
     "**Transcript correlation:** Each task has an `agent_description` field of the form `<eval_id>:<condition>:i<N>-<nonce>`. When dispatching the subagent via the host's primitive (e.g. Claude Code's Agent tool), pass this string verbatim as the dispatch `description` — do not reconstruct it. The per-run nonce keeps descriptions unique across iterations sharing one session's subagents dir, so the transcript adapter correlates each subagent's persisted transcript back to the right `(eval, condition)` slot without collisions.",
     "",
-    "After every dispatch:",
+    "After all dispatches (Claude Code):",
     "",
-    "1. Write `run.json` matching `skills/evaluating-skills/schema/run-record.schema.json` (enforced at runtime by grade/fill-transcripts/detect-stray-writes). Carry over `eval_id`, `condition`, `skill_path` (`null` on the without_skill arm), `prompt`, and `files` from the task; populate `final_message` from the subagent's reply; leave `tool_invocations` as `[]` for now — `evals:fill-transcripts` will populate it from the persisted transcript in a later step.",
-    "2. Capture `total_tokens` and `duration_ms` from the harness's task completion event into `timing.json`. These values may not be persisted anywhere else — save them immediately.",
+    '1. Run `bun run evals:ingest -- --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` — a fixed-order chain of record-runs (assembles every task\'s `run.json` from `dispatch.json` + the subagent\'s own `outputs/final-message.md` + the persisted transcript, and backfills `timing.json` with transcript-derived tokens/duration; never clobbers an existing record), fill-transcripts, detect-stray-writes, and grade. Optional higher-fidelity timing: write `{ "total_tokens": <n>, "duration_ms": <n>, "source": "completion-event" }` from the task completion event to `timing.json` right after a dispatch — completion-event numbers always win over the backfill.',
+    "2. Dispatch the judge tasks ingest lists, then run `bun run evals:finalize -- --skill <name> --iteration <N>` for the benchmark.",
     "",
-    "After all dispatches:",
-    "",
-    "3. (Claude Code only, optional) Run `bun run evals:fill-transcripts --skill <name> --iteration <N> --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/` to fill `tool_invocations` from each subagent's persisted transcript. Skipping this step leaves `transcript_check` assertions unverifiable.",
-    "4. Run `bun run evals:grade --skill <name> --iteration <N>` to grade.",
+    "On a harness without persisted transcripts, instead write each task's `run.json` (matching `skills/evaluating-skills/schema/run-record.schema.json`, enforced at runtime by grade/fill-transcripts/detect-stray-writes) and `timing.json` by hand when its subagent returns: carry over `eval_id`, `condition`, `skill_path` (`null` on the without_skill arm), `prompt`, and `files` from the task; populate `final_message` from the subagent's reply; leave `tool_invocations` as `[]`; capture `total_tokens`/`duration_ms` from the task completion event immediately — they may not be persisted anywhere else.",
     "",
     "## Dispatches",
     "",
@@ -1008,6 +1165,174 @@ function buildManifest(opts: {
   return header + entries;
 }
 
+// ---------------------------------------------------------------------------
+// ingest / finalize — fixed-order orchestrators over the sibling commands.
+//
+// The eval loop has exactly two points where only the in-harness agent can act
+// (dispatching eval subagents, dispatching judge subagents). Everything between
+// them is mechanical, so each stretch is one command: `ingest` runs the
+// post-dispatch chain and stops at the judge hand-off; `finalize` runs the
+// post-judge chain and prints the benchmark. No workspace-state inference —
+// each always runs the same steps in the same order, and every sub-step keeps
+// its own skip-if-done guard, so re-running after a fix is safe.
+// ---------------------------------------------------------------------------
+
+export type StepCommand = { label: string; argv: string[] };
+
+export function buildIngestCommands(opts: {
+  runnerDir: string;
+  skillDir: string;
+  skill: string;
+  iteration: number;
+  subagentsDir: string;
+}): StepCommand[] {
+  const shared = [
+    "--skill-dir",
+    opts.skillDir,
+    "--skill",
+    opts.skill,
+    "--iteration",
+    String(opts.iteration),
+  ];
+  const transcripts = ["--subagents-dir", opts.subagentsDir];
+  const script = (name: string) => [
+    "bun",
+    "run",
+    join(opts.runnerDir, `${name}.ts`),
+  ];
+  return [
+    {
+      label: "record-runs",
+      argv: [...script("record-runs"), ...shared, ...transcripts],
+    },
+    // record-runs subsumes this for the records it wrote; it still fills any
+    // pre-existing (agent-written) run.json with empty tool_invocations.
+    {
+      label: "fill-transcripts",
+      argv: [...script("fill-transcripts"), ...shared, ...transcripts],
+    },
+    {
+      label: "detect-stray-writes",
+      argv: [...script("detect-stray-writes"), ...shared],
+    },
+    { label: "grade", argv: [...script("grade"), ...shared] },
+  ];
+}
+
+export function buildFinalizeCommands(opts: {
+  runnerDir: string;
+  skillDir: string;
+  skill: string;
+  iteration: number;
+}): StepCommand[] {
+  const shared = [
+    "--skill-dir",
+    opts.skillDir,
+    "--skill",
+    opts.skill,
+    "--iteration",
+    String(opts.iteration),
+  ];
+  return [
+    {
+      label: "grade --finalize",
+      argv: [
+        "bun",
+        "run",
+        join(opts.runnerDir, "grade.ts"),
+        ...shared,
+        "--finalize",
+      ],
+    },
+    {
+      label: "aggregate",
+      argv: ["bun", "run", join(opts.runnerDir, "aggregate.ts"), ...shared],
+    },
+  ];
+}
+
+/**
+ * Runs steps in order, stopping at the first non-zero exit. A failure must
+ * halt the chain: grade's `__skill_invoked` code-check silently degrades to an
+ * LLM judge when `tool_invocations` is missing, so grading after a failed
+ * record/fill step would quietly lose the deterministic check.
+ */
+export function runSteps(
+  steps: StepCommand[],
+  spawn: (step: StepCommand) => number = (step) =>
+    Bun.spawnSync(step.argv, { stdout: "inherit", stderr: "inherit" })
+      .exitCode ?? 1,
+): { failedAt: string | null } {
+  for (const step of steps) {
+    console.log(`\n── ${step.label} ──`);
+    if (spawn(step) !== 0) return { failedAt: step.label };
+  }
+  return { failedAt: null };
+}
+
+function commandIngest(args: Args, ctx: RunContext): void {
+  if (args.iteration === undefined) die("ingest requires --iteration <N>");
+  if (!args.subagentsDir)
+    die(
+      "ingest requires --subagents-dir <path> (Claude Code persists subagent transcripts under ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/)",
+    );
+  const { failedAt } = runSteps(
+    buildIngestCommands({
+      runnerDir: import.meta.dir,
+      skillDir: ctx.skillDir,
+      skill: ctx.skillName,
+      iteration: args.iteration,
+      subagentsDir: args.subagentsDir,
+    }),
+  );
+  if (failedAt)
+    die(
+      `ingest stopped at '${failedAt}'. Fix the failure and re-run ingest — completed steps skip work that's already done.`,
+    );
+
+  const judgeTasksPath = join(
+    ctx.workspaceRoot,
+    ctx.skillName,
+    `iteration-${args.iteration}`,
+    "judge-tasks.json",
+  );
+  let totalTasks: number | null = null;
+  try {
+    totalTasks =
+      readJson<{ total_tasks?: number }>(judgeTasksPath).total_tasks ?? null;
+  } catch {
+    // grade always writes judge-tasks.json; treat a read failure as unknown.
+  }
+  if (totalTasks === 0) {
+    console.log(
+      `\n✅ Ingest complete — no judge dispatches needed.\nNext: bun run evals:finalize -- --skill ${ctx.skillName} --iteration ${args.iteration}`,
+    );
+  } else {
+    console.log(
+      `\n✅ Ingest complete. Dispatch the ${totalTasks ?? ""} judge task(s) grade listed above (judge-tasks.json), then:\n  bun run evals:finalize -- --skill ${ctx.skillName} --iteration ${args.iteration}`,
+    );
+  }
+}
+
+function commandFinalize(args: Args, ctx: RunContext): void {
+  if (args.iteration === undefined) die("finalize requires --iteration <N>");
+  const { failedAt } = runSteps(
+    buildFinalizeCommands({
+      runnerDir: import.meta.dir,
+      skillDir: ctx.skillDir,
+      skill: ctx.skillName,
+      iteration: args.iteration,
+    }),
+  );
+  if (failedAt)
+    die(
+      `finalize stopped at '${failedAt}'. Fix the failure and re-run finalize.`,
+    );
+  console.log(
+    `\n✅ Finalize complete. Read the benchmark above, then tear down: bun run evals:teardown --skill ${ctx.skillName}`,
+  );
+}
+
 if (import.meta.main) {
   const argv = Bun.argv.slice(2);
   const args = parseArgs(argv);
@@ -1018,6 +1343,8 @@ if (import.meta.main) {
     die(err instanceof Error ? err.message : String(err));
   }
   if (args.command === "snapshot") commandSnapshot(args, ctx);
+  else if (args.command === "ingest") commandIngest(args, ctx);
+  else if (args.command === "finalize") commandFinalize(args, ctx);
   else if (args.command === "teardown-guard") {
     const torn = teardownGuard(ctx.stageRoot);
     console.log(
@@ -1025,5 +1352,37 @@ if (import.meta.main) {
         ? "🛡 Write guard removed."
         : "No write guard was installed — nothing to remove.",
     );
+  } else if (args.command === "teardown") {
+    // Full end-of-run teardown: disarm the guard, remove the staged skill set
+    // (and prune a `.claude` the runner emptied), then reclaim the workspace —
+    // leaving the user's own `.claude/settings.json`, pre-existing project
+    // skills, and any uncommitted eval results intact.
+    const torn = teardownGuard(ctx.stageRoot);
+    cleanupStagedSkills(ctx.stageRoot);
+    const ws = cleanupWorkspace(ctx.workspaceRoot, ctx.skillName);
+    console.log(
+      `🧹 Eval teardown complete: staged skill set removed${
+        torn ? " and write guard disarmed" : ""
+      }.`,
+    );
+    const reclaimed = ws.removedIterations.length + ws.removedSnapshots.length;
+    if (reclaimed > 0) {
+      console.log(
+        `   Reclaimed ${ws.removedIterations.length} workspace iteration(s)` +
+          ` and ${ws.removedSnapshots.length} reproducible snapshot(s).`,
+      );
+    }
+    if (ws.keptIterations.length > 0) {
+      const lines = ws.keptIterations.map(
+        (k) => `     - ${k.iteration} (${k.reason})`,
+      );
+      console.warn(
+        `⚠ Kept ${ws.keptIterations.length} workspace iteration(s) with results ` +
+          `not yet committed:\n${lines.join("\n")}\n` +
+          `   Commit them, e.g.:\n` +
+          `     bun run evals:promote-baseline --skill ${ctx.skillName} --iteration <N>\n` +
+          `   or delete ${join("skills-workspace", ctx.skillName)}/ manually to discard.`,
+      );
+    }
   } else commandRun(args, ctx);
 }

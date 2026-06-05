@@ -60,7 +60,7 @@ Roughly in increasing order of effort / payoff:
    class of eval measurable. This is the high-value framework improvement.
 3. **Real harness-mode injection.** Reproduce the plan-mode suppression by running
    the eval subagent *inside* a real plan mode rather than a described one. Tracked
-   as a parity goal in `harness-parity-check.md`; the biggest lift.
+   as a parity goal in `skills/evaluating-skills/harness-parity.md`; the biggest lift.
 
 ## Bigger-picture testing strategy (from the maintainer)
 

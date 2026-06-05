@@ -11,11 +11,12 @@
     "iteration": { "type": "integer" },
     "totals": {
       "type": "object",
-      "required": ["violations", "warnings"],
+      "required": ["violations", "warnings", "live_source_reads"],
       "additionalProperties": false,
       "properties": {
         "violations": { "type": "integer" },
-        "warnings": { "type": "integer" }
+        "warnings": { "type": "integer" },
+        "live_source_reads": { "type": "integer" }
       }
     },
     "runs": {
@@ -23,7 +24,13 @@
       "description": "One entry per (eval, condition) run that had at least one finding.",
       "items": {
         "type": "object",
-        "required": ["eval_id", "condition", "violations", "warnings"],
+        "required": [
+          "eval_id",
+          "condition",
+          "violations",
+          "warnings",
+          "live_source_reads"
+        ],
         "additionalProperties": false,
         "properties": {
           "eval_id": { "type": "string" },
@@ -36,6 +43,11 @@
           "warnings": {
             "type": "array",
             "description": "Heuristic: a Bash command matched a mutating pattern (install, git, sed -i, redirection) without referencing the outputs dir.",
+            "items": { "$ref": "#/definitions/finding" }
+          },
+          "live_source_reads": {
+            "type": "array",
+            "description": "A read tool or Bash command accessed the live skill-under-test directory instead of the staged copy — the arm may be contaminated (staged-slug resolution race).",
             "items": { "$ref": "#/definitions/finding" }
           }
         }

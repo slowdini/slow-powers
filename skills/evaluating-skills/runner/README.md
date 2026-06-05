@@ -22,6 +22,7 @@ Other flags:
 - `--workspace-dir <path>` (optional) — where iteration artifacts are written. Defaults to `<CWD>/skills-workspace`.
 - `--harness claude-code` (optional, default `claude-code`; the only supported harness).
 - `--no-stage`, `--dry-run`, `--iteration <N>`, `--mode <new-skill|revision>`, `--baseline <label>`, `--label <label>` — as before.
+- `--ref <git-ref>` (optional, `snapshot` only) — snapshot the skill (SKILL.md + sibling assets, excluding `evals/`) as it existed at a git ref, read straight from git without touching the working tree. Use it for the common edit-first Mode B order: edit the skill, *then* snapshot the old version with `--ref HEAD` (or any commit/tag/branch) as the baseline. Without `--ref`, `snapshot` reads the working tree as before.
 - `--only <id,id,...>` / `--skip <id,id,...>` (optional) — run only, or all-but, the named eval ids from `evals.json`. The two are mutually exclusive, and every named id must exist (the run aborts with the available ids listed otherwise). Use this for a cost-conscious reduced-set run instead of temporarily editing `evals.json` down. The pre-flight summary and the `N evals × 2 conditions` count reflect the filtered set.
 - `--plan-mode` (optional, Claude Code) — inject the harness's verbatim plan-mode procedure as an operating-context layer. When set, the runner reads `profiles/<harness>/plan-mode.md` and emits it (via the session adapter's `renderPlanModeContext`) as a `<system-reminder>` block in every dispatch, after the available-skills block and before the user request. It is identical across the with/without-skill arms and recorded as `plan_mode` in `dispatch.json`. This is issue #142's highest-fidelity in-runner approximation of a real plan mode — still text the agent reads, so a pass is necessary-not-sufficient; see *Seeding conversation context (and its ceiling)* in `../SKILL.md`. Opt-in, and meant only for plan-mode-relevant skills; a harness with no profile aborts the run, leaving the portable dispatch contract unchanged.
 
@@ -29,7 +30,7 @@ Staging is written under the current working directory: `<CWD>/.claude/skills/`.
 
 ## Driving the loop
 
-Every run produces both a `dispatch-manifest.md` (human-readable) and a `dispatch.json` (machine-readable). An agent in a session reads `dispatch.json`, dispatches each task itself, and writes the run/timing records to the paths in each task.
+Every run produces both a `dispatch-manifest.md` (human-readable) and a `dispatch.json` (machine-readable). An agent in a session reads `dispatch.json` and dispatches each task itself. On Claude Code the rest is two fixed-order commands around the judge dispatches — `ingest` (record-runs → fill-transcripts → detect-stray-writes → grade) and `finalize` (grade --finalize → aggregate) — so the whole loop is three runner calls and two dispatch batches. On harnesses without persisted transcripts, the agent writes the records to the paths in each task by hand and runs the chained steps individually (the portable path).
 
 ## Quickstart (internal / repo use)
 
@@ -44,20 +45,20 @@ Maintainers run from the repo root; the npm scripts supply `--skill-dir ./skills
 bun run evals -- --skill <name> --mode new-skill
 
 # 3. Read skills-workspace/<name>/iteration-1/dispatch.json and dispatch each
-#    task as a fresh general-purpose subagent, writing run.json + timing.json
-#    to the paths in each task.
+#    task as a fresh general-purpose subagent (each writes its own
+#    outputs/final-message.md).
 
-# 4. Fill tool_invocations from subagent transcripts:
-bun run evals:fill-transcripts -- --skill <name> --iteration 1 \
+# 4. Ingest — record-runs → fill-transcripts → detect-stray-writes → grade,
+#    in fixed order (assembles run.json + timing.json from dispatch.json,
+#    final-message.md, and the persisted transcripts, then emits judge tasks):
+bun run evals:ingest -- --skill <name> --iteration 1 \
   --subagents-dir ~/.claude/projects/<project-slug>/<parent-session-id>/subagents/
 
-# 5. Grade:
-bun run evals:grade -- --skill <name> --iteration 1
-# (After judge subagents complete and their responses are written, finalize:)
-bun run evals:grade -- --skill <name> --iteration 1 --finalize
+# 5. Dispatch each judge task ingest listed, writing responses to their
+#    response_path.
 
-# 6. Aggregate:
-bun run evals:aggregate -- --skill <name> --iteration 1
+# 6. Finalize — grade --finalize → aggregate:
+bun run evals:finalize -- --skill <name> --iteration 1
 
 # 7. Read skills-workspace/<name>/iteration-1/benchmark.json.
 
@@ -68,17 +69,23 @@ bun run evals:promote-baseline -- --skill <name> --iteration 1
 
 ### Mode B — Evaluate a language change to an existing skill
 
+The common case is edit-first: you've already changed the skill, then decide to eval.
+Snapshot the *old* version from git — no working-tree dance:
+
 ```bash
-# 1. Snapshot current SKILL.md before editing.
-bun run evals:snapshot -- --skill <name> --label baseline-2026-05-24
+# 1. Edit skills/<name>/SKILL.md (the "new" version is now in the working tree).
 
-# 2. Edit skills/<name>/SKILL.md.
+# 2. Snapshot the old version straight from git as the baseline.
+bun run evals:snapshot -- --skill <name> --label baseline-2026-05-24 --ref HEAD
 
-# 3. Build the iteration-N workspace, comparing snapshot vs current.
+# 3. Build the iteration-N workspace, comparing baseline (old) vs current (new).
 bun run evals -- --skill <name> --mode revision --baseline baseline-2026-05-24
 
 # 4-7. Same as Mode A.
 ```
+
+If you snapshot *before* editing instead, drop `--ref HEAD` from step 2 (it reads the
+working tree) and run it before step 1.
 
 ### Dry run (workspace prep only)
 
@@ -102,12 +109,14 @@ If you have the slow-powers plugin installed and a personal skill, you do **not*
 ## Layout
 
 - `context.ts` — `detectRunContext(argv)` builds the `RunContext` every command shares: resolves `--skill-dir`/`--skill`, enumerates sibling skills, resolves `--bootstrap`/`--workspace-dir`, and derives `stageRoot` (CWD) and `workspaceRoot`.
-- `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. On Claude Code (default), also stages each condition's snapshot at `<stageRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md` so the subagent can discover and invoke it via the Skill tool, stages every *other* skill found in `--skill-dir` at its natural name so cross-references resolve, and builds the `<session-start-context>` block (see *Environment parity* below). Pass `--no-stage` to opt out and fall back to inlining the SKILL.md into the dispatch prompt. Also handles the `snapshot` subcommand.
+- `run.ts` — orchestrator; builds workspace tree, snapshots SKILL.md, emits dispatch manifest. On Claude Code (default), also stages each condition's snapshot at `<stageRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md` so the subagent can discover and invoke it via the Skill tool, stages every *other* skill found in `--skill-dir` at its natural name so cross-references resolve, and builds the `<session-start-context>` block (see *Environment parity* below). Pass `--no-stage` to opt out and fall back to inlining the SKILL.md into the dispatch prompt. Pass `--stage-name <name>` to stage under a verbatim name instead of the eval slug (issue #144 name-confound experiments; single-staging-condition modes only, refuses to clobber an existing dir, registered for next-run cleanup). Also handles the `snapshot`, `ingest`/`finalize` (fixed-order post-dispatch chains over the sibling commands), and `teardown` subcommands.
 - `grade.ts` — evaluates `transcript_check` assertions directly (regex against `tool_invocations`), emits judge-task files for `llm_judge` assertions, then finalizes by merging judge responses into per-run `grading.json`. The `__skill_invoked` meta-check is code-based on Claude Code when the staged-skill slug is known and `tool_invocations` is populated (deterministic scan for a `Skill` tool call with matching slug); it falls back to an LLM judge looking for behavioral fingerprints when either signal is missing.
 - `aggregate.ts` — reads grading.json + timing.json from an iteration, writes `benchmark.json` with pass-rate / duration / token stats keyed by condition name.
 - `promote-baseline.ts` — copies the durable subset of an iteration (`benchmark.json` + each run's `grading.json` + a `BASELINE.md` provenance file) into the skill's version-controlled `evals/baseline/`. Flags: `--skill-dir`/`--skill` (as everywhere), `--iteration <N>` (required), `--label <tag>` (optional, recorded in provenance). Everything else in the workspace stays gitignored.
-- `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a subagent transcript by description, parses the transcript with the appropriate adapter, populates `tool_invocations` in `run.json`.
-- `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]`. Also exposes `listSubagents` / `findByDescription` for the fill-transcripts CLI.
+- `record-runs.ts` — assembles a schema-valid `run.json` and backfills `timing.json` for every task in a runner-built iteration, from `dispatch.json` (carry-over fields) + `outputs/final-message.md` (`final_message`, transcript fallback) + the persisted transcript (`tool_invocations`, tokens, duration). Never clobbers existing records without `--overwrite`; transcript-derived timing carries `"source": "transcript"`. Claude-Code-tier, like `fill-transcripts` — transcript-less harnesses keep authoring records manually (the portable path).
+- `fill-transcripts.ts` — walks the iteration tree, matches each `(eval, condition)` to a subagent transcript by description, parses the transcript with the appropriate adapter, populates `tool_invocations` in `run.json`. Subsumed by `record-runs` for runner-built iterations; still the tool for filling a pre-existing (hand- or agent-written) `run.json`.
+- `detect-stray-writes.ts` — scans each run's `tool_invocations` for sandbox breaches and writes `stray-writes.json`: write tools targeting paths outside the run's outputs dir (violations), mutating Bash heuristics (warnings), and **live-source reads** — a read tool or Bash command accessing the live skill-under-test directory instead of its staged copy, the signature of the staged-slug resolution race (skills staged mid-session aren't guaranteed resolvable by the Skill tool, whose registry is built at session start; an agent that hits "Unknown skill" improvises and reads the live source, contaminating its arm). `aggregate` lifts all three into `benchmark.json`'s `validity_warnings`.
+- `adapters/claude-code-transcript.ts` — reads a Claude Code subagent JSONL and returns `ToolInvocation[]` (`parseTranscript`), or the full summary with usage tokens deduped by message id, wall-clock duration, and the last assistant text (`parseTranscriptFull`). Also exposes `listSubagents` / `findByDescription` for transcript correlation.
 - `types.ts` — shared TypeScript types matching `../schema/*.json`.
 - `validate.ts` / `validate-all.ts` — validator for `evals.json` against the JSON Schema rules. `validate-all.ts` takes `--skill-dir` and validates every skill's `evals.json` in it.
 
@@ -137,7 +146,7 @@ For the **`without_skill` / baseline condition** in this realistic environment, 
 - **General fallback.** Harnesses without project-local discovery should keep using `--no-stage`; the inline `<skill>` block in the dispatch prompt is the only skill the subagent sees. Bootstrap is omitted in this mode because its references to other skills would mislead the agent.
 - **Plan-mode profiles (`--plan-mode`).** The plan-mode operating-context layer is also a harness-specific surface. The procedure text lives in `profiles/<harness>/plan-mode.md` and is wrapped by a `renderPlanModeContext` in that harness's session adapter (`adapters/<harness>-session.ts`), exactly mirroring how `renderAvailableSkillsBlock` is harness-specific. Only `profiles/claude-code/plan-mode.md` exists today; a harness that wants this fidelity layer adds its own profile file (its native plan/research mode procedure) plus a renderer alongside the Claude ones. A harness with no profile simply has no `--plan-mode`, and the portable dispatch contract is unchanged.
 
-The committed per-skill baselines (`skills/<skill>/evals/baseline/`) plus the `transcript_check` assertions in the baseline eval suite give other harnesses a concrete target to reproduce: a harness whose adapter populates `tool_invocations` faithfully should be able to re-run a skill's eval and land close to the committed `benchmark.json` delta. See `harness-parity-check.md` — the transcript adapter is a parity target, and evals are not production functionality, so a harness can aim high here without risking user-facing behavior.
+The committed per-skill baselines (`skills/<skill>/evals/baseline/`) plus the `transcript_check` assertions in the baseline eval suite give other harnesses a concrete target to reproduce: a harness whose adapter populates `tool_invocations` faithfully should be able to re-run a skill's eval and land close to the committed `benchmark.json` delta. See `../harness-parity.md` — the transcript adapter is a parity target, and evals are not production functionality, so a harness can aim high here without risking user-facing behavior.
 
 **Operational notes.** Do not run two `run.ts` invocations concurrently against the same CWD — they race on `<stageRoot>/.claude/skills/` and the manifest.
 

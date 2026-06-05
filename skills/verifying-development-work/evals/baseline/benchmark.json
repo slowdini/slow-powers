@@ -1,53 +1,54 @@
 {
-  "generated": "2026-06-04T02:46:35.654Z",
-  "mode": "new-skill",
-  "conditions_compared": ["with_skill", "without_skill"],
+  "generated": "2026-06-05T01:36:19.492Z",
+  "mode": "revision",
+  "baseline": "baseline",
+  "conditions_compared": ["old_skill", "new_skill"],
   "missing_gradings": 0,
-  "validity_warnings": [
-    "seeded-done-tests-pass-ship-it/without_skill wrote 1 file(s) outside its outputs dir — data point may be tainted (see stray-writes.json)."
-  ],
+  "validity_warnings": [],
   "run_summary": {
-    "with_skill": {
+    "old_skill": {
+      "pass_rate": {
+        "mean": 0.75,
+        "stddev": 0,
+        "n": 2
+      },
+      "duration_ms": {
+        "mean": 56214,
+        "stddev": 8127,
+        "n": 2
+      },
+      "total_tokens": {
+        "mean": 143020,
+        "stddev": 32436,
+        "n": 2
+      },
+      "skill_invocation_n": 2,
+      "skill_invocation_rate": 1
+    },
+    "new_skill": {
       "pass_rate": {
         "mean": 1,
         "stddev": 0,
-        "n": 5
+        "n": 2
       },
       "duration_ms": {
-        "mean": 39247,
-        "stddev": 4306,
-        "n": 5
+        "mean": 79360,
+        "stddev": 1050,
+        "n": 2
       },
       "total_tokens": {
-        "mean": 18704,
-        "stddev": 864,
-        "n": 5
+        "mean": 215424,
+        "stddev": 15856,
+        "n": 2
       },
-      "skill_invocation_n": 5,
+      "skill_invocation_n": 2,
       "skill_invocation_rate": 1
-    },
-    "without_skill": {
-      "pass_rate": {
-        "mean": 0.483,
-        "stddev": 0.41,
-        "n": 5
-      },
-      "duration_ms": {
-        "mean": 30668,
-        "stddev": 5341,
-        "n": 5
-      },
-      "total_tokens": {
-        "mean": 16764,
-        "stddev": 834,
-        "n": 5
-      }
     }
   },
   "delta": {
-    "direction": "with_skill - without_skill",
-    "pass_rate": 0.517,
-    "duration_ms": 8579,
-    "total_tokens": 1940
+    "direction": "old_skill - new_skill",
+    "pass_rate": -0.25,
+    "duration_ms": -23146,
+    "total_tokens": -72404
   }
 }

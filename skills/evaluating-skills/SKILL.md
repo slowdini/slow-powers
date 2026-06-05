@@ -21,13 +21,15 @@ Compares `with_skill/` vs `without_skill/`. Use when validating a brand-new skil
 
 ### Mode B — Revision comparison
 
-Compares `old_skill/` vs `new_skill/`. **This is the common case.** Use when testing a language change to an existing skill — snapshot the current SKILL.md before editing, make changes, run both variants against the same prompts.
+Compares `old_skill/` vs `new_skill/`. **This is the common case.** Use when testing a language change to an existing skill — snapshot the old SKILL.md as a baseline, then run both variants against the same prompts.
 
-Mode B workflow:
-1. Snapshot current SKILL.md (label the snapshot with a date or short tag)
-2. Edit the skill
+Mode B workflow (edit-first — the usual order):
+1. Edit the skill (the new version is now in the working tree)
+2. Snapshot the old version straight from git: `snapshot --label <tag> --ref HEAD` (any commit/tag/branch works; `--ref` reads git without touching the working tree)
 3. Run the eval with `--mode revision --baseline <snapshot-label>`
 4. Grade and aggregate; review the delta
+
+If you snapshot *before* editing, omit `--ref` in step 2 (it reads the working tree) and do it ahead of step 1.
 
 A negative or zero delta is a signal to revert the change — the new language did not improve behavior.
 
@@ -51,7 +53,7 @@ Each iteration lands under `<workspace-dir>/<skill>/iteration-N/` with the same 
 
 #### What gets staged
 
-The runner stages every skill it finds under `--skill-dir`. The skill-under-test goes under a unique slug for the `__skill_invoked` meta-check; sibling skills stage under their natural names so cross-references resolve. **If your `--skill-dir` contains only your one skill, the eval runs in isolation** — references like "REQUIRED SUB-SKILL: `slow-powers:test-driven-development`" won't resolve, and your assertions must not depend on a sibling skill firing. To include other skills as siblings, copy or symlink them into `--skill-dir` before running.
+The runner stages every skill it finds under `--skill-dir`. The skill-under-test goes under a unique slug for the `__skill_invoked` meta-check — with its sibling asset files (any non-`SKILL.md`, non-`evals/` content) copied alongside, so a multi-file skill whose `SKILL.md` links a companion doc (e.g. `[code-review.md](code-review.md)`) still resolves once staged; sibling skills stage under their natural names so cross-references resolve. **If your `--skill-dir` contains only your one skill, the eval runs in isolation** — references like "REQUIRED SUB-SKILL: `slow-powers:test-driven-development`" won't resolve, and your assertions must not depend on a sibling skill firing. To include other skills as siblings, copy or symlink them into `--skill-dir` before running.
 
 #### Bootstrap content
 
@@ -135,7 +137,7 @@ Do not dispatch until the user confirms *this summary*. An earlier "run the eval
 A subagent under test runs the real skill, and some skills write to disk — the skill that triggered this gate, `working-in-isolation`, creates git worktrees in whatever repo it's pointed at. Without active enforcement those writes land in your working directory.
 
 - **Guard available (Claude Code):** arming `--guard` is the default. If you are about to run without it, STOP. Proceed unguarded **only** when the user actively opts out — and warn them that stray writes will then only be **detected after the fact** by `detect-stray-writes`, never blocked or reverted, so anything a subagent writes outside its `outputs/` dir (worktrees, installed packages, edited repo files) persists and is theirs to clean up.
-- **Guard unavailable (other harnesses):** there is no active write enforcement. Tell the user plainly: stray writes are detected and reported by `detect-stray-writes` but **not auto-cleaned** — they must review the report and remove anything that escaped. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.
+- **Guard unavailable (other harnesses):** there is no active write enforcement. Tell the user plainly: stray writes are detected and reported by `detect-stray-writes` but **not auto-cleaned** — they must review the report and remove anything that escaped. Harness-level write enforcement is tracked as a parity goal in `harness-parity.md`.
 
 ## Red Flags — STOP before dispatching
 
@@ -157,13 +159,13 @@ For each test case, dispatch fresh general-purpose subagents — one per conditi
 
 Subagents MUST start with clean context. State leaking from previous runs invalidates the comparison.
 
-When a subagent completes, capture:
+Each run needs a portable **run record** (`run.json`, matching `schema/run-record.schema.json`) and a timing record (`timing.json`) holding:
 
-- `total_tokens` and `duration_ms` from the harness's task completion event — **these may not be persisted anywhere else; save them immediately**
+- `total_tokens` and `duration_ms`
 - The final user-facing message
 - The tool invocations (best effort — see "Transcript access" below)
 
-Convert these into a portable **run record** (`run.json`) using `schema/run-record.schema.json`. Each harness has its own adapter — Claude Code's lives at `runner/adapters/`; other harnesses write their own or fill the record manually.
+On a harness with persisted transcripts (Claude Code), `record-runs` assembles both records from disk after the dispatches — nothing is captured by hand. On a transcript-less harness, capture them manually when each subagent completes: tokens/duration come from the harness's task completion event (**these may not be persisted anywhere else; save them immediately**), and the record is written via that harness's adapter or by hand.
 
 ### Driving the eval loop
 
@@ -171,12 +173,10 @@ The agent itself drives the entire loop from inside a normal agent session:
 
 1. The agent invokes the runner via Bash to build the workspace (same command as above).
 2. The agent reads the generated `dispatch.json` (machine-readable sibling of the manifest). Each task object points at a `dispatch_prompt_path` (a file holding the full prompt), an `agent_description` to pass through as the dispatch description, and exact `run_record_path` and `timing_path` to write to. The prompt lives in a file rather than inline in `dispatch.json` so the agent never has to reproduce kilobytes of prompt text per dispatch. The `agent_description` is namespaced with the iteration and a per-run nonce (`<eval_id>:<condition>:i<N>-<nonce>`) so transcripts from different iterations sharing one session's subagents dir can't collide — **pass it verbatim; do not reconstruct it from the eval id and condition.**
-3. For each task, the agent dispatches a fresh subagent using its host's primitive, instructing it to read the file at `dispatch_prompt_path` and follow it exactly, and passing `agent_description` verbatim as the dispatch `description`. Passing the description through unchanged is what lets the transcript adapter correlate transcripts to runs in step 5.
-4. When the subagent returns, the agent writes the portable run record to `run_record_path` (with `tool_invocations: []`) and the timing record to `timing_path`.
-5. (Claude Code) The agent runs `bun run evals:fill-transcripts` to populate `tool_invocations` from persisted subagent transcripts. Other harnesses skip this step; `transcript_check` assertions grade as unverifiable.
-6. (Optional, where transcripts were filled) The agent runs `bun run evals:detect-stray-writes --skill <name> --iteration <N>` to flag any subagent writes or installs that landed outside the run's `outputs/` dir. See *Sandboxing eval subagents* below.
-7. The agent runs the grader (Bash) and then dispatches judge subagents for any `llm_judge` assertions — same pattern: read a tasks file, dispatch, write results back to a path.
-8. The agent runs the aggregator.
+3. For each task, the agent dispatches a fresh subagent using its host's primitive, instructing it to read the file at `dispatch_prompt_path` and follow it exactly, and passing `agent_description` verbatim as the dispatch `description`. Passing the description through unchanged is what lets the transcript adapter correlate transcripts to runs in step 4.
+4. (Claude Code) After all dispatches return, the agent runs `bun run evals:ingest` once — a fixed-order chain of record-runs (assembles every task's `run.json` from `dispatch.json` + the subagent's own `outputs/final-message.md` + the persisted transcript, and backfills `timing.json` with transcript-derived tokens/duration, `"source": "transcript"`; never clobbers a record that already exists), fill-transcripts, detect-stray-writes (see *Sandboxing eval subagents* below), and the grader. It stops where only the agent can act: dispatching a judge subagent for each `llm_judge` assertion — same pattern as step 3: read a tasks file, dispatch, write results back to a path.
+5. (Claude Code) After the judges return, the agent runs `bun run evals:finalize` — grade `--finalize` then the aggregator — and reads the benchmark.
+6. (Other harnesses) The portable path is the same loop run by hand: when each subagent returns, the agent writes the run record to `run_record_path` and the timing record to `timing_path` itself (without a transcript adapter, `tool_invocations` stays `[]` and `transcript_check` assertions grade as unverifiable), then runs the grader, dispatches judges, finalizes, and aggregates as individual commands.
 
 Agent-driven mode is the common case because the framework is most useful from inside the harness where the skill is being iterated. Use it when you want a single in-session "run the eval and report the delta" flow.
 
@@ -195,7 +195,9 @@ Design your assertions accordingly. For maximally portable evals, lean on `llm_j
 The dispatch prompt tells each subagent to write only inside its `outputs/` dir, but nothing in the portable contract *enforces* that — a misbehaving subagent can edit the real repo or run `npm install` against the repo root, silently corrupting the very runner it's being measured by. Two layers guard against this:
 
 - **Detection (all harnesses).** After `fill-transcripts` populates `tool_invocations`, run `bun run evals:detect-stray-writes --skill <name> --iteration <N>`. It reads each task's `outputs_dir` from `dispatch.json` and scans the invocations for **violations** (`Write`/`Edit`/`MultiEdit`/`NotebookEdit` whose path resolves outside the run's `outputs/`) and **warnings** (Bash commands matching install/`git`/`sed -i`/redirection patterns that don't reference `outputs/`). Findings land in `stray-writes.json`; the aggregator turns each run with violations into a `validity_warnings` entry, so a tainted data point is flagged the same way a missed skill invocation is. This is portable because it works off the same transcripts the adapters already parse — but it only *reports*, after the fact; it never reverts what a subagent wrote.
-- **Hard guard (Claude Code, default posture).** `--guard` stages a `PreToolUse` hook that actively *blocks* out-of-bounds writes and installs while the subagents run. On Claude Code it is the default — the *Pre-flight gate* requires you to arm it unless the user explicitly opts out. It's Claude-Code-specific; see `harness-details/claude.md`. Harness-level write enforcement is tracked as a parity goal in `harness-parity-check.md`.
+- **Hard guard (Claude Code, default posture).** `--guard` stages a `PreToolUse` hook that actively *blocks* out-of-bounds writes and installs while the subagents run — including `git worktree add` and Bash that creates files under `.claude` or a bare `skills/`. On Claude Code it is the default — the *Pre-flight gate* requires you to arm it unless the user explicitly opts out. It's Claude-Code-specific; see `harness-details/claude.md`. Harness-level write enforcement is tracked as a parity goal in `harness-parity.md`.
+
+A run ends with teardown (`bun run evals:teardown --skill <name>`, or the `teardown` runner command): it disarms the guard, removes the staged skill set the runner created under `<cwd>/.claude/skills/`, **and** reclaims the skill's `skills-workspace/` artifacts, so a completed run leaves nothing behind that wasn't meant to be committed. Pre-existing project skills and `.claude/settings.json` are left intact. Teardown only deletes what's safe: iterations whose results are committed (it keys off the `.promoted.json` marker `promote-baseline` drops) and snapshots reproducible from a git ref. Iterations with results you haven't promoted, and working-tree snapshots, are **preserved** with a warning telling you to promote or discard them. Pass the same `--workspace-dir` you ran with if you used a custom one.
 
 ## Workspace layout
 
@@ -277,7 +279,7 @@ The check has two tiers, chosen automatically per run:
 - **Code-based (Claude Code).** On harnesses that persist subagent transcripts with discrete `Skill` tool calls, the framework parses the transcript and checks for a `Skill` invocation whose `input.skill` matches the eval-staged slug. This is deterministic, free, and cannot be fooled by superficial vocabulary in the response.
 - **LLM-judge fallback (other harnesses).** Where transcripts aren't available or the harness injects skills via system-prompt hooks rather than a tool call (Codex, OpenCode), a judge subagent compares the agent's `final_message` against the SKILL.md content embedded in the run record, looking for behavioral fingerprints — distinctive vocabulary, named sections, procedural steps that mirror the skill's phrasing. It does **not** require the agent to explicitly cite the skill (that would taint the eval).
 
-To enable the code-based check on Claude Code, the runner stages each condition's SKILL.md snapshot at `<repoRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md`. The unique slug prevents collisions with already-installed production skills (relevant when evaluating skills in a repo where the same skills are also installed) and is what the code-based check looks for in the transcript. The slug prevents an on-disk *collision*, not runtime *discovery*: if the same skill is also provided by an installed, **enabled** plugin, the subagent can still discover and invoke that copy — contaminating both arms (the control arm is no longer skill-absent). On Claude Code the runner flags this at build time (a "plugin-shadow" warning, also surfaced in `benchmark.json`'s `validity_warnings`), but cannot unload a live plugin; to remove the installed copy, run the eval from a plugin-isolated session — see `harness-details/claude.md` → *Isolating from installed plugins*. The dispatch prompt deliberately omits any inline `<skill>...</skill>` block so the subagent must discover and invoke the staged skill naturally — this measures whether the skill's `description:` actually triggers it. Stale staged skills are swept at the start of each fresh run. Pass `--no-stage` to opt out (e.g., when running the same eval against a harness that doesn't support project-local skill discovery); the runner will fall back to inlining the SKILL.md text in the dispatch prompt, and the LLM-judge meta-check will be used.
+To enable the code-based check on Claude Code, the runner stages each condition's SKILL.md snapshot (plus the skill's sibling asset files) at `<repoRoot>/.claude/skills/slow-powers-eval-<iteration>-<condition>__<skillName>/SKILL.md`. The unique slug prevents collisions with already-installed production skills (relevant when evaluating skills in a repo where the same skills are also installed) and is what the code-based check looks for in the transcript. The slug prevents an on-disk *collision*, not runtime *discovery*: if the same skill is also provided by an installed, **enabled** plugin, the subagent can still discover and invoke that copy — contaminating both arms (the control arm is no longer skill-absent). On Claude Code the runner flags this at build time (a "plugin-shadow" warning, also surfaced in `benchmark.json`'s `validity_warnings`), but cannot unload a live plugin; to remove the installed copy, run the eval from a plugin-isolated session — see `harness-details/claude.md` → *Isolating from installed plugins*. The dispatch prompt deliberately omits any inline `<skill>...</skill>` block so the subagent must discover and invoke the staged skill naturally — this measures whether the skill's `description:` actually triggers it. Stale staged skills are swept at the start of each fresh run. Pass `--no-stage` to opt out (e.g., when running the same eval against a harness that doesn't support project-local skill discovery); the runner will fall back to inlining the SKILL.md text in the dispatch prompt, and the LLM-judge meta-check will be used. The inline fallback carries only the SKILL.md text — sibling asset files aren't inlined — so a multi-file skill whose behavior depends on a linked companion doc needs the staged path, not `--no-stage`.
 
 The aggregator emits a `validity_warnings` array when any with-skill condition has an invocation rate below 100%. Read those before interpreting the substantive delta. The rate is computed only over evals where the skill *should* fire; negative evals (`skill_should_trigger: false`) are excluded so a correct non-trigger never depresses the rate or raises a spurious warning.
 

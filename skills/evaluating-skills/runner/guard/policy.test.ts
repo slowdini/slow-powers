@@ -68,4 +68,61 @@ describe("guard decide", () => {
       true,
     );
   });
+
+  test("denies git worktree add (working tree outside the sandbox)", () => {
+    const d = decide(
+      "Bash",
+      { command: "git worktree add ../wt -b scratch" },
+      marker(),
+    );
+    expect(d.allow).toBe(false);
+    expect(d.reason).toMatch(/worktree/i);
+  });
+
+  test("denies Bash that creates a path under .claude via a non-redirect verb", () => {
+    expect(
+      decide("Bash", { command: "mkdir -p .claude/foo" }, marker()).allow,
+    ).toBe(false);
+    expect(
+      decide("Bash", { command: "cp out.txt .claude/bar" }, marker()).allow,
+    ).toBe(false);
+  });
+
+  test("denies Bash that creates a bare skills/ dir", () => {
+    expect(decide("Bash", { command: "mkdir skills" }, marker()).allow).toBe(
+      false,
+    );
+    expect(
+      decide("Bash", { command: "cp -r src ./skills" }, marker()).allow,
+    ).toBe(false);
+  });
+
+  test("still allows reads of .claude (no create verb)", () => {
+    expect(
+      decide("Bash", { command: "cat .claude/settings.json" }, marker()).allow,
+    ).toBe(true);
+    expect(decide("Bash", { command: "ls .claude" }, marker()).allow).toBe(
+      true,
+    );
+  });
+
+  test("allows a create scoped to the .claude/skills staging root (allowed-root escape)", () => {
+    expect(
+      decide(
+        "Bash",
+        { command: "mkdir -p /work/.claude/skills/staged-x" },
+        marker(),
+      ).allow,
+    ).toBe(true);
+  });
+
+  test("does not flag skills-workspace as a bare skills/ write", () => {
+    expect(
+      decide(
+        "Bash",
+        { command: "mkdir -p /work/skills-workspace/x/outputs" },
+        marker(),
+      ).allow,
+    ).toBe(true);
+  });
 });

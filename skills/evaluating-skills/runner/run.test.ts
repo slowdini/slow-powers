@@ -11,9 +11,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   buildDispatchTask,
+  buildFinalizeCommands,
+  buildIngestCommands,
   cleanupStagedSkills,
   redactSkillFromBootstrap,
   registerStagedSkillForCleanup,
+  runSteps,
   STAGED_SIBLING_MANIFEST,
   STAGED_SKILL_PREFIX,
   selectEvals,
@@ -21,6 +24,7 @@ import {
   stageSkillForCC,
 } from "./run";
 import type { Eval } from "./types";
+import { SNAPSHOT_META } from "./workspace-teardown";
 
 const FIXTURE_ROOT = join(tmpdir(), `slow-powers-run-test-${process.pid}`);
 
@@ -119,6 +123,83 @@ describe("stageSkillForCC", () => {
 
     const stagedPath = join(repoRoot, ".claude", "skills", slug, "SKILL.md");
     expect(readFileSync(stagedPath, "utf8")).toBe("second");
+  });
+
+  test("copies sibling assets from assetsDir alongside the staged SKILL.md", () => {
+    const repoRoot = join(FIXTURE_ROOT, "stage-assets");
+    const assetsDir = join(FIXTURE_ROOT, "stage-assets-src");
+    mkdirSync(repoRoot, { recursive: true });
+    mkdirSync(join(assetsDir, "scripts"), { recursive: true });
+    writeFileSync(join(assetsDir, "SKILL.md"), "the source skill md");
+    writeFileSync(join(assetsDir, "code-review.md"), "review guidance");
+    writeFileSync(
+      join(assetsDir, "scripts", "helper.ts"),
+      "export const x = 1",
+    );
+
+    const slug = stageSkillForCC({
+      content: "staged content",
+      iteration: 1,
+      condition: "new_skill",
+      skillName: "s",
+      repoRoot,
+      assetsDir,
+    });
+
+    const stagedDir = join(repoRoot, ".claude", "skills", slug);
+    // SKILL.md comes from `content`, not the assetsDir copy.
+    expect(readFileSync(join(stagedDir, "SKILL.md"), "utf8")).toBe(
+      "staged content",
+    );
+    expect(readFileSync(join(stagedDir, "code-review.md"), "utf8")).toBe(
+      "review guidance",
+    );
+    expect(readFileSync(join(stagedDir, "scripts", "helper.ts"), "utf8")).toBe(
+      "export const x = 1",
+    );
+  });
+
+  test("excludes SKILL.md, evals/, and the snapshot meta file from the asset copy", () => {
+    const repoRoot = join(FIXTURE_ROOT, "stage-assets-excludes");
+    const assetsDir = join(FIXTURE_ROOT, "stage-assets-excludes-src");
+    mkdirSync(join(assetsDir, "evals", "fixtures"), { recursive: true });
+    mkdirSync(repoRoot, { recursive: true });
+    writeFileSync(join(assetsDir, "SKILL.md"), "src skill md");
+    writeFileSync(join(assetsDir, "code-review.md"), "keep me");
+    writeFileSync(join(assetsDir, SNAPSHOT_META), '{"source":"ref"}');
+    writeFileSync(join(assetsDir, "evals", "evals.json"), "{}");
+
+    const slug = stageSkillForCC({
+      content: "staged",
+      iteration: 1,
+      condition: "old_skill",
+      skillName: "s",
+      repoRoot,
+      assetsDir,
+    });
+
+    const stagedDir = join(repoRoot, ".claude", "skills", slug);
+    expect(existsSync(join(stagedDir, "code-review.md"))).toBe(true);
+    expect(existsSync(join(stagedDir, "evals"))).toBe(false);
+    expect(existsSync(join(stagedDir, SNAPSHOT_META))).toBe(false);
+    // SKILL.md exists (from content) but the assetsDir SKILL.md didn't overwrite it.
+    expect(readFileSync(join(stagedDir, "SKILL.md"), "utf8")).toBe("staged");
+  });
+
+  test("stages SKILL.md alone when assetsDir is omitted", () => {
+    const repoRoot = join(FIXTURE_ROOT, "stage-no-assets");
+    mkdirSync(repoRoot, { recursive: true });
+
+    const slug = stageSkillForCC({
+      content: "solo",
+      iteration: 1,
+      condition: "with_skill",
+      skillName: "s",
+      repoRoot,
+    });
+
+    const stagedDir = join(repoRoot, ".claude", "skills", slug);
+    expect(readdirSync(stagedDir)).toEqual(["SKILL.md"]);
   });
 
   test("stageNameOverride stages under the verbatim name instead of the eval slug", () => {
@@ -393,6 +474,81 @@ describe("cleanupStagedSkills (manifest-aware)", () => {
       existsSync(join(skillsDir, `${STAGED_SKILL_PREFIX}1-with_skill__foo`)),
     ).toBe(false);
     expect(existsSync(join(skillsDir, "user-custom"))).toBe(true);
+  });
+});
+
+describe("cleanupStagedSkills (runner-created .claude/skills)", () => {
+  test("removes the whole .claude/skills tree when the runner created it, and prunes an empty .claude", () => {
+    const root = join(FIXTURE_ROOT, "cleanup-created");
+    mkdirSync(root, { recursive: true });
+    const src = join(root, "src-skills");
+    mkdirSync(join(src, "alpha"), { recursive: true });
+    writeFileSync(join(src, "alpha", "SKILL.md"), "alpha");
+
+    // .claude/skills did NOT pre-exist — stageSiblingSkills creates it.
+    stageSiblingSkills({
+      skillUnderTest: "x",
+      skillsSourceDir: src,
+      repoRoot: root,
+    });
+    // A stray, non-prefixed dir a recursive eval might have left behind.
+    mkdirSync(join(root, ".claude", "skills", "stray-leftover"), {
+      recursive: true,
+    });
+
+    cleanupStagedSkills(root);
+
+    expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
+    // .claude held nothing else, so it is pruned too.
+    expect(existsSync(join(root, ".claude"))).toBe(false);
+  });
+
+  test("keeps .claude (and settings.json) when the runner created only skills/", () => {
+    const root = join(FIXTURE_ROOT, "cleanup-keep-settings");
+    const claudeDir = join(root, ".claude");
+    mkdirSync(claudeDir, { recursive: true });
+    writeFileSync(join(claudeDir, "settings.json"), "{}");
+    const src = join(root, "src-skills");
+    mkdirSync(join(src, "alpha"), { recursive: true });
+    writeFileSync(join(src, "alpha", "SKILL.md"), "alpha");
+
+    // .claude exists but .claude/skills does not — runner creates skills/.
+    stageSiblingSkills({
+      skillUnderTest: "x",
+      skillsSourceDir: src,
+      repoRoot: root,
+    });
+
+    cleanupStagedSkills(root);
+
+    expect(existsSync(join(claudeDir, "skills"))).toBe(false);
+    expect(existsSync(claudeDir)).toBe(true);
+    expect(existsSync(join(claudeDir, "settings.json"))).toBe(true);
+  });
+
+  test("leaves a pre-existing .claude/skills dir in place (surgical restore only)", () => {
+    const root = join(FIXTURE_ROOT, "cleanup-preexisting-skillsdir");
+    const skillsDir = join(root, ".claude", "skills");
+    // The user already had a .claude/skills with their own skill.
+    mkdirSync(join(skillsDir, "user-owned"), { recursive: true });
+    writeFileSync(join(skillsDir, "user-owned", "SKILL.md"), "USER");
+    const src = join(root, "src-skills");
+    mkdirSync(join(src, "alpha"), { recursive: true });
+    writeFileSync(join(src, "alpha", "SKILL.md"), "alpha");
+
+    stageSiblingSkills({
+      skillUnderTest: "x",
+      skillsSourceDir: src,
+      repoRoot: root,
+    });
+
+    cleanupStagedSkills(root);
+
+    expect(existsSync(skillsDir)).toBe(true);
+    expect(
+      readFileSync(join(skillsDir, "user-owned", "SKILL.md"), "utf8"),
+    ).toBe("USER");
+    expect(existsSync(join(skillsDir, "alpha"))).toBe(false);
   });
 });
 
@@ -1004,6 +1160,79 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     expect(existsSync(settingsPath)).toBe(false);
   });
 
+  test("teardown removes the guard AND the staged skill set the runner created", () => {
+    const { skillDir, cwd } = setup("usermode-teardown");
+    const settingsPath = join(cwd, ".claude", "settings.local.json");
+    const stagedSkillsDir = join(cwd, ".claude", "skills");
+
+    const res = runCli(
+      [
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--mode",
+        "new-skill",
+        "--guard",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+    expect(existsSync(settingsPath)).toBe(true);
+    expect(existsSync(stagedSkillsDir)).toBe(true);
+
+    const down = runCli(
+      ["teardown", "--skill-dir", skillDir, "--skill", "mr-review"],
+      cwd,
+    );
+    expect(down.exitCode).toBe(0);
+    // Guard gone, staged skills gone, and the .claude scaffolding the runner
+    // created in this throwaway cwd (no settings.json) is pruned entirely.
+    expect(existsSync(settingsPath)).toBe(false);
+    expect(existsSync(stagedSkillsDir)).toBe(false);
+    expect(existsSync(join(cwd, ".claude"))).toBe(false);
+    // The run only produced scaffolding (no results), so teardown reclaims the
+    // workspace too — a completed run leaves nothing uncommitted behind.
+    expect(existsSync(join(cwd, "skills-workspace"))).toBe(false);
+  });
+
+  test("teardown preserves an iteration with uncommitted results and warns", () => {
+    const { skillDir, cwd } = setup("usermode-teardown-keep");
+
+    const res = runCli(
+      ["--skill-dir", skillDir, "--skill", "mr-review", "--mode", "new-skill"],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    // Simulate a graded-but-not-promoted run: drop an aggregate into the
+    // iteration the runner just created.
+    const iterationDir = join(
+      cwd,
+      "skills-workspace",
+      "mr-review",
+      "iteration-1",
+    );
+    writeFileSync(
+      join(iterationDir, "benchmark.json"),
+      `${JSON.stringify({ delta: { pass_rate: 0.4 } })}\n`,
+    );
+
+    const down = runCli(
+      ["teardown", "--skill-dir", skillDir, "--skill", "mr-review"],
+      cwd,
+    );
+    expect(down.exitCode).toBe(0);
+
+    // Uncommitted results are preserved, and the user is told how to commit.
+    expect(existsSync(iterationDir)).toBe(true);
+    const out =
+      new TextDecoder().decode(down.stdout) +
+      new TextDecoder().decode(down.stderr);
+    expect(out).toContain("iteration-1");
+    expect(out).toContain("promote-baseline");
+  });
+
   test("a normal run does not install a guard", () => {
     const { skillDir, cwd } = setup("usermode-noguard");
     const res = runCli(
@@ -1176,5 +1405,299 @@ describe("run.ts user-mode end-to-end (--skill-dir, isolated CWD)", () => {
     expect(new TextDecoder().decode(res.stderr)).toContain(
       "unknown eval id(s): nope",
     );
+  });
+});
+
+describe("snapshot --ref (read baseline from a git ref, issue #122)", () => {
+  const RUN_TS = join(import.meta.dir, "run.ts");
+
+  function git(args: string[], cwd: string) {
+    const res = Bun.spawnSync(
+      [
+        "git",
+        "-c",
+        "user.email=eval@test",
+        "-c",
+        "user.name=eval",
+        "-c",
+        "commit.gpgsign=false",
+        ...args,
+      ],
+      { cwd, stdout: "pipe", stderr: "pipe" },
+    );
+    if (res.exitCode !== 0)
+      throw new Error(`git ${args.join(" ")} failed: ${res.stderr.toString()}`);
+    return res;
+  }
+
+  function runCli(args: string[], cwd: string) {
+    return Bun.spawnSync(["bun", "run", RUN_TS, ...args], {
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+  }
+
+  /**
+   * Builds a git repo at <root> containing a `mr-review` skill committed as v1,
+   * then overwrites the working-tree SKILL.md with v2 (uncommitted). Returns the
+   * paths a snapshot needs, so a test can assert `--ref HEAD` reads v1 while the
+   * working tree keeps v2.
+   */
+  function setupRepo(
+    name: string,
+    opts: { extraCommitted?: Record<string, string> } = {},
+  ): { root: string; skillDir: string; skillSub: string; cwd: string } {
+    const root = join(FIXTURE_ROOT, name);
+    const skillDir = join(root, "skill-dir");
+    const skillSub = join(skillDir, "mr-review");
+    mkdirSync(skillSub, { recursive: true });
+    writeFileSync(join(skillSub, "SKILL.md"), "v1 baseline\n");
+    for (const [rel, content] of Object.entries(opts.extraCommitted ?? {})) {
+      const p = join(skillSub, rel);
+      mkdirSync(join(p, ".."), { recursive: true });
+      writeFileSync(p, content);
+    }
+
+    git(["init", "-q"], root);
+    git(["add", "-A"], root);
+    git(["commit", "-q", "-m", "v1"], root);
+
+    // Working tree diverges to v2; the commit still holds v1.
+    writeFileSync(join(skillSub, "SKILL.md"), "v2 working tree\n");
+
+    const cwd = join(root, "work");
+    mkdirSync(cwd, { recursive: true });
+    return { root, skillDir, skillSub, cwd };
+  }
+
+  function snapshotPath(cwd: string, label: string, rel: string): string {
+    return join(cwd, "skills-workspace", "mr-review", "snapshots", label, rel);
+  }
+
+  test("snapshots the SKILL.md committed at the ref, leaving the working tree untouched", () => {
+    const { skillDir, skillSub, cwd } = setupRepo("ref-old-content");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "old",
+        "--ref",
+        "HEAD",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    // Snapshot holds the committed v1...
+    expect(readFileSync(snapshotPath(cwd, "old", "SKILL.md"), "utf8")).toBe(
+      "v1 baseline\n",
+    );
+    // ...and the working tree still holds the edited v2 (no clobber).
+    expect(readFileSync(join(skillSub, "SKILL.md"), "utf8")).toBe(
+      "v2 working tree\n",
+    );
+  });
+
+  test("captures sibling assets at the ref but excludes evals/", () => {
+    const { skillDir, cwd } = setupRepo("ref-assets", {
+      extraCommitted: {
+        "assets/notes.md": "asset body\n",
+        "evals/evals.json": '{"skill_name":"mr-review","evals":[]}',
+      },
+    });
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "old",
+        "--ref",
+        "HEAD",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    expect(existsSync(snapshotPath(cwd, "old", "assets/notes.md"))).toBe(true);
+    expect(
+      readFileSync(snapshotPath(cwd, "old", "assets/notes.md"), "utf8"),
+    ).toBe("asset body\n");
+    expect(existsSync(snapshotPath(cwd, "old", "evals"))).toBe(false);
+  });
+
+  test("records ref provenance so teardown can reclaim the snapshot", () => {
+    const { skillDir, cwd } = setupRepo("ref-meta");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "old",
+        "--ref",
+        "HEAD",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const meta = JSON.parse(
+      readFileSync(snapshotPath(cwd, "old", SNAPSHOT_META), "utf8"),
+    ) as { source: string; ref: string };
+    expect(meta.source).toBe("ref");
+    expect(meta.ref).toBe("HEAD");
+  });
+
+  test("a ref that does not exist fails with a clear message", () => {
+    const { skillDir, cwd } = setupRepo("ref-bad");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "old",
+        "--ref",
+        "does-not-exist",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).not.toBe(0);
+    expect(new TextDecoder().decode(res.stderr)).toContain("does-not-exist");
+  });
+
+  test("without --ref, snapshot still reads the working tree (v2)", () => {
+    const { skillDir, cwd } = setupRepo("ref-default-path");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "wt",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+    expect(readFileSync(snapshotPath(cwd, "wt", "SKILL.md"), "utf8")).toBe(
+      "v2 working tree\n",
+    );
+  });
+
+  test("records working-tree provenance so teardown preserves the snapshot", () => {
+    const { skillDir, cwd } = setupRepo("wt-meta");
+    const res = runCli(
+      [
+        "snapshot",
+        "--skill-dir",
+        skillDir,
+        "--skill",
+        "mr-review",
+        "--label",
+        "wt",
+      ],
+      cwd,
+    );
+    expect(res.exitCode).toBe(0);
+
+    const meta = JSON.parse(
+      readFileSync(snapshotPath(cwd, "wt", SNAPSHOT_META), "utf8"),
+    ) as { source: string };
+    expect(meta.source).toBe("working-tree");
+  });
+});
+
+describe("ingest / finalize step plans", () => {
+  const opts = {
+    runnerDir: "/runner",
+    skillDir: "/skills",
+    skill: "mr-review",
+    iteration: 2,
+    subagentsDir: "/subagents",
+  };
+
+  test("buildIngestCommands runs record → fill → stray-writes → grade, in order", () => {
+    const steps = buildIngestCommands(opts);
+    expect(steps.map((s) => s.label)).toEqual([
+      "record-runs",
+      "fill-transcripts",
+      "detect-stray-writes",
+      "grade",
+    ]);
+    // Every step is a bun invocation of the sibling script with the shared flags.
+    for (const step of steps) {
+      expect(step.argv.slice(0, 2)).toEqual(["bun", "run"]);
+      expect(step.argv[2]).toBe(`/runner/${step.label}.ts`);
+      expect(step.argv).toContain("--skill-dir");
+      expect(step.argv).toContain("/skills");
+      expect(step.argv).toContain("--skill");
+      expect(step.argv).toContain("mr-review");
+      expect(step.argv).toContain("--iteration");
+      expect(step.argv).toContain("2");
+    }
+    // The transcript-reading steps get --subagents-dir; the others must not.
+    const byLabel = Object.fromEntries(steps.map((s) => [s.label, s.argv]));
+    expect(byLabel["record-runs"]).toContain("--subagents-dir");
+    expect(byLabel["fill-transcripts"]).toContain("--subagents-dir");
+    expect(byLabel["detect-stray-writes"]).not.toContain("--subagents-dir");
+    expect(byLabel.grade).not.toContain("--subagents-dir");
+  });
+
+  test("buildFinalizeCommands runs grade --finalize then aggregate", () => {
+    const steps = buildFinalizeCommands({
+      runnerDir: "/runner",
+      skillDir: "/skills",
+      skill: "mr-review",
+      iteration: 2,
+    });
+    expect(steps.map((s) => s.label)).toEqual([
+      "grade --finalize",
+      "aggregate",
+    ]);
+    expect(steps[0].argv[2]).toBe("/runner/grade.ts");
+    expect(steps[0].argv).toContain("--finalize");
+    expect(steps[1].argv[2]).toBe("/runner/aggregate.ts");
+  });
+
+  test("runSteps stops at the first failing step and reports it", () => {
+    const ran: string[] = [];
+    const result = runSteps(
+      [
+        { label: "a", argv: ["x"] },
+        { label: "b", argv: ["y"] },
+        { label: "c", argv: ["z"] },
+      ],
+      (step) => {
+        ran.push(step.label);
+        return step.label === "b" ? 1 : 0;
+      },
+    );
+    expect(ran).toEqual(["a", "b"]); // c never runs after b fails
+    expect(result.failedAt).toBe("b");
+  });
+
+  test("runSteps runs everything and reports no failure on success", () => {
+    const result = runSteps(
+      [
+        { label: "a", argv: ["x"] },
+        { label: "b", argv: ["y"] },
+      ],
+      () => 0,
+    );
+    expect(result.failedAt).toBeNull();
   });
 });
