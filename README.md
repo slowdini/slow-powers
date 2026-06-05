@@ -12,17 +12,27 @@ and clarifying skill content.
 
 ## Quickstart
 
-Give your agent superpowers with slow-powers: [Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [OpenCode](#opencode). Support varies per harness — see the [feature support](#feature-support) table.
+Give your agent superpowers with slow-powers: [Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [OpenCode](#opencode). Support varies per harness — see the [feature support](#feature-support) tables.
 
 ## Feature support
+
+Parity is tracked on two independent surfaces. **Plugin distribution** is how Slow-powers reaches a user's session — manifests, bootstrap injection, skill discovery, hooks:
 
 | Harness         | Status   | Notes                                                                             |
 |-----------------|----------|-----------------------------------------------------------------------------------|
 | Claude Code     | Full     | Reference implementation                                                          |
-| Codex CLI       | Partial  | Plugin manifest + shared hooks; no eval transcript adapter (manual run records)   |
-| OpenCode        | Partial  | JS plugin with bootstrap injection; no eval transcript adapter (manual run records) |
+| Codex CLI       | Full     | Plugin manifest + shared `hooks/hooks.json`; the plan hand-off hook is Claude-native (N/A here, see #141) |
+| OpenCode        | Full     | JS plugin (npm package) injects bootstrap and registers skills via the native plugin API |
 
-Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md): it audits which Slow-powers features are wired up for a given harness and preps an agent to close one gap.
+The **skill-eval runner** (developer tooling under `skills/evaluating-skills/`, slated to move into its own project) is tracked separately:
+
+| Harness         | Status   | Notes                                                                             |
+|-----------------|----------|-----------------------------------------------------------------------------------|
+| Claude Code     | Full     | Reference implementation: transcript adapter, auto-record, `--guard`, `--plan-mode` |
+| Codex CLI       | Manual   | No transcript adapter — hand-authored run records; `llm_judge` assertions carry the measurement |
+| OpenCode        | Manual   | No transcript adapter — hand-authored run records; `llm_judge` assertions carry the measurement |
+
+Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md) for distribution gaps, or [`skills/evaluating-skills/harness-parity.md`](./skills/evaluating-skills/harness-parity.md) for eval-runner gaps: each audits which features are wired up for a given harness and preps an agent to close one gap.
 
 ## How it works
 
@@ -136,7 +146,7 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `opencode/` — OpenCode plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
-- `harness-parity-check.md` — Instructions for an agent in any harness to audit feature gaps and prep to close one
+- `harness-parity-check.md` — Instructions for an agent in any harness to audit plugin-distribution gaps and prep to close one (the eval runner's counterpart lives at `skills/evaluating-skills/harness-parity.md`)
 
 ## Releasing
 

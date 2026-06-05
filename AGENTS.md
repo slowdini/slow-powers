@@ -12,7 +12,7 @@ This repo ships Slow-powers across three harnesses:
 - `.codex-plugin/` — OpenAI Codex plugin
 - `opencode/` — OpenCode plugin (`@slowdini/slow-powers-opencode`)
 
-See the [feature support](README.md#feature-support) table in the README for current tier per harness.
+See the [feature support](README.md#feature-support) tables in the README for current tier per harness.
 
 ## Editing the right files
 
@@ -43,7 +43,7 @@ Two file-confusion traps are common in this repo. Avoid both:
 
 Ensure all features work across supported harnesses, with at least a minimum level of compatibility. If a feature isn't supported in a harness, or has reduced or limited functionality, this should be clearly communicated. A feature MUST NOT break or degrade any harness functionality.
 
-When closing gaps between harnesses, follow [`harness-parity-check.md`](./harness-parity-check.md) — it walks an agent through auditing its harness against Claude Code's reference implementation and prepping to close one gap.
+When closing gaps between harnesses, follow [`harness-parity-check.md`](./harness-parity-check.md) for plugin distribution (manifests, bootstrap injection, skill discovery, hooks) or [`skills/evaluating-skills/harness-parity.md`](./skills/evaluating-skills/harness-parity.md) for the skill-eval runner — each walks an agent through auditing its harness against Claude Code's reference implementation and prepping to close one gap.
 
 ## Pull Request Requirements
 
