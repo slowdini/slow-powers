@@ -6,7 +6,7 @@
 // bullets. Other harnesses (Codex, OpenCode) surface their skills differently,
 // so this rendering lives in an adapter rather than inline in the harness-
 // agnostic orchestrator. A new harness adds its own renderer alongside this one
-// (see harness-parity-check.md).
+// (see ../../harness-parity.md).
 
 import type { AvailableSkill } from "../types";
 
@@ -33,7 +33,7 @@ export function renderAvailableSkillsBlock(skills: AvailableSkill[]): string {
  * operating under, not prose it merely reads. The profile text (the verbatim
  * plan-mode procedure) lives in `../profiles/claude-code/plan-mode.md`; this
  * adapter owns only the harness-native framing, so a new harness adds its own
- * renderer + profile alongside this one (see harness-parity-check.md). Returns
+ * renderer + profile alongside this one (see ../../harness-parity.md). Returns
  * an empty string for empty input so the caller can omit the section entirely.
  */
 export function renderPlanModeContext(profileText: string): string {
