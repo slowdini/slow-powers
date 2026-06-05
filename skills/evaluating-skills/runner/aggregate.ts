@@ -203,6 +203,7 @@ if (existsSync(strayPath)) {
         eval_id: string;
         condition: string;
         violations?: unknown[];
+        live_source_reads?: unknown[];
       }>;
     };
     for (const r of stray.runs ?? []) {
@@ -210,6 +211,11 @@ if (existsSync(strayPath)) {
       if (n > 0)
         validityWarnings.push(
           `${r.eval_id}/${r.condition} wrote ${n} file(s) outside its outputs dir — data point may be tainted (see stray-writes.json).`,
+        );
+      const reads = r.live_source_reads?.length ?? 0;
+      if (reads > 0)
+        validityWarnings.push(
+          `${r.eval_id}/${r.condition} read the live skill source ${reads} time(s) instead of its staged copy — the arm may be contaminated (staged-slug resolution race; see stray-writes.json).`,
         );
     }
   } catch {
