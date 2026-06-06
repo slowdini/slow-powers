@@ -1,7 +1,6 @@
-# Slow-powers — Contributor Guidelines
+# Slow-powers
 
-Slow-powers is a fork of [obra/superpowers](https://github.com/obra/superpowers)
-that ships as a distinct product with its own release cadence.
+Slow-powers is a set of software development methodology skills and meta skill-writing guidance.
 
 ## What lives here
 
@@ -24,26 +23,13 @@ Two file-confusion traps are common in this repo. Avoid both:
   "fix up" the other names — there's nothing to fix.
 - **Read and edit only files inside this repository, never the installed
   slow-powers plugin.** Your environment almost always has the slow-powers
-  plugin installed (a stable release, e.g. under `~/.claude/plugins/`), while
-  this repo is the bleeding-edge `dev` source. The two trees diverge, so an
-  installed skill file is *not* the file you want. Every read and edit belongs to
-  a path under this project directory.
-
-  To stop the installed copy from shadowing source during work and skill evals,
-  this repo **disables** the installed slow-powers (and upstream superpowers)
-  plugins in `.claude/settings.json`, so their skills are not auto-loaded in a
-  session opened here — see the `@slowdini/eval-runner` docs
-  (`docs/harness-claude-code.md` → *Isolating from installed plugins*) for why this
-  matters to eval validity. With the plugin off, **use the
-  source skills directly**: open `skills/<name>/SKILL.md` when you need a
-  slow-powers skill rather than relying on skill auto-discovery. The disable
-  applies at session start, so restart once after pulling this setting.
+  plugin installed while this repo is the bleeding-edge `dev` source. The two trees
+  diverge, so an installed skill file is *not* the file you want. Every read and
+  edit belongs to a path under this project directory.
 
 ## Cross-Harness Compatibility
 
-Ensure all features work across supported harnesses, with at least a minimum level of compatibility. If a feature isn't supported in a harness, or has reduced or limited functionality, this should be clearly communicated. A feature MUST NOT break or degrade any harness functionality.
-
-When closing gaps between harnesses, follow [`harness-parity-check.md`](./harness-parity-check.md) for plugin distribution (manifests, bootstrap injection, skill discovery, hooks) or the `@slowdini/eval-runner` docs (`docs/harness-parity.md`) for the skill-eval runner — each walks an agent through auditing its harness against Claude Code's reference implementation and prepping to close one gap.
+All skills MUST use cross-harness vocabulary, as described in `slow-powers/writing-skills`.
 
 ## Pull Request Requirements
 
@@ -72,9 +58,7 @@ If you modify skill content:
   that embeds a short prior transcript so the skill is met mid-session under a
   competing attractor — because their real-world failures happen in-flight and a
   cold prompt alone under-measures them (see "Seeding conversation context" in
-  `slow-powers:evaluating-skills`). `hardening-plans` is the reference example;
-  `test-driven-development` and `systematic-debugging` are currently cold-only and
-  want seeded cases added.
+  `slow-powers:evaluating-skills`). `hardening-plans` is the reference example.
 
 ## Local development
 
@@ -85,9 +69,6 @@ bun run check
 ```
 
 `bun install` runs the `prepare` script, which installs the git hooks
-(pre-commit runs typecheck + lint-staged; pre-push runs the test suite). This is
-safe for OpenCode consumers because we ship to OpenCode only as a published npm
-package, and `prepare` never runs on a registry-tarball install — see
-`tests/opencode/install-contract.test.ts`.
+(pre-commit runs typecheck + lint-staged; pre-push runs the test suite).
 
 `bun scripts/bump-version.ts <version>` updates every manifest in lockstep.
