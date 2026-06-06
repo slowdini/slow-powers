@@ -24,7 +24,7 @@ Parity is tracked on two independent surfaces. **Plugin distribution** is how Sl
 | Codex CLI       | Full     | Plugin manifest + shared `hooks/hooks.json`; the plan hand-off hook is Claude-native (N/A here, see #141) |
 | OpenCode        | Full     | JS plugin (npm package) injects bootstrap and registers skills via the native plugin API |
 
-The **skill-eval runner** (developer tooling under `skills/evaluating-skills/`, slated to move into its own project) is tracked separately:
+The **skill-eval runner** — now the standalone [`@slowdini/eval-runner`](https://www.npmjs.com/package/@slowdini/eval-runner) package (`slow-powers:evaluating-skills` teaches authoring the evals it runs) — is tracked separately:
 
 | Harness         | Status   | Notes                                                                             |
 |-----------------|----------|-----------------------------------------------------------------------------------|
@@ -32,7 +32,7 @@ The **skill-eval runner** (developer tooling under `skills/evaluating-skills/`, 
 | Codex CLI       | Manual   | No transcript adapter — hand-authored run records; `llm_judge` assertions carry the measurement |
 | OpenCode        | Manual   | No transcript adapter — hand-authored run records; `llm_judge` assertions carry the measurement |
 
-Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md) for distribution gaps, or [`skills/evaluating-skills/harness-parity.md`](./skills/evaluating-skills/harness-parity.md) for eval-runner gaps: each audits which features are wired up for a given harness and preps an agent to close one gap.
+Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md) for distribution gaps, or the `@slowdini/eval-runner` docs (`docs/harness-parity.md`) for eval-runner gaps: each audits which features are wired up for a given harness and preps an agent to close one gap.
 
 ## How it works
 
@@ -146,7 +146,7 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `opencode/` — OpenCode plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
-- `harness-parity-check.md` — Instructions for an agent in any harness to audit plugin-distribution gaps and prep to close one (the eval runner's counterpart lives at `skills/evaluating-skills/harness-parity.md`)
+- `harness-parity-check.md` — Instructions for an agent in any harness to audit plugin-distribution gaps and prep to close one (the eval runner's counterpart lives in the `@slowdini/eval-runner` docs at `docs/harness-parity.md`)
 
 ## Releasing
 

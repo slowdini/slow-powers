@@ -2,7 +2,7 @@
 
 You are an agent running inside one of Slow-powers's supported harnesses. This file walks you through auditing **which Slow-powers features are wired up for your harness** and prepping to close one gap. Claude Code is the reference implementation; other harnesses adapt its patterns using their own native conventions.
 
-This file covers **plugin distribution** — how Slow-powers reaches a user's session: manifests, marketplace/registry, bootstrap injection, skill discovery, hooks, installation docs, version lockstep, and CI. The skill-eval runner has its own parity surface, audited separately by `skills/evaluating-skills/harness-parity.md` (it lives with the runner, which is slated to move into its own project).
+This file covers **plugin distribution** — how Slow-powers reaches a user's session: manifests, marketplace/registry, bootstrap injection, skill discovery, hooks, installation docs, version lockstep, and CI. The skill-eval runner has its own parity surface, audited separately in the `@slowdini/eval-runner` docs (`docs/harness-parity.md`), since the runner now lives in that standalone package.
 
 Read the file end-to-end before acting. The categories in Step 4 are the source of truth for what "parity" means today — when a new feature is added to Slow-powers, that table is updated and this file stays evergreen.
 
@@ -138,4 +138,4 @@ Once the user picks a gap:
 - **Do not edit `bootstrap.md` or shared skills as part of parity work.** Those are cross-cutting; changes need their own PRs with their own evidence.
 - **Do not fabricate features that don't exist in any harness yet.** Parity means "catch up to Claude," not "invent something new."
 - **Do not guess at harness-specific details.** If your harness's docs don't confirm something, ask the user before proceeding.
-- **Keep this file evergreen.** If you add a new distribution-side feature category to Slow-powers, add a row to the Step 4 table here and to the distribution tier table in `README.md` in the same PR. Eval-runner categories belong in `skills/evaluating-skills/harness-parity.md` instead.
+- **Keep this file evergreen.** If you add a new distribution-side feature category to Slow-powers, add a row to the Step 4 table here and to the distribution tier table in `README.md` in the same PR. Eval-runner categories belong in the `@slowdini/eval-runner` docs (`docs/harness-parity.md`) instead.

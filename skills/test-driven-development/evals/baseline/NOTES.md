@@ -23,7 +23,7 @@ A null delta here is **not** evidence the reframe failed (the eval-seeding issue
 says so explicitly). It is two stacked measurement ceilings:
 
 1. **The runner over-promotes invocation.** `buildDispatchTask` in
-   `skills/evaluating-skills/runner/run.ts` puts a *constant* instruction in the
+   `@slowdini/eval-runner`'s `src/run.ts` puts a *constant* instruction in the
    `with_skill` arm: *"the skill … is staged under the unique slug … — invoke that
    slug … if the skill applies."* That hint is identical across both `--bootstrap`
    variants, so it cancels in the delta but pins the invocation floor near 100%.
@@ -60,7 +60,7 @@ Roughly in increasing order of effort / payoff:
    class of eval measurable. This is the high-value framework improvement.
 3. **Real harness-mode injection.** Reproduce the plan-mode suppression by running
    the eval subagent *inside* a real plan mode rather than a described one. Tracked
-   as a parity goal in `skills/evaluating-skills/harness-parity.md`; the biggest lift.
+   as a parity goal in the `@slowdini/eval-runner` docs (`docs/harness-parity.md`); the biggest lift.
 
 ## Bigger-picture testing strategy (from the maintainer)
 

@@ -32,9 +32,9 @@ Two file-confusion traps are common in this repo. Avoid both:
   To stop the installed copy from shadowing source during work and skill evals,
   this repo **disables** the installed slow-powers (and upstream superpowers)
   plugins in `.claude/settings.json`, so their skills are not auto-loaded in a
-  session opened here — see
-  `skills/evaluating-skills/harness-details/claude.md` → *Isolating from installed
-  plugins* for why this matters to eval validity. With the plugin off, **use the
+  session opened here — see the `@slowdini/eval-runner` docs
+  (`docs/harness-claude-code.md` → *Isolating from installed plugins*) for why this
+  matters to eval validity. With the plugin off, **use the
   source skills directly**: open `skills/<name>/SKILL.md` when you need a
   slow-powers skill rather than relying on skill auto-discovery. The disable
   applies at session start, so restart once after pulling this setting.
@@ -43,7 +43,7 @@ Two file-confusion traps are common in this repo. Avoid both:
 
 Ensure all features work across supported harnesses, with at least a minimum level of compatibility. If a feature isn't supported in a harness, or has reduced or limited functionality, this should be clearly communicated. A feature MUST NOT break or degrade any harness functionality.
 
-When closing gaps between harnesses, follow [`harness-parity-check.md`](./harness-parity-check.md) for plugin distribution (manifests, bootstrap injection, skill discovery, hooks) or [`skills/evaluating-skills/harness-parity.md`](./skills/evaluating-skills/harness-parity.md) for the skill-eval runner — each walks an agent through auditing its harness against Claude Code's reference implementation and prepping to close one gap.
+When closing gaps between harnesses, follow [`harness-parity-check.md`](./harness-parity-check.md) for plugin distribution (manifests, bootstrap injection, skill discovery, hooks) or the `@slowdini/eval-runner` docs (`docs/harness-parity.md`) for the skill-eval runner — each walks an agent through auditing its harness against Claude Code's reference implementation and prepping to close one gap.
 
 ## Pull Request Requirements
 
