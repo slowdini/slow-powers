@@ -1,0 +1,32 @@
+{
+  "assertion_results": [
+    {
+      "id": "decides_rather_than_eyeballs",
+      "passed": true,
+      "evidence": "\"Not yet — and the answer to 'is it ready to ship?' is precisely what evals exist to tell you.\" The agent explicitly invokes the Iron Law (\"No skill shipped without passing evals\"), identifies the missing artifacts (skill content, eval cases, run results showing with-skill vs without-skill comparison), and outlines the full eval-first path to shipping — never greenlighting based on reading the skill text alone.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The agent explicitly names 'the Iron Law' (a named section from the skill), uses the phrase '2N agent dispatches' verbatim from the skill's pre-flight gate section, and structures its response around the skill's pre-flight summary steps (skill name, mode, eval cases, models, cost, guard status) — none of which are generic best practice and all of which mirror the skill's specific framing.",
+      "confidence": 0.98,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

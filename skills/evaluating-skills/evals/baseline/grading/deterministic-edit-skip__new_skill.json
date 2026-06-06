@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "declares_deterministic_and_skips",
+      "passed": true,
+      "evidence": "\"Removing a 'announce out loud that you're using this skill' line is a deterministic change... **Decision: deterministic instruction removal — skip the eval.** Ship it.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "door_stays_open",
+      "passed": true,
+      "evidence": "If you want an eval anyway (the skill says the door stays open), it would need to be a real one — actual cases testing a behavior this change could plausibly affect — not a checkbox run to rubber-stamp a foregone conclusion.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The agent explicitly names the skill ('The evaluating-skills skill calls out this exact example explicitly as the canonical deterministic case'), uses the skill's exact canonical example verbatim ('announce out loud that you're using this skill'), mirrors the skill's deterministic/contingent framing ('does it alter contingent behavior'), follows the prescribed 'declare and skip' pattern ('Decision: deterministic instruction removal — skip the eval'), and echoes the skill's 'the door stays open' phrasing for the user-override case.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "assertion_results": [
+    {
+      "id": "decides_rather_than_eyeballs",
+      "passed": true,
+      "evidence": "The agent explicitly refused to approve shipping: 'Not yet — the Iron Law requires passing evals before any skill ships, and you haven't run any yet.' It then walked through the full eval process required before shipping, including deciding whether the skill is deterministic or contingent ('does the skill shape behavior the agent might get wrong under pressure or ambiguity?'), authoring evals.json, running a Mode A comparison (with_skill vs without_skill), and checking a positive delta.pass_rate. No green-light was given based on inspection alone.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final message directly cites 'The Iron Law' by name and quotes its rule verbatim, references Mode A eval ('compares with_skill/ vs without_skill/'), uses the skill's specific terminology '__skill_invoked meta-check', 'delta.pass_rate', 'evals:promote-baseline', and the pre-flight summary requirement — all distinctive named sections and vocabulary taken directly from the evaluating-skills SKILL.md.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
