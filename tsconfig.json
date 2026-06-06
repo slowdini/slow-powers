@@ -9,10 +9,6 @@
     "noEmit": true,
     "types": ["bun"]
   },
-  "include": [
-    "scripts/**/*.ts",
-    "tests/**/*.ts",
-    "skills/evaluating-skills/runner/**/*.ts"
-  ],
+  "include": ["scripts/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "skills-workspace", "skills/**/fixtures"]
 }

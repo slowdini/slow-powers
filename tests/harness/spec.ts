@@ -110,4 +110,4 @@ export const HARNESSES: HarnessSpec[] = [
   },
 ];
 
-export const BOOTSTRAP_MARKER = "# Instructions for using Slow-powers Skills";
+export const BOOTSTRAP_MARKER = "<EXTREMELY-IMPORTANT>";

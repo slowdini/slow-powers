@@ -1,6 +1,6 @@
 {
   "name": "@slowdini/slow-powers-opencode",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Slow-powers — structured development workflows for coding agents (TDD, debugging, verification, git hygiene)",
   "type": "module",
   "main": "./opencode/plugins/slow-powers.js",
@@ -36,19 +36,19 @@
   },
   "scripts": {
     "test": "bun test --path-ignore-patterns='skills-workspace/**'",
-    "evals": "bun run skills/evaluating-skills/runner/run.ts --skill-dir ./skills --bootstrap ./bootstrap.md",
-    "evals:snapshot": "bun run skills/evaluating-skills/runner/run.ts snapshot --skill-dir ./skills",
-    "evals:validate": "bun run skills/evaluating-skills/runner/validate-all.ts --skill-dir ./skills",
-    "evals:ingest": "bun run skills/evaluating-skills/runner/run.ts ingest --skill-dir ./skills",
-    "evals:finalize": "bun run skills/evaluating-skills/runner/run.ts finalize --skill-dir ./skills",
-    "evals:record-runs": "bun run skills/evaluating-skills/runner/record-runs.ts --skill-dir ./skills",
-    "evals:fill-transcripts": "bun run skills/evaluating-skills/runner/fill-transcripts.ts --skill-dir ./skills",
-    "evals:detect-stray-writes": "bun run skills/evaluating-skills/runner/detect-stray-writes.ts --skill-dir ./skills",
-    "evals:teardown-guard": "bun run skills/evaluating-skills/runner/run.ts teardown-guard --skill-dir ./skills",
-    "evals:teardown": "bun run skills/evaluating-skills/runner/run.ts teardown --skill-dir ./skills",
-    "evals:grade": "bun run skills/evaluating-skills/runner/grade.ts --skill-dir ./skills",
-    "evals:aggregate": "bun run skills/evaluating-skills/runner/aggregate.ts --skill-dir ./skills",
-    "evals:promote-baseline": "bun run skills/evaluating-skills/runner/promote-baseline.ts --skill-dir ./skills",
+    "evals": "bunx @slowdini/eval-runner run --skill-dir ./skills --bootstrap ./bootstrap.md",
+    "evals:snapshot": "bunx @slowdini/eval-runner snapshot --skill-dir ./skills",
+    "evals:validate": "bunx @slowdini/eval-runner validate --skill-dir ./skills",
+    "evals:ingest": "bunx @slowdini/eval-runner ingest --skill-dir ./skills",
+    "evals:finalize": "bunx @slowdini/eval-runner finalize --skill-dir ./skills",
+    "evals:record-runs": "bunx @slowdini/eval-runner record-runs --skill-dir ./skills",
+    "evals:fill-transcripts": "bunx @slowdini/eval-runner fill-transcripts --skill-dir ./skills",
+    "evals:detect-stray-writes": "bunx @slowdini/eval-runner detect-stray-writes --skill-dir ./skills",
+    "evals:teardown-guard": "bunx @slowdini/eval-runner teardown-guard --skill-dir ./skills",
+    "evals:teardown": "bunx @slowdini/eval-runner teardown --skill-dir ./skills",
+    "evals:grade": "bunx @slowdini/eval-runner grade --skill-dir ./skills",
+    "evals:aggregate": "bunx @slowdini/eval-runner aggregate --skill-dir ./skills",
+    "evals:promote-baseline": "bunx @slowdini/eval-runner promote-baseline --skill-dir ./skills",
     "check": "biome check --write .",
     "check:ci": "biome check --error-on-warnings .",
     "typecheck": "tsc --noEmit",
@@ -62,8 +62,5 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.4",
     "typescript": "^6.0.3"
-  },
-  "dependencies": {
-    "ajv": "^8.20.0"
   }
 }
