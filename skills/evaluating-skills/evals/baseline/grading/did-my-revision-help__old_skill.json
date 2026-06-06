@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "prescribes_structured_comparison",
+      "passed": true,
+      "evidence": "The agent explicitly prescribes: (1) snapshot the old version ('snapshot --label pre-rewrite --ref HEAD~1'), (2) run both old and new against the same test cases ('--mode revision --baseline pre-rewrite'), and (3) read 'benchmark.json' where 'delta.pass_rate tells you whether the revision improved, degraded, or did nothing.' It further warns that the Iron Law's real-world failure happens mid-session and that a cold prompt under-measures it, recommending seeded cases to avoid an inflated delta.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "keep_only_on_positive_delta",
+      "passed": true,
+      "evidence": "\"A positive delta means the rewrite helped; zero or negative means revert it.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final message is saturated with skill-specific fingerprints: it prescribes 'Mode B revision eval' (matching the skill's 'Mode B — Revision comparison' section), uses the exact flags '--mode revision --baseline pre-rewrite' and 'snapshot --label pre-rewrite --ref HEAD~1' from the Mode B workflow, invokes 'contingent behavior' and 'competing attractor' from the seeding section, references 'delta.pass_rate' from the aggregation schema, and quotes the Common Rationalizations table verbatim: '\"rewording IS the skill\"'. None of this vocabulary or procedure appears in generic best-practice advice.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

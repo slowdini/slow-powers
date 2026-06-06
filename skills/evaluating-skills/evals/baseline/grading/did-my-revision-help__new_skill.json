@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "prescribes_structured_comparison",
+      "passed": true,
+      "evidence": "\"You know it's better by running a Mode B revision eval — comparing the old skill against the new one on the same set of test prompts, then looking at the pass-rate delta.\" The agent explicitly prescribes: (1) snapshot the old SKILL.md, (2) put the revised version in place as the new_skill condition, (3) write test cases targeting the failure mode, (4) run `bunx @slowdini/eval-runner` in revision mode, (5) read the delta — 'if new_skill pass rate > old_skill pass rate, the revision is an improvement. Zero or negative delta means revert.'",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "keep_only_on_positive_delta",
+      "passed": true,
+      "evidence": "\"Read the delta: if `new_skill` pass rate > `old_skill` pass rate, the revision is an improvement. Zero or negative delta means revert.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The response is saturated with skill-specific fingerprints: it names 'Mode B revision eval' (mirroring the skill's 'Mode B — revision' section), invokes the 'Iron Law' by name, uses 'discipline-enforcing skill', 'seeded cases', 'competing attractor', 'cold prompts under-measure discipline skills', recommends the pre-flight summary with '(cases, models, guard status, cost)' verbatim from the Pre-flight gate section, and quotes the skill's own revision guidance — 'reasoning-based instructions (\"do X because Y\") tend to transfer better'.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

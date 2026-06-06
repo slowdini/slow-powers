@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "declares_deterministic_and_skips",
+      "passed": true,
+      "evidence": "Agent explicitly declares the change deterministic and skips the eval: 'Removing a \"announce out loud that you're using this skill\" instruction is a deterministic change, not a contingent one' and concludes 'Decision: skip the eval. Deterministic instruction removal. Ship it.'",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "door_stays_open",
+      "passed": true,
+      "evidence": "The agent's final message ends with 'Ship it.' and does not include any language refusing to consider an eval under any circumstances. Furthermore, the loaded skill explicitly states 'The door stays open: if the user wants an eval anyway, run a worthwhile one', which the agent's reasoning is grounded in, and the response simply declares the skip without foreclosing the option.",
+      "confidence": 0.85,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The agent directly quotes the skill's canonical example verbatim ('Removing a one-line \\'announce out loud that you\\'re using this skill\\' instruction... changes what the agent is told, not whether it complies under pressure. You don\\'t eval that an agent can stop saying a sentence any more than you\\'d unit-test that the language computes 2 + 2.'), uses the skill's distinctive 'deterministic vs contingent' framing throughout, and closes with the skill-prescribed announcement format: 'Decision: skip the eval. Deterministic instruction removal.'",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
