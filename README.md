@@ -1,67 +1,42 @@
 # Slow-powers
 
-Slow-powers gives your agent superpowers. It's a complete software development
-methodology for coding agents — a set of composable skills plus a bootstrap
-that ensures the agent reaches for them at the right moments.
+Slow-powers is an agent skill set for professional software development. It enhances plan mode and debugging work, enforces best practices, and works _with_ the features of modern agents, instead of replacing them. It's a plugin for people who don't install plugins.
 
 ## About this fork
 
-Slow-powers is a fork of [obra/superpowers](https://github.com/obra/superpowers)
-at v5.1.0. We preserve the overall workflow of superpowers, while fixing bugs
-and clarifying skill content.
+Slow-powers is a fork of [obra/superpowers](https://github.com/obra/superpowers). Much of the skill content is sourced from upstream, with rewrites focusing on clarity, token efficiency, and enhancing instead of replacing plan mode.
 
 ## Quickstart
 
-Give your agent superpowers with slow-powers: [Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [OpenCode](#opencode). Support varies per harness — see the [feature support](#feature-support) tables.
-
-## Feature support
-
-Parity is tracked on two independent surfaces. **Plugin distribution** is how Slow-powers reaches a user's session — manifests, bootstrap injection, skill discovery, hooks:
-
-| Harness         | Status   | Notes                                                                             |
-|-----------------|----------|-----------------------------------------------------------------------------------|
-| Claude Code     | Full     | Reference implementation                                                          |
-| Codex CLI       | Full     | Plugin manifest + shared `hooks/hooks.json`; the plan hand-off hook is Claude-native (N/A here, see #141) |
-| OpenCode        | Full     | JS plugin (npm package) injects bootstrap and registers skills via the native plugin API |
-
-The **skill-eval runner** — now the standalone [`@slowdini/eval-runner`](https://www.npmjs.com/package/@slowdini/eval-runner) package (`slow-powers:evaluating-skills` teaches authoring the evals it runs) — is tracked separately:
-
-| Harness         | Status   | Notes                                                                             |
-|-----------------|----------|-----------------------------------------------------------------------------------|
-| Claude Code     | Full     | Reference implementation: transcript adapter, auto-record, `--guard`, `--plan-mode` |
-| Codex CLI       | Manual   | No transcript adapter — hand-authored run records; `llm_judge` assertions carry the measurement |
-| OpenCode        | Manual   | No transcript adapter — hand-authored run records; `llm_judge` assertions carry the measurement |
-
-Contributors closing parity gaps should follow [`harness-parity-check.md`](./harness-parity-check.md) for distribution gaps, or the `@slowdini/eval-runner` docs (`docs/harness-parity.md`) for eval-runner gaps: each audits which features are wired up for a given harness and preps an agent to close one gap.
+[Claude Code](#claude-code) · [Codex CLI](#codex-cli) · [OpenCode](#opencode)
 
 ## How it works
 
-Slow-powers integrates directly into your agent's session, providing a highly disciplined set of technical execution utilities. It enforces strict test-driven development (TDD), systematic scientific debugging, rigorous verification checks, safe workspace isolation so new work doesn't collide with existing work, and clean branch-finishing hygiene. It also enhances native agent planning phases with strict rules: banning placeholders, enforcing atomic task granularity, and requiring TDD-first checklists.
+Slow-powers is designed to improve the actual day-to-day work of software developers working with agents. It instructs agents to check for skills first, and use the ones that apply. The shipped skills fill real gaps in agentic development, but all discoverable skills benefit from the skill-enforcing guidance.
+
+### Start in plan mode
+
+Even small features are developed better with a plan. Slow-powers hardens the plan to catch hallucinations and other mistakes before you review it. During implementation, skills guide the agent through best practices, working in isolation, following test-driven development, and reviewing and verifying its work before it hands it back to you.
+
+### Debugging
+
+Slow-powers guides agents through an evidence-backed, no-guess debugging approach. No "It works now!" without proof.
+
+### Writing skills
+
+Skills for writing skills! Slow-powers skills are all written and evaluated following the same guidelines and processes it ships. Back up your own skills with real stats, and understand their cost in time and tokens.
+
+Skill evaluations are powered by [@slowdini/eval-runner](https://github.com/slowdini/eval-runner)
 
 ## Installation
 
-Installation differs by harness. If you use more than one, install
-Slow-powers separately for each.
-
 ### Install with your agent
 
-Don't want to look up the steps? Open the harness you want Slow-powers on and
-paste this prompt to its agent — it'll read the guide, work out which harness
-it's in, and do the install for you:
+Open the harness you want Slow-powers on and paste this prompt:
 
 ```text
-Install the "slow-powers" plugin for the coding-agent harness you are currently
-running in. Read the installation guide at
-https://github.com/slowdini/slow-powers#installation, determine which harness
-this is (Claude Code, Codex CLI, or OpenCode), and follow the matching steps —
-run the documented marketplace/install commands for Claude Code or Codex, or add
-the package to the `plugin` array in opencode.json for OpenCode. Then tell me
-exactly what you changed and what I need to do to finish (e.g. restart the
-session so the skills load).
+Install the slow-powers plugin from https://github.com/slowdini/slow-powers#installation for this harness.
 ```
-
-The per-harness instructions below are the source of truth the agent follows —
-and the reference for installing by hand.
 
 ### Claude Code
 
@@ -69,6 +44,9 @@ and the reference for installing by hand.
 /plugin marketplace add slowdini/slow-powers
 /plugin install slow-powers@slow-powers
 ```
+
+You can also browse and install it interactively: run `claude`, open
+`/plugin`, choose the `slowdini` marketplace, and install `slow-powers`.
 
 ### Codex CLI
 
@@ -79,15 +57,10 @@ codex plugin add slow-powers@slowdini
 
 You can also browse and install it interactively: run `codex`, open
 `/plugins`, choose the `slowdini` marketplace, and install `slow-powers`.
-Start a new Codex thread after installing so the bundled skills are loaded.
-
-Slow-powers includes a plugin-bundled `SessionStart` hook for bootstrap
-context. Codex hooks are stable, but plugin hooks must be reviewed and trusted
-before Codex runs them.
 
 ### OpenCode
 
-Add Slow-powers to the `plugin` array in your `opencode.json` (global or project-level):
+Add Slow-powers to the `plugin` array in `~/.config/opencode/opencode.json`:
 
 ```json
 {
@@ -95,44 +68,34 @@ Add Slow-powers to the `plugin` array in your `opencode.json` (global or project
 }
 ```
 
-This installs the latest published version from npm.
+## The skills
 
-## The Core Execution Utilities
+Slow-powers provides a set of highly focused skills that ensure your agent operates with maximum discipline:
 
-Slow-powers provides a set of highly focused, execution-level skills that ensure your agent operates with maximum discipline:
-
-1. **`working-in-isolation`** — Establishes an isolated workspace so new work doesn't collide with existing or in-progress work, keeping protected branches like `main` clean.
-2. **`test-driven-development`** — Enforces a strict RED-GREEN-REFACTOR cycle, ensuring all production code is backed by failing test verification first.
-3. **`systematic-debugging`** — Guides the agent to locate the root cause of failures via scientific hypothesis testing, avoiding "guess-and-check" thrashing.
-4. **`verifying-development-work`** — Requires running actual test/build commands and presenting concrete evidence before any success claim, with a final review pass over the change before work is handed back.
-5. **`writing-skills`** — Handles future custom skill authoring and updates.
-
-## What's inside
-
-**Testing & Verification** — `test-driven-development`, `verifying-development-work`
-
-**Debugging** — `systematic-debugging`
-
-**Workspace & Git Hygiene** — `working-in-isolation`
-
-**Meta & Extension** — `writing-skills`
+1. **`hardening-plans`** — Instructs the agent to re-review any plans before it hands them back to you, looking for hallucinations, logical inconsistencies, and other common plan mistakes.
+2. **`systematic-debugging`** — Guides the agent to locate the root cause of failures via scientific hypothesis testing, avoiding "guess-and-check" thrashing.
+3. **`working-in-isolation`** — Establishes an isolated workspace (worktree or branch) so new work doesn't collide with existing or in-progress work, keeping protected branches like `main` clean.
+4. **`test-driven-development`** — Enforces a strict RED-GREEN-REFACTOR cycle, ensuring all code is backed by failing test verification first.
+5. **`verifying-development-work`** — Requires running actual test/build commands and presenting concrete evidence before any success claim, with a final review pass over the change, code AND comments, before work is handed back.
+6. **`writing-skills`** — Helps write and edit skills, following the same best practices that guide slow-powers itself.
+7. **`evaluating-skills`** — Teaches the agent how to run skill evals, so the value of skills and prose changes can be objectively assessed.
 
 ## Intended Workflows
 
-The skills declare lightweight prerequisite / next-step gates so the agent knows the intended sequence. These gates **suggest** what comes before and after a skill once it is invoked; they do **not** restrict when any skill can be invoked. An agent may invoke `test-driven-development`, `verifying-development-work`, or any other skill at any point.
+The skills declare prerequisite / next-step gates so the agent follows an intended skill sequence. These gates **suggest** what comes before and after a skill once it is invoked; they do **not** restrict when any skill can be invoked.
 
 **Plan mode:** plan mode → `hardening-plans` → `working-in-isolation` → `test-driven-development` → `verifying-development-work`
 
 **Debugging:** (`working-in-isolation`) → `systematic-debugging` → `verifying-development-work`
 
-`hardening-plans` points to `test-driven-development` as its next step, and `test-driven-development` requires `working-in-isolation` first — so isolation is reached as TDD's prerequisite, producing the plan-mode order above.
-
 ## Philosophy
 
+Slow-powers skills follow a few opinionated principles:
+
 - Test-Driven Development — write tests first, always
-- Systematic over ad-hoc — process over guessing
-- Complexity reduction — simplicity as a primary goal
-- Evidence over claims — verify before declaring success
+- Plan mode — even small features should start with a plan
+- Prefer branches to worktrees — branches are easier for human review and testing, worktrees are better for agent isolation
+- Skills need evals — evals prove a new skill is better than no skill, and an edit to an existing skill is valuable
 
 ## Repository structure
 
@@ -146,7 +109,6 @@ Flat layout — skills and assets live at root, harness-specific integration liv
 - `opencode/` — OpenCode plugin
 - `.claude-plugin/marketplace.json` — Claude Code marketplace registry
 - `package.json` — OpenCode plugin manifest + dev tooling
-- `harness-parity-check.md` — Instructions for an agent in any harness to audit plugin-distribution gaps and prep to close one (the eval runner's counterpart lives in the `@slowdini/eval-runner` docs at `docs/harness-parity.md`)
 
 ## Releasing
 

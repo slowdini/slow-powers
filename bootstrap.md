@@ -1,14 +1,8 @@
-# Instructions for using Slow-powers Skills
-
 <EXTREMELY-IMPORTANT>
   If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
   IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
   This is not negotiable. This is not optional. You cannot rationalize your way out of this.
 </EXTREMELY-IMPORTANT>
-
-These skills are quality gates on procedures you already run. They don't grant abilities — they enhance how you execute work you already know how to do.
-
-When you reach a gate moment — about to code, hand off a plan, debug, claim done, finish a branch — the matching skill's description surfaces it. Load it then, even if your procedure already feels complete. That "feels complete" is the gate's target.
 
 ## The Rule
 
@@ -55,7 +49,7 @@ These thoughts mean STOP — you're rationalizing:
 
 ## Instruction Priority
 
-Slow-powers skills override default system behavior where they conflict, but user instructions always take precedence:
+Skills override default system behavior where they conflict, but user instructions always take precedence:
 1. **User's explicit instructions** (CLAUDE.md, AGENTS.md, direct requests) — highest priority
 2. **Slow-powers skills / bootstrap guidelines** — override default system prompt behavior where they conflict
 3. **Default system prompt** — lowest priority
