@@ -94,6 +94,14 @@ const HOOKS_JSON = fs.readFileSync(
   path.join(REPO_ROOT, "hooks/hooks.json"),
   "utf8",
 );
+const CODEX_HOOKS_JSON = fs.readFileSync(
+  path.join(REPO_ROOT, "hooks/codex-hooks.json"),
+  "utf8",
+);
+const CODEX_STOP_PLAN_MODE = fs.readFileSync(
+  path.join(REPO_ROOT, "hooks/codex-stop-plan-mode"),
+  "utf8",
+);
 const OPENAI_YAML = `interface:
   display_name: "Example"
   short_description: "Destination-owned OpenAI metadata"
@@ -115,8 +123,10 @@ function writeUpstreamFixture(repo: string): void {
     `{\n  "name": "slow-powers",\n  "version": "${MANIFEST_VERSION}"\n}\n`,
   );
   write(path.join(repo, "hooks/hooks.json"), HOOKS_JSON);
+  write(path.join(repo, "hooks/codex-hooks.json"), CODEX_HOOKS_JSON);
   write(path.join(repo, "hooks/session-start"), "#!/usr/bin/env bash\n");
   write(path.join(repo, "hooks/exit-plan-mode"), "#!/usr/bin/env bash\n");
+  write(path.join(repo, "hooks/codex-stop-plan-mode"), CODEX_STOP_PLAN_MODE);
   write(path.join(repo, "hooks/run-hook.cmd"), "@echo off\n");
   write(
     path.join(repo, "assets/slow-powers-small.svg"),
@@ -135,6 +145,8 @@ function writeUpstreamFixture(repo: string): void {
     "assets/app-icon.png",
     "assets/slow-powers-small.svg",
     "hooks/exit-plan-mode",
+    "hooks/codex-hooks.json",
+    "hooks/codex-stop-plan-mode",
     "hooks/hooks.json",
     "hooks/run-hook.cmd",
     "hooks/session-start",
@@ -169,12 +181,20 @@ function writeSyncedDestinationFixture(repo: string): void {
   );
   write(path.join(repo, "plugins/slow-powers/hooks/hooks.json"), HOOKS_JSON);
   write(
+    path.join(repo, "plugins/slow-powers/hooks/codex-hooks.json"),
+    CODEX_HOOKS_JSON,
+  );
+  write(
     path.join(repo, "plugins/slow-powers/hooks/session-start"),
     "#!/usr/bin/env bash\n",
   );
   write(
     path.join(repo, "plugins/slow-powers/hooks/exit-plan-mode"),
     "#!/usr/bin/env bash\n",
+  );
+  write(
+    path.join(repo, "plugins/slow-powers/hooks/codex-stop-plan-mode"),
+    CODEX_STOP_PLAN_MODE,
   );
   write(
     path.join(repo, "plugins/slow-powers/hooks/run-hook.cmd"),
@@ -261,6 +281,8 @@ describe("dry-run preview", () => {
     expect(section).toContain("assets/slow-powers-small.svg");
     expect(section).toContain("assets/app-icon.png");
     expect(section).toContain("hooks/hooks.json");
+    expect(section).toContain("hooks/codex-hooks.json");
+    expect(section).toContain("hooks/codex-stop-plan-mode");
   });
   test("includes tracked ignored files but excludes untracked ignored files", () => {
     expect(section).toContain(".private-journal/keep.txt");

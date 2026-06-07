@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# Stop hook for Slow-powers — gates Codex plan-mode plan presentation.
+#
+# Codex has no ExitPlanMode tool. The closest deterministic lifecycle moment is
+# Stop: it fires when a turn is about to finish and includes the latest
+# assistant message. When a plan-mode turn is about to leave behind a
+# <proposed_plan> block, this hook inserts the missing hardening-plans beat by
+# returning decision:block, which Codex treats as an automatic continuation
+# prompt for the same conversation.
+#
+# Safety shape mirrors hooks/exit-plan-mode:
+#   - allow when not in Codex plan mode or when no proposed plan was emitted
+#   - allow when hardening-plans is already visible in the transcript
+#   - deny-once per turn to avoid hard-locking a session
+#
+# Keep this script dependency-free. Hook scripts run early and across machines;
+# jq/python/node/bun are not guaranteed.
+
+set -euo pipefail
+
+payload=$(cat)
+
+# Extract the first simple JSON string value for the given key, tolerant of
+# missing keys. This is intentionally small rather than a JSON parser; the fields
+# we read here are scalar Codex hook metadata, while plan detection uses direct
+# tag presence in the raw payload.
+extract_field() {
+  printf '%s' "$payload" \
+    | grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" \
+    | head -n1 \
+    | sed -E 's/.*:[[:space:]]*"([^"]*)"$/\1/' \
+    || true
+}
+
+contains_payload() {
+  printf '%s' "$payload" | grep -Fq "$1"
+}
+
+is_true_field() {
+  printf '%s' "$payload" \
+    | grep -Eq "\"$1\"[[:space:]]*:[[:space:]]*true"
+}
+
+hook_event_name=$(extract_field hook_event_name)
+permission_mode=$(extract_field permission_mode)
+
+[ "$hook_event_name" = "Stop" ] || exit 0
+[ "$permission_mode" = "plan" ] || exit 0
+
+# If Codex is already continuing because of a Stop hook, never stack another
+# continuation on top of it.
+if is_true_field stop_hook_active; then
+  exit 0
+fi
+
+if ! contains_payload "<proposed_plan>" || ! contains_payload "</proposed_plan>"; then
+  exit 0
+fi
+
+transcript_path=$(extract_field transcript_path)
+
+plan_already_hardened() {
+  [ -n "$transcript_path" ] || return 1
+  [ -r "$transcript_path" ] || return 1
+
+  # Claude Code Skill invocation shape.
+  if grep -Eq '"skill"[[:space:]]*:[[:space:]]*"slow-powers:hardening-plans"' "$transcript_path"; then
+    return 0
+  fi
+
+  # Codex skill use commonly appears as a command/tool read of the repo-local
+  # skill file. Avoid matching bare prose that only names the skill.
+  grep -Eq '("(cmd|command)"[[:space:]]*:|exec_command|tool_use).*skills/hardening-plans/SKILL\.md|skills/hardening-plans/SKILL\.md.*("(cmd|command)"[[:space:]]*:|exec_command|tool_use)' "$transcript_path"
+}
+
+if plan_already_hardened; then
+  exit 0
+fi
+
+session_key=$(extract_field turn_id)
+[ -n "$session_key" ] || session_key=$(extract_field session_id)
+[ -n "$session_key" ] || session_key=$(extract_field transcript_path)
+[ -n "$session_key" ] || session_key="fallback"
+
+session_key=$(printf '%s' "$session_key" | tr -c 'A-Za-z0-9._-' '_')
+marker="${TMPDIR:-/tmp}/slow-powers-codex-plan-gate-${session_key}"
+
+if [ -e "$marker" ]; then
+  exit 0
+fi
+
+: > "$marker" 2>/dev/null || true
+
+reason="A Codex plan-mode turn is about to finish with a <proposed_plan> block. Before presenting it, use the slow-powers:hardening-plans skill to review the drafted plan as a skeptical executor. Verify referenced files, remove placeholders/hallucinations/irrelevant steps, then present the full hardened replacement in one <proposed_plan> block."
+
+escape_for_json() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+reason_escaped=$(escape_for_json "$reason")
+
+printf '{\n  "decision": "block",\n  "reason": "%s"\n}\n' "$reason_escaped"
+
+exit 0
