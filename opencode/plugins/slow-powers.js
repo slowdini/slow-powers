@@ -3,8 +3,10 @@
  *
  * Injects slow-powers bootstrap context via system prompt transform.
  * Auto-registers skills directory via config hook (no symlinks needed).
+ * Intercepts plan file writes in plan mode and triggers hardening-plans skill.
  */
 
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,10 +24,12 @@ const bootstrapLeadingPhrase = "<EXTREMELY-IMPORTANT>";
 // once eliminates redundant fs work on every agent step.
 let _bootstrapCache; // undefined = not yet loaded, null = file missing
 
-export const SlowPowersPlugin = async ({
-  client: _client,
-  directory: _directory,
-}) => {
+// Deduplication state for plan hardening
+// Map<filePath, contentHash> - tracks processed plan file versions
+const processedPlanHashes = new Map();
+const HARDENED_MARKER = "<!-- hardened-plans -->";
+
+export const SlowPowersPlugin = async ({ client, directory: _directory }) => {
   // Helper to load bootstrap content (cached after first call)
   const getBootstrapContent = () => {
     if (_bootstrapCache !== undefined) return _bootstrapCache;
@@ -38,6 +42,61 @@ export const SlowPowersPlugin = async ({
     _bootstrapCache = fs.readFileSync(bootstrapPath, "utf8");
 
     return _bootstrapCache;
+  };
+
+  const hashContent = (content) =>
+    createHash("sha256").update(content).digest("hex");
+
+  const isPlanHardened = (content) => content.includes(HARDENED_MARKER);
+
+  const handlePlanFileEdit = async (event) => {
+    const filePath = event.properties.file;
+    const sessionID = event.properties.sessionID;
+
+    if (!filePath || !sessionID) return;
+
+    if (!filePath.match(/\.opencode\/plans\/.*\.md$/)) return;
+
+    let session;
+    try {
+      session = await client.session.get({ path: { id: sessionID } });
+    } catch {
+      return;
+    }
+    if (session.agent !== "plan") return;
+
+    let content;
+    try {
+      content = fs.readFileSync(filePath, "utf8");
+    } catch {
+      return;
+    }
+
+    if (isPlanHardened(content)) return;
+
+    const contentHash = hashContent(content);
+    const previousHash = processedPlanHashes.get(filePath);
+    if (previousHash === contentHash) return;
+
+    processedPlanHashes.set(filePath, contentHash);
+
+    try {
+      await client.session.prompt({
+        path: { id: sessionID },
+        body: {
+          noReply: true,
+          parts: [
+            {
+              type: "text",
+              text: `The plan at ${filePath} has been written. Please run the hardening-plans skill on this plan file to review it for hallucinations, missing file references, vague steps, and coverage gaps before presenting it. Update the file in place with the hardened version. Add ${HARDENED_MARKER} marker when done.`,
+            },
+          ],
+        },
+      });
+    } catch (err) {
+      processedPlanHashes.delete(filePath);
+      console.error("[slow-powers] Failed to trigger hardening-plans:", err);
+    }
   };
 
   return {
@@ -81,6 +140,11 @@ export const SlowPowersPlugin = async ({
         return;
 
       firstUser.parts.unshift({ type: "text", text: bootstrap });
+    },
+
+    event: async ({ event }) => {
+      if (event.type !== "file.edited") return;
+      await handlePlanFileEdit(event);
     },
   };
 };
