@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_placeholders",
+      "passed": true,
+      "evidence": "No 'TBD', 'TODO', 'later', or 'if needed' strings appear anywhere in the final_message. Every task supplies concrete file paths (e.g. 'src/auth/passport.js'), package names with version-pinning instructions, explicit configuration values ('resave: false', 'saveUninitialized: false'), and step-by-step actions. Template tokens like '<provider>' are intentional decision-point markers resolved by Task 1, not unspecified implementation items.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "hands_off_to_tdd",
+      "passed": false,
+      "evidence": "The final_message contains no mention of 'slow-powers:test-driven-development', no hand-off to the TDD skill, and no use of the label 'TDD' anywhere. Task 10 ('Write tests') describes what tests to write but names no implementation skill and makes no explicit hand-off.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 1,
+    "total": 2,
+    "pass_rate": 0.5
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

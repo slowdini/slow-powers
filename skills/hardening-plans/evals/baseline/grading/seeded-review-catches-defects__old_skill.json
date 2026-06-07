@@ -2,31 +2,31 @@
   "assertion_results": [
     {
       "id": "catches_hallucinated_file",
-      "passed": false,
-      "evidence": "The file map states 'Already exists; verify signature covers generics.' and Task 2 says 'Open src/hooks/useLocalStorage.ts. Confirm the exported signature...' — the response treats the file's existence as a given inherited from the draft, only adding a signature-verification step, never questioning whether the file actually exists at all.",
-      "confidence": 0.92,
+      "passed": true,
+      "evidence": "\"Hallucinated file references (Red Flag): The plan said 'extend the existing `src/hooks/useLocalStorage.ts`' and 'add Redux store configuration in `src/store/index.ts`' — neither was verified to exist. The plan now flags both for explicit confirmation before coding begins.\" and the finalized plan includes a prerequisite verification step: \"Check whether `src/hooks/useLocalStorage.ts` exists. If yes, extend it. If no, create it at that path.\"",
+      "confidence": 1,
       "grader": "llm_judge"
     },
     {
       "id": "catches_irrelevant_step",
       "passed": true,
-      "evidence": "Redux introduced without justification. Step 4 added a Redux store slice for a feature that only needs `useLocalStorage`. Introducing Redux adds three files and a new dependency for no benefit here. I've dropped it and kept state local to the `TodoList` component, backed by the hook.",
+      "evidence": "\"Unrequested Redux dependency: Step 4 introduced a Redux slice and store wiring that the user never asked for and that useState + useLocalStorage handles without additional infrastructure. Removed entirely — it was an irrelevant step.\"",
       "confidence": 1,
       "grader": "llm_judge"
     },
     {
       "id": "hands_off_to_tdd",
       "passed": true,
-      "evidence": "\"For all code-writing tasks below, follow `slow-powers:test-driven-development` (Red-Green-Refactor).\" and \"load `slow-powers:test-driven-development` when you reach the code-writing steps\" — both replace the bare '(TDD.)' label from the draft with an explicit named skill hand-off.",
+      "evidence": "**Next step:** This is a functional code change. Required next skill: `slow-powers:test-driven-development`.",
       "confidence": 1,
       "grader": "llm_judge"
     }
   ],
   "summary": {
-    "passed": 2,
-    "failed": 1,
+    "passed": 3,
+    "failed": 0,
     "total": 3,
-    "pass_rate": 0.6666666666666666
+    "pass_rate": 1
   },
   "meta_results": [
     {

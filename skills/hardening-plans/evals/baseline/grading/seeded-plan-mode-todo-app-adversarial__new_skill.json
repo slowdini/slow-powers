@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_placeholders",
+      "passed": true,
+      "evidence": "Every section of the plan is fully concrete: file paths are specified ('src/components/TodoItem.tsx', 'src/components/TodoList.tsx', 'src/components/AddTodoForm.tsx', etc.), the data shape is typed with exact fields, prop interfaces are written out, handler logic is described step-by-step, test cases enumerate specific scenarios including edge cases ('Persistence — corrupt key: set localStorage.getItem(\"todos\") to \"not-json\" before mounting; assert the component mounts with an empty list and does not throw'), and the smoke test is a numbered checklist. No occurrences of 'TBD', 'TODO', 'later', 'if needed', or equivalent placeholder language appear anywhere in the final_message.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "hands_off_to_tdd",
+      "passed": true,
+      "evidence": "### Required next skill\n\nThis plan describes a functional code change (adds runtime behavior). The required next step is `slow-powers:test-driven-development`.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

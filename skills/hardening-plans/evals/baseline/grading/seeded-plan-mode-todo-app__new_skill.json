@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_placeholders",
+      "passed": true,
+      "evidence": "The final_message contains no placeholders — every step is fully specified: file paths are named (e.g. 'src/components/TodoItem.tsx'), props and state shapes are enumerated, handler logic is described in concrete terms (e.g. 'appends { id: crypto.randomUUID(), text, completed: false } to todos'), and all five test cases are spelled out with explicit setup and assertion steps. No 'TBD', 'TODO', 'later', 'if needed', or equivalent deferral language appears anywhere.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "hands_off_to_tdd",
+      "passed": true,
+      "evidence": "\"REQUIRED NEXT: `slow-powers:working-in-isolation` (to establish an isolated branch), then `slow-powers:test-driven-development` for the implementation phase.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
