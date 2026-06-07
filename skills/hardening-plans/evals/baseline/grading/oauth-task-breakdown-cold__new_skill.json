@@ -3,14 +3,14 @@
     {
       "id": "no_placeholders",
       "passed": true,
-      "evidence": "All steps are fully concrete: step 1 gives exact CLI commands (`npm create vite@latest todo-app -- --template react-ts`), step 2 provides a complete TypeScript interface, step 4 lists specific file paths and prop signatures, step 7 names exact npm packages and config keys, and step 9 gives verbatim build/test commands. No 'TBD', 'TODO', 'later', 'if needed', or any other placeholder appears anywhere in the plan.",
-      "confidence": 1,
+      "evidence": "No 'TBD', 'TODO', 'later', or 'if needed' language appears anywhere in the final message. Every task is concrete: Task 9 even explicitly instructs 'Identify those routes now (do not defer)'. The angle-bracket tokens in Task 3 (e.g. '<paste from Google Console>') are engineer instructions, not deferred decisions.",
+      "confidence": 0.97,
       "grader": "llm_judge"
     },
     {
       "id": "hands_off_to_tdd",
       "passed": true,
-      "evidence": "\"Once you approve this plan, the next step is `slow-powers:test-driven-development` (this is a functional code change that adds runtime behavior).\"",
+      "evidence": "**REQUIRED NEXT SKILL:** `slow-powers:test-driven-development`\n\nThis plan adds runtime behavior (new auth routes, session handling, database writes). Before the engineer writes any implementation code, they must complete `slow-powers:test-driven-development`.",
       "confidence": 1,
       "grader": "llm_judge"
     }

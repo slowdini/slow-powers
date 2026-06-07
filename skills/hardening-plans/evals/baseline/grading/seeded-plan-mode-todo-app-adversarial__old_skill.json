@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_placeholders",
+      "passed": false,
+      "evidence": "The agent explicitly labels the file paths as placeholders: 'I’ve added placeholder paths below using the conventional `src/components/` location — confirm or correct these before we proceed.' The plan therefore contains a declared placeholder rather than a confirmed concrete value.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "hands_off_to_tdd",
+      "passed": true,
+      "evidence": "\"This is a functional code change, so **`slow-powers:test-driven-development` is required next** — write the tests in Task 5 before touching the implementation files. TDD will also set up the isolated workspace.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 1,
+    "total": 2,
+    "pass_rate": 0.5
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

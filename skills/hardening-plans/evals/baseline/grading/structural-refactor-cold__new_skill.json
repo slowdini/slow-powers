@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "routes_to_working_in_isolation",
+      "passed": true,
+      "evidence": "REQUIRED NEXT SKILL: `slow-powers:working-in-isolation` — complete this before starting, so the reorganization branch doesn't collide with other in-flight work.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "does_not_force_tdd",
+      "passed": true,
+      "evidence": "The response names 'REQUIRED NEXT SKILL: `slow-powers:working-in-isolation`' as the required gate and never mentions test-driven-development. The only reference to tests is in step 6/Verify: 'Run: full test suite; tsc --noEmit; linter' — using existing tests to confirm no behavior change, not demanding tests-first authorship.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

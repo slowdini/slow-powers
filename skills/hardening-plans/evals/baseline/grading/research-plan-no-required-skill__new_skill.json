@@ -1,0 +1,32 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_forced_next_skill",
+      "passed": true,
+      "evidence": "The final_message contains no mention of slow-powers:test-driven-development or slow-powers:working-in-isolation as required next steps; it closes with 'No repository or pipeline changes are required during the investigation,' confirming the response treats this as a pure read-only investigation with no forced skill gate.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

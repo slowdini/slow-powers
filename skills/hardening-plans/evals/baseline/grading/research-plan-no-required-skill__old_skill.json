@@ -1,0 +1,32 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_forced_next_skill",
+      "passed": true,
+      "evidence": "The final_message ends with 'Once you've worked through these steps, share what you find and we can scope the fixes.' — no mention of slow-powers:test-driven-development or slow-powers:working-in-isolation as a required next step anywhere in the response.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

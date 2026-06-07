@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "no_placeholders",
+      "passed": true,
+      "evidence": "The final_message contains no instances of 'TBD', 'TODO', 'later', or 'if needed'. Every task specifies concrete file names, TypeScript interfaces, JSX snippets, and handler logic. The one vague phrase — 'max-width as appropriate for the app's existing style' in the TodoList.css description — is a style guidance note, not a placeholder that defers implementation.",
+      "confidence": 0.9,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "hands_off_to_tdd",
+      "passed": true,
+      "evidence": "\"This plan adds runtime behavior, so the implementation phase must follow `slow-powers:test-driven-development` (Task 1 above is the TDD entry point — tests before code). That skill also requires `slow-powers:working-in-isolation` before touching any files.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

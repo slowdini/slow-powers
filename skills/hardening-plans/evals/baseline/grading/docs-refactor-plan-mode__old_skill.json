@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "routes_to_working_in_isolation",
+      "passed": true,
+      "evidence": "\"Wrong next step. I said 'I'll skip the slow-powers skills and just start editing on the current branch.' That's incorrect. A docs restructure of this scope ... is non-mechanical and non-functional. The routing rule is clear: non-mechanical, non-functional changes require `slow-powers:working-in-isolation` before starting.\" and \"Set the next step correctly to `slow-powers:working-in-isolation`.\"",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "does_not_force_tdd",
+      "passed": true,
+      "evidence": "The final_message sets the corrected next step as 'slow-powers:working-in-isolation' and never mentions test-driven-development at all — TDD is neither imposed nor referenced anywhere in the response.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

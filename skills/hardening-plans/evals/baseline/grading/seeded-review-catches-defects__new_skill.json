@@ -3,21 +3,21 @@
     {
       "id": "catches_hallucinated_file",
       "passed": true,
-      "evidence": "\"Unverified file reference. The draft said 'extend the *existing* `src/hooks/useLocalStorage.ts`' — I have no confirmation this file exists in your project. Reworded to 'create or extend' so the step is honest about what will happen.\"",
+      "evidence": "The final_message explicitly calls out 'Hallucinated file references — two files cited as \"existing\" without verification.' listing `src/hooks/useLocalStorage.ts` and noting 'Neither was confirmed to exist.' The corrected plan's Step 1 reads: 'Confirm `src/hooks/useLocalStorage.ts` exists. If it does not, create it…'",
       "confidence": 1,
       "grader": "llm_judge"
     },
     {
       "id": "catches_irrelevant_step",
       "passed": true,
-      "evidence": "\"Hallucinated Redux dependency (Red Flag). Step 4 introduced a Redux store and todo slice that you never asked for. Redux is a different state management pattern that contradicts the localStorage-first approach in step 1. Removed.\"",
+      "evidence": "**Unrequested dependency — Redux introduced with no basis in the spec.** The request is for localStorage persistence. A Redux slice is an invented architectural choice. It also creates structural incoherence: localStorage (Step 1) and Redux (Step 4) would both manage the same state.",
       "confidence": 1,
       "grader": "llm_judge"
     },
     {
       "id": "hands_off_to_tdd",
       "passed": true,
-      "evidence": "\"Ready to start? I'll follow `test-driven-development` for the implementation phase.\"",
+      "evidence": "**REQUIRED NEXT SKILL:** `slow-powers:test-driven-development`\n\nThis is a functional code change that adds runtime behavior. TDD governs the implementation phase.",
       "confidence": 1,
       "grader": "llm_judge"
     }
