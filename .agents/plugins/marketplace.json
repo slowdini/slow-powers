@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "slow-powers",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "source": {
         "source": "url",
         "url": "./"

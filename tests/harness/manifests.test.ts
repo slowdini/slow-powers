@@ -122,6 +122,23 @@ describe("shared assets (delivered by every harness)", () => {
       true,
     );
   });
+
+  test("Codex manifest wires shared and Codex-specific hook manifests", () => {
+    const manifest = readJson(".codex-plugin/plugin.json") as {
+      hooks?: unknown;
+    };
+
+    expect(manifest.hooks).toEqual([
+      "./hooks/hooks.json",
+      "./hooks/codex-hooks.json",
+    ]);
+    expect(fs.existsSync(path.join(REPO_ROOT, "hooks/codex-hooks.json"))).toBe(
+      true,
+    );
+    expect(
+      fs.existsSync(path.join(REPO_ROOT, "hooks/codex-stop-plan-mode")),
+    ).toBe(true);
+  });
 });
 
 describe("version lockstep", () => {
@@ -160,11 +177,15 @@ describe.each(HARNESSES)("$name harness", (harness) => {
     }) => {
       const manifest = readJson(harness.manifest);
       const value = getByPath(manifest, field);
-      expect(typeof value).toBe("string");
-      const resolved = resolveWithinRoot(REPO_ROOT, value as string);
-      expect(fs.existsSync(resolved)).toBe(true);
-      const stat = fs.statSync(resolved);
-      expect(kind === "dir" ? stat.isDirectory() : stat.isFile()).toBe(true);
+      const values = Array.isArray(value) ? value : [value];
+      expect(values.length).toBeGreaterThan(0);
+      for (const item of values) {
+        expect(typeof item).toBe("string");
+        const resolved = resolveWithinRoot(REPO_ROOT, item as string);
+        expect(fs.existsSync(resolved)).toBe(true);
+        const stat = fs.statSync(resolved);
+        expect(kind === "dir" ? stat.isDirectory() : stat.isFile()).toBe(true);
+      }
     });
   }
 

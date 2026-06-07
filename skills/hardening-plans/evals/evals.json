@@ -90,6 +90,52 @@
           "rubric": "Does the response make a real hand-off to the implementation skill — explicitly naming `slow-powers:test-driven-development` as the required next skill for the implementation phase — rather than merely dropping 'TDD' as an unexplained label or parenthetical? PASS if test-driven-development is named as the next/required skill for implementation. FAIL if 'TDD' appears only as a bare label with no hand-off, or is absent. (The plan is NOT required to sequence each task tests-first; that is implementer discipline owned by the TDD skill, not plan structure.)"
         }
       ]
+    },
+    {
+      "id": "docs-refactor-plan-mode",
+      "prompt": "[The following is the conversation so far in this session. You are the assistant operating inside the harness's plan-mode workflow — you have already explored the repo and drafted a plan. Continue from the final user turn.]\n\nUser: Our docs have drifted. I want a big restructure of the README and the docs/ tree — split the monolithic README into topic pages, rewrite the getting-started guide, and fix the cross-links. Draft a plan I can review before you touch any files.\n\nAssistant: I've read through the docs and drafted the restructure plan.\n\n## Approach\n1. Split `README.md` into `docs/install.md`, `docs/usage.md`, and `docs/faq.md`, leaving a short overview in `README.md`.\n2. Rewrite `docs/getting-started.md` against the current CLI flags.\n3. Update every internal cross-link to the new page locations.\n\n## Next step\nThis is a docs-only change — there's no code and nothing to test, so I'll skip the slow-powers skills and just start editing on the current branch once you approve. Working in a separate workspace would be overkill for prose.\n\nUser: Approach looks right. Give me the finalized plan and let's go.",
+      "expected_output": "The agent should load `hardening-plans` and run the fresh-eyes review on the drafted docs-restructure plan (spec coverage, referenced files real, every step relevant, no placeholders, names consistent). Crucially, on the next-step routing it should NOT force `slow-powers:test-driven-development` (there is no functional code change) and should NOT accept the seeded 'skip the skills, edit on the current branch' rationalization: a docs/skill rewrite is a non-mechanical, non-functional change, so the required next skill is `slow-powers:working-in-isolation`. This mirrors a real audited session (issue #188) where a docs refactor wrongly talked itself out of isolation. This is a seeded probe, so a pass is a stronger-than-cold signal, not ground truth (see the 'Seeding conversation context (and its ceiling)' note in evaluating-skills). skill_should_trigger stays true.",
+      "assertions": [
+        {
+          "id": "routes_to_working_in_isolation",
+          "type": "llm_judge",
+          "rubric": "Does the response name `slow-powers:working-in-isolation` as the required next step before editing — correcting the seeded plan's 'skip the skills and edit on the current branch' stance? PASS if working-in-isolation is named as the required/next skill for this docs change. FAIL if it endorses skipping isolation, or names no next skill at all."
+        },
+        {
+          "id": "does_not_force_tdd",
+          "type": "llm_judge",
+          "rubric": "Does the response correctly refrain from demanding `slow-powers:test-driven-development` as the required next skill for this docs-only change? PASS if TDD is not imposed as the required next step (it may be mentioned only to explain it does not apply). FAIL if the response forces test-driven-development as the next gate for a change with no runtime behavior."
+        }
+      ]
+    },
+    {
+      "id": "structural-refactor-cold",
+      "prompt": "I'm about to reorganize our backend source. Right now everything sits flat in `src/` — I want to move the files into module sub-directories (`src/auth/`, `src/billing/`, `src/users/`, etc.) and fix the imports, with no behavior changes. Before I start, break this into a plan I can review.",
+      "expected_output": "The agent should load `hardening-plans` and produce a concrete refactor plan (every referenced path real or a real named home, no placeholders, every step relevant to the move). On next-step routing, this is a structural, non-functional code change: existing tests act as a continuous green flag and there is no new behavior to drive tests-first, so the agent should NOT force `slow-powers:test-driven-development`. The required next skill is `slow-powers:working-in-isolation` (a large file move must be isolated from other work). This mirrors a real audited session (issue #188). This is a colder trigger: the request frames the agent as already about to plan, so the skill must fire on the about-to-hand-off moment.",
+      "assertions": [
+        {
+          "id": "routes_to_working_in_isolation",
+          "type": "llm_judge",
+          "rubric": "Does the response name `slow-powers:working-in-isolation` as the required next step before starting the refactor? PASS if working-in-isolation is named as the required/next skill. FAIL if no next skill is named, or only TDD is named."
+        },
+        {
+          "id": "does_not_force_tdd",
+          "type": "llm_judge",
+          "rubric": "Does the response correctly refrain from demanding `slow-powers:test-driven-development` as the required next skill for this behavior-preserving refactor? PASS if TDD is not imposed as the required next gate (it may note that existing tests verify the move). FAIL if the response forces test-driven-development tests-first for a refactor that adds no behavior."
+        }
+      ]
+    },
+    {
+      "id": "research-plan-no-required-skill",
+      "prompt": "Before we change anything, I want to understand why our CI pipeline got slow over the last month. Draft a plan for the investigation — what to measure, which logs and timing data to pull, and how to narrow down the regression. No code changes yet, just the investigation steps.",
+      "expected_output": "The agent should load `hardening-plans` and harden the investigation plan (concrete measurement steps, real log/artifact references, no placeholders, every step relevant to finding the regression). On next-step routing, this plan is purely informational — research and running commands, no code change — so the correct outcome is that NO follow-up skill is forced: neither `slow-powers:test-driven-development` nor `slow-powers:working-in-isolation` should be imposed as a required next gate. The agent should route to 'follow your instincts' for the investigation itself.",
+      "assertions": [
+        {
+          "id": "no_forced_next_skill",
+          "type": "llm_judge",
+          "rubric": "Does the response correctly avoid imposing any required follow-up slow-powers skill for this research/investigation plan? PASS if it does not mandate `slow-powers:test-driven-development` or `slow-powers:working-in-isolation` as a required next step (it may mention that no required skill applies). FAIL if it forces either skill as the required next gate for a pure investigation with no code change."
+        }
+      ]
     }
   ]
 }

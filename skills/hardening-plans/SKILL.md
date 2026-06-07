@@ -40,13 +40,30 @@ Before the plan leaves your hands, re-read the whole draft once, top to bottom, 
 
 ---
 
-## The Next Gate: Implementation
+## Choosing the Next Step
 
-When the plan is approved, implementation begins — and implementation has its own gate.
+When the plan is approved, the next move depends on what kind of work the plan
+describes. Route by the **first** branch that matches — then **close your hand-off
+by naming the required next skill verbatim**, with its `slow-powers:` identifier.
+Telling the reader to "work on a branch" or "write the tests first" in your own
+words is *not* the hand-off; the named skill is. State it even on a cold draft
+where nothing pushed back — the named hand-off is part of the deliverable, not a
+rebuttal you only produce when someone argued against it.
 
-> **REQUIRED NEXT SKILL:** You must complete `slow-powers:test-driven-development` next for the implementation phase.
+```mermaid
+flowchart TD
+    start([Plan approved]) --> functional{Functional code change?<br/>adds or changes runtime behavior}
+    functional -->|yes| tdd[REQUIRED NEXT:<br/>slow-powers:test-driven-development]
+    functional -->|no| nonmech{Non-mechanical &amp; non-functional?<br/>refactor, file move, docs/skill rewrite}
+    nonmech -->|yes| isolation[REQUIRED NEXT:<br/>slow-powers:working-in-isolation]
+    nonmech -->|no| none[No required skill —<br/>follow your instincts]
+```
 
-The plan should carry a tests section so the reader can see *what* will be verified. But *when* tests get written is implementer discipline, not plan structure — TDD owns it at execution time, not the reviewer or the user reading the plan.
+* **Functional code change** — adds or changes runtime behavior.
+  > **REQUIRED NEXT SKILL:** You must complete `slow-powers:test-driven-development` next, for the implementation phase. The plan should carry a tests section so the reader can see *what* will be verified, but *when* tests get written is implementer discipline TDD owns at execution time — not plan structure. (TDD in turn requires `slow-powers:working-in-isolation`, so isolation still happens on this path.)
+* **Non-mechanical, non-functional change** — a structural code change (refactor, file move), a docs or skill change, or any other substantive update that doesn't alter runtime behavior.
+  > **REQUIRED NEXT SKILL:** You must complete `slow-powers:working-in-isolation` next, before you start. TDD has no green to chase here, but the work still collides with other branches if it isn't isolated.
+* **Informational or trivial/mechanical** — the plan is to research, run commands, or make a trivial/mechanical fix (merge-conflict cleanup, test fixups, typos). No required next skill; follow your instincts.
 
 ---
 
@@ -57,6 +74,8 @@ The plan should carry a tests section so the reader can see *what* will be verif
 * The plan contains "TBD", "TODO", "later", "if needed", "appropriate", or "etc."
 * The same thing is named two different ways across tasks.
 * You wrote "similar to Task N" instead of restating the content.
+* TDD doesn't fit the work, so you're about to skip straight to coding with no skill at all — non-functional work still routes to `slow-powers:working-in-isolation`; only the informational/trivial branch frees you.
+* Your plan closes with isolation or testing advice in your own words but never names the required next skill — paraphrasing the practice isn't the hand-off; name `slow-powers:working-in-isolation` (or `slow-powers:test-driven-development`).
 
 If you hit a Red Flag: stop and fix it before the plan leaves your hands. Approval comes from a plan that holds up to scrutiny, not from optimism.
 
@@ -70,3 +89,6 @@ If you hit a Red Flag: stop and fix it before the plan leaves your hands. Approv
 | "That file is probably where I said it is." | "Probably" isn't verified. Check it before the user does. |
 | "The plan reads fine — I don't need to re-review it." | You wrote it, so you're blind to its gaps. Re-read it as someone who has to execute it. |
 | "Repeating context across similar tasks is wasteful." | The reader may read tasks out of order. Restate the relevant detail. |
+| "It's just docs / a refactor — it doesn't need isolation." | Non-mechanical changes still collide with other work. Route by the flowchart: structural and docs changes get `slow-powers:working-in-isolation`. |
+| "TDD doesn't apply, so no skill applies." | TDD is only the *functional* branch. Non-functional, non-mechanical work still has a required next skill — isolation. |
+| "I told them to work on a branch / isolate the work — that covers it." | Generic isolation advice in your own words isn't the hand-off. Name `slow-powers:working-in-isolation` as the required next skill — the named hand-off is the deliverable, on a cold draft as much as a contested one. |

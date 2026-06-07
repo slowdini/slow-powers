@@ -3,14 +3,14 @@
     {
       "id": "no_placeholders",
       "passed": true,
-      "evidence": "All 8 steps are fully concrete: file paths are named (e.g. 'src/types.ts', 'src/components/TodoItem.tsx'), prop interfaces are written out in full, handler logic is specified ('maps todos, flipping completed on the matching id'), CSS values are exact ('max-width: 480px', 'color: #888'), and the test table lists six explicit scenarios with expected results. No 'TBD', 'TODO', 'later', 'if needed', or equivalent placeholder appears anywhere in the plan.",
+      "evidence": "Every task in the plan is fully concrete: Task 1 gives exact CLI commands and filenames to delete; Task 2 provides the complete TypeScript interface; Task 3 specifies exact state shape, API signatures, and side-effect behavior; Tasks 4–6 give exact prop types, rendered element structure, and CSS class names; Task 7 specifies exact destructuring and JSX structure; Task 8 gives exact CSS property values. The tests section lists specific test cases per component. No 'TBD', 'TODO', 'later', 'if needed', or any other placeholder appears anywhere in the final_message.",
       "confidence": 1,
       "grader": "llm_judge"
     },
     {
       "id": "hands_off_to_tdd",
       "passed": true,
-      "evidence": "\"When implementation begins, use `slow-powers:test-driven-development` for the implementation phase.\"",
+      "evidence": "**REQUIRED NEXT SKILL:** `slow-powers:test-driven-development`\n\nThis plan adds runtime behavior, so TDD governs the implementation phase.",
       "confidence": 1,
       "grader": "llm_judge"
     }

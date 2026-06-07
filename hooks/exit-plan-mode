@@ -36,10 +36,10 @@
 #   without hardening) degrades to today's behavior — never worse.
 #
 # CROSS-HARNESS
-#   ExitPlanMode is a Claude Code tool. Codex/OpenCode expose no such tool, so
-#   this matcher in the shared hooks/hooks.json is inert there (it never fires)
-#   and degrades cleanly to a no-op. An analogous present-a-plan lifecycle event
-#   on other harnesses is deferred (see harness-parity-check.md, issue #141).
+#   ExitPlanMode is a Claude Code tool. Codex exposes no such tool, so this
+#   matcher in the shared hooks/hooks.json is inert there. Codex gets its
+#   analogous guard through hooks/codex-stop-plan-mode, wired only from the
+#   Codex plugin manifest. OpenCode uses its runtime plugin event hook.
 #
 # Conventions mirror hooks/session-start: extensionless name (so Windows
 # auto-detection doesn't prepend bash), printf-based JSON (heredoc hangs on bash

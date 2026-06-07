@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "routes_to_working_in_isolation",
+      "passed": true,
+      "evidence": "REQUIRED NEXT SKILL: `slow-powers:working-in-isolation` — before any file is touched.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "does_not_force_tdd",
+      "passed": true,
+      "evidence": "The final_message names exactly one required next skill: 'REQUIRED NEXT SKILL: `slow-powers:working-in-isolation`'. There is no mention of test-driven-development anywhere in the response.",
+      "confidence": 1,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "Skill invocation verified from transcript.",
+      "confidence": 1,
+      "grader": "transcript_check"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
