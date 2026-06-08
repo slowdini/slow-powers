@@ -60,12 +60,8 @@ You can also browse and install it interactively: run `codex`, open
 
 ### OpenCode
 
-Add Slow-powers to the `plugin` array in `~/.config/opencode/opencode.json`:
-
-```json
-{
-  "plugin": ["@slowdini/slow-powers-opencode"]
-}
+```bash
+opencode plugin @slowdini/slow-powers-opencode -g
 ```
 
 ## The skills
