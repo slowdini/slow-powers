@@ -23,11 +23,18 @@ const bootstrapLeadingPhrase = "<EXTREMELY-IMPORTANT>";
 // once eliminates redundant fs work on every agent step.
 let _bootstrapCache; // undefined = not yet loaded, null = file missing
 
-// Tracks plan files we've already sent the hardening prompt for.
-// Once we ask the agent to harden a plan, we never ask again for that file.
-const hardeningPromptSentFor = new Set();
-
 export const SlowPowersPlugin = async ({ client, directory: _directory }) => {
+  // Tracks plan files we've already sent the hardening prompt for, keyed by
+  // `${sessionID}:${filePath}` so different sessions with the same plan path
+  // still get prompted. Scoped to the plugin instance (one per opencode process).
+  const hardeningPromptSentFor = new Set();
+
+  const log = (level, message) => {
+    client.app
+      .log({ body: { service: "slow-powers", level, message } })
+      .catch(() => {});
+  };
+
   // Helper to load bootstrap content (cached after first call)
   const getBootstrapContent = () => {
     if (_bootstrapCache !== undefined) return _bootstrapCache;
@@ -46,23 +53,30 @@ export const SlowPowersPlugin = async ({ client, directory: _directory }) => {
     const filePath = event.properties.file;
     const sessionID = event.properties.sessionID;
 
-    if (!filePath || !sessionID) return;
-
-    if (!filePath.match(/\.opencode\/plans\/.*\.md$/)) return;
-
-    let session;
-    try {
-      session = await client.session.get({ path: { id: sessionID } });
-    } catch {
+    if (!filePath || !sessionID) {
+      log("debug", `[hardening] skipped: missing filePath or sessionID`);
       return;
     }
-    if (session.agent !== "plan") return;
 
-    // Only prompt once per plan file. After we've asked the agent to harden
-    // it, we trust them to do so or not; re-prompting causes loops.
-    if (hardeningPromptSentFor.has(filePath)) return;
+    if (!filePath.match(/\.opencode\/plans\/.*\.md$/)) {
+      log("debug", `[hardening] skipped: ${filePath} not in .opencode/plans/`);
+      return;
+    }
 
-    hardeningPromptSentFor.add(filePath);
+    const promptKey = `${sessionID}:${filePath}`;
+
+    // Only prompt once per plan file per session. After we've asked the agent
+    // to harden it, we trust them to do so or not; re-prompting causes loops.
+    if (hardeningPromptSentFor.has(promptKey)) {
+      log("debug", `[hardening] skipped: already prompted for ${promptKey}`);
+      return;
+    }
+
+    hardeningPromptSentFor.add(promptKey);
+    log(
+      "info",
+      `[hardening] prompting agent to harden ${filePath} in session ${sessionID}`,
+    );
 
     try {
       await client.session.prompt({
@@ -78,8 +92,8 @@ export const SlowPowersPlugin = async ({ client, directory: _directory }) => {
         },
       });
     } catch (err) {
-      hardeningPromptSentFor.delete(filePath);
-      console.error("[slow-powers] Failed to trigger hardening-plans:", err);
+      hardeningPromptSentFor.delete(promptKey);
+      log("error", `[hardening] failed to trigger hardening-plans: ${err}`);
     }
   };
 
