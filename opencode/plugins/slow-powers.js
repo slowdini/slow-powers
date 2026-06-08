@@ -6,7 +6,6 @@
  * Intercepts plan file writes in plan mode and triggers hardening-plans skill.
  */
 
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,10 +23,9 @@ const bootstrapLeadingPhrase = "<EXTREMELY-IMPORTANT>";
 // once eliminates redundant fs work on every agent step.
 let _bootstrapCache; // undefined = not yet loaded, null = file missing
 
-// Deduplication state for plan hardening
-// Map<filePath, contentHash> - tracks processed plan file versions
-const processedPlanHashes = new Map();
-const HARDENED_MARKER = "<!-- hardened-plans -->";
+// Tracks plan files we've already sent the hardening prompt for.
+// Once we ask the agent to harden a plan, we never ask again for that file.
+const hardeningPromptSentFor = new Set();
 
 export const SlowPowersPlugin = async ({ client, directory: _directory }) => {
   // Helper to load bootstrap content (cached after first call)
@@ -43,11 +41,6 @@ export const SlowPowersPlugin = async ({ client, directory: _directory }) => {
 
     return _bootstrapCache;
   };
-
-  const hashContent = (content) =>
-    createHash("sha256").update(content).digest("hex");
-
-  const isPlanHardened = (content) => content.includes(HARDENED_MARKER);
 
   const handlePlanFileEdit = async (event) => {
     const filePath = event.properties.file;
@@ -65,20 +58,11 @@ export const SlowPowersPlugin = async ({ client, directory: _directory }) => {
     }
     if (session.agent !== "plan") return;
 
-    let content;
-    try {
-      content = fs.readFileSync(filePath, "utf8");
-    } catch {
-      return;
-    }
+    // Only prompt once per plan file. After we've asked the agent to harden
+    // it, we trust them to do so or not; re-prompting causes loops.
+    if (hardeningPromptSentFor.has(filePath)) return;
 
-    if (isPlanHardened(content)) return;
-
-    const contentHash = hashContent(content);
-    const previousHash = processedPlanHashes.get(filePath);
-    if (previousHash === contentHash) return;
-
-    processedPlanHashes.set(filePath, contentHash);
+    hardeningPromptSentFor.add(filePath);
 
     try {
       await client.session.prompt({
@@ -88,13 +72,13 @@ export const SlowPowersPlugin = async ({ client, directory: _directory }) => {
           parts: [
             {
               type: "text",
-              text: `The plan at ${filePath} has been written. Please run the hardening-plans skill on this plan file to review it for hallucinations, missing file references, vague steps, and coverage gaps before presenting it. Update the file in place with the hardened version. Add ${HARDENED_MARKER} marker when done.`,
+              text: `The plan at ${filePath} has been written. If not already done, please run the hardening-plans skill on this plan file to review it before presentation.`,
             },
           ],
         },
       });
     } catch (err) {
-      processedPlanHashes.delete(filePath);
+      hardeningPromptSentFor.delete(filePath);
       console.error("[slow-powers] Failed to trigger hardening-plans:", err);
     }
   };
