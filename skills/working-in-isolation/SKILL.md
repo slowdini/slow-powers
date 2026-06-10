@@ -24,13 +24,27 @@ git worktree list              # >1 entry = worktrees already exist
 2. **Dirty tree (staged or unstaged changes) OR worktrees already exist**
    → a human or another agent is mid-work here. Use a **new worktree** so your
    changes can't collide with theirs.
-3. **On `dev` / `main` / `master`** → sync with origin and **check out a new
-   branch**. Keeps the base clean and makes the work easy to review.
+3. **On `dev` / `main` / `master`** → sync with origin and **create a new
+   branch** using the rule 3 command below. Keeps the base clean and makes the
+   work easy to review.
 4. **On any other branch** → **work in place.** The user already isolated this
    workspace; adding a worktree is needless ceremony.
 
 > **Hard rule: never make changes while on `dev` / `main` / `master`.** If you
 > find yourself on a base branch, branch (rule 3) or worktree (rule 2) first.
+
+## Creating a branch (rule 3)
+
+After syncing the base branch with origin, create the new branch from the
+current `HEAD` with no upstream tracking:
+
+```bash
+git switch --no-track --create <branch-name>
+```
+
+Do not create the branch from `origin/dev`, `origin/main`, or `origin/master`.
+`--no-track` keeps the new branch without an upstream until the user pushes it
+explicitly.
 
 ## Creating a worktree (rule 2)
 
