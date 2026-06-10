@@ -11,13 +11,13 @@ on, guard armed, 2026-06-05). Promoted from **iteration-6**; confirmed by
 - SKILL.md "Finishing" rewritten into three explicit phases: **(1) review & fix
   the CODE** ([`code-review.md`](../../code-review.md)) → code is frozen → **(2)
   final verification** on the frozen code → **(3) review & clean the COMMENTS**
-  ([`comment-review.md`](../../comment-review.md)), cosmetic, no re-verify.
+  (a former standalone comment guide), cosmetic, no re-verify.
 - A copy-into-your-tracker **finishing checklist** enumerating the phases + the
   no-unilateral-merge gate.
-- `code-review.md` is the code review only; the comment-hygiene pass (delete
+- `code-review.md` was the code review only; the comment-hygiene pass (delete
   narration / step-by-step / ticket comments; keep only Explanation or exported
-  Documentation; **extract the kernel** from a mixed comment) moved to its own
-  `comment-review.md`.
+  Documentation; **extract the kernel** from a mixed comment) moved to a former
+  standalone companion guide.
 - Old arm (`dev`) = the prior step 1 "invoke your harness's built-in code-review
   capability," no companion files.
 

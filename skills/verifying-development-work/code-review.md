@@ -1,8 +1,8 @@
 # Reviewing the Code
 
-This is **phase 1** of the finishing sequence in [`SKILL.md`](SKILL.md) — the
-code review. Review and fix the *code* here. This is the only phase that changes
-behavior, so once you finish it the code is frozen.
+This is **phase 1** of the finishing sequence in [`./SKILL.md`](./SKILL.md) —
+the diff review. Review code and comments here, fix or flag the findings that
+matter, then freeze behavior before final verification.
 
 ---
 
@@ -32,6 +32,9 @@ the request. Cite findings by `file:line` so each one is checkable. Look for:
   code that could be plainer.
 - **Leftover scaffolding** — debug prints, commented-out code, dead branches,
   silent regressions to nearby behavior.
+- **Comments** — ticket/time narrative, step-by-step narration, comments that
+  restate the next line, or mixed comments whose one useful kernel should be
+  extracted.
 - **Tests** — do they exercise real behavior, and do they cover what changed?
 
 This is not an exhaustive checklist to march through — it's where real problems
@@ -58,11 +61,33 @@ Close with a one-line verdict.
 
 ---
 
-## Then: address the findings — and freeze the code
+## Clean the comments while reviewing
 
-Fix or explicitly flag each code finding you kept. Any fix changes the code — so
-make all of those changes *now*, in this phase. When you're done, the code is
-**frozen**: nothing in the remaining phases touches behavior. Return to the
-finishing sequence in [`SKILL.md`](SKILL.md) and run the **final verification**
-(phase 2) on this frozen result — the check you hand back is then guaranteed to
-cover the exact code being returned.
+Comments are part of the diff. Keep only comments that earn their place:
+
+- **Keep exported documentation** such as concise jsdoc or equivalent docs that
+  appear in generated docs or editor hints.
+- **Keep rare evergreen explanations** for non-obvious constraints, algorithms,
+  or deliberate departures from the usual pattern.
+- **Delete narrative**: ticket numbers, incident dates, "we changed this
+  because...", or any time-sensitive story that belongs in the PR.
+- **Delete restatement**: step-by-step narration and comments that merely say
+  what the next line already says.
+- **Extract the kernel** from mixed comments: keep the one non-obvious reason,
+  rewritten tightly if needed, and delete the surrounding narration.
+
+Comment-only edits do not change behavior. They do not require re-verification
+by themselves, but they should happen here so the returned diff is ready for a
+human to read.
+
+---
+
+## Then: address the findings — and freeze behavior
+
+Fix or explicitly flag each finding you kept. Any behavior fix changes the code — so
+make all behavior-changing fixes *now*, in this phase. When you're done,
+behavior is **frozen**: nothing after this phase changes runtime behavior. Return
+to the finishing sequence in [`./SKILL.md`](./SKILL.md) and establish final
+verification evidence for this frozen result. If qualifying verification evidence
+already exists and this review made no behavior-changing edits after it, reuse
+that evidence instead of rerunning ceremony.
