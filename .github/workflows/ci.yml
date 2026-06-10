@@ -29,7 +29,7 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Install eval-magic (skill-eval)
+      - name: Install eval-magic (eval-magic)
         env:
           EVAL_MAGIC_INSTALL_DIR: ${{ runner.temp }}/eval-magic
         run: |
