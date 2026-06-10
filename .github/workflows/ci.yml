@@ -29,6 +29,14 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      - name: Install eval-magic (skill-eval)
+        env:
+          EVAL_MAGIC_INSTALL_DIR: ${{ runner.temp }}/eval-magic
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf \
+            https://github.com/slowdini/eval-magic/releases/latest/download/eval-magic-installer.sh | sh
+          echo "${{ runner.temp }}/eval-magic/bin" >> "$GITHUB_PATH"
+
       - name: Validate every skills/*/evals/evals.json
         run: bun run evals:validate
 
