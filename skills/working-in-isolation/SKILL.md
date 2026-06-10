@@ -61,6 +61,19 @@ git-ignored, add it to `.gitignore` and commit that first. If worktree creation
 fails (sandbox or permission limits), say so and fall back to checking out a
 branch in place (rule 3).
 
+## Creating a branch (rule 3)
+
+After syncing the base branch with origin, create the new branch from the
+current `HEAD` with no upstream tracking:
+
+```bash
+git switch --no-track --create <branch-name>
+```
+
+Do not create the branch from `origin/dev`, `origin/main`, or `origin/master`.
+`--no-track` keeps the new branch without an upstream until the user pushes it
+explicitly.
+
 ## After the workspace is set
 
 Install dependencies and run the existing test suite once, to confirm a clean
