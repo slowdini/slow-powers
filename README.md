@@ -26,7 +26,7 @@ Slow-powers guides agents through an evidence-backed, no-guess debugging approac
 
 Skills for writing skills! Slow-powers skills are all written and evaluated following the same guidelines and processes it ships. Back up your own skills with real stats, and understand their cost in time and tokens.
 
-Skill evaluations are powered by [@slowdini/eval-runner](https://github.com/slowdini/eval-runner)
+Skill evaluations are powered by [eval-magic](https://github.com/slowdini/eval-magic)
 
 ## Installation
 
