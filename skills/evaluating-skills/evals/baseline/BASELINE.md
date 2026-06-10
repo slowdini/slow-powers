@@ -1,9 +1,9 @@
 # Baseline — evaluating-skills
 
 Committed reference output from a canonical eval run. Regenerate with
-`skill-eval promote-baseline --skill evaluating-skills --iteration <N>` after aggregating. The ephemeral workspace (run records, timing,
+`eval-magic promote-baseline --skill evaluating-skills --iteration <N>` after aggregating. The ephemeral workspace (run records, timing,
 dispatch files, produced outputs) stays gitignored under `skills-workspace/`
-and is reclaimable by `skill-eval teardown` once promoted (this commit's marker).
+and is reclaimable by `eval-magic teardown` once promoted (this commit's marker).
 
 | Field | Value |
 |-------|-------|
@@ -20,4 +20,3 @@ and is reclaimable by `skill-eval teardown` once promoted (this commit's marker)
 Files:
 - `benchmark.json` — aggregate pass-rate / duration / token deltas.
 - `grading/<eval-id>__<condition>.json` — per-run assertion results and judge rationales.
-
