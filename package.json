@@ -1,6 +1,6 @@
 {
   "name": "@slowdini/slow-powers-opencode",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Slow-powers — structured development workflows for coding agents (TDD, debugging, verification, git hygiene)",
   "type": "module",
   "main": "./opencode/plugins/slow-powers.js",
