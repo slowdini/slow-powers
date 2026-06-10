@@ -15,6 +15,8 @@ Write production code before the test? Delete it. Start over. Do not keep it for
 
 > **REQUIRED PREREQUISITE:** You must have already completed `slow-powers:working-in-isolation` — establish an isolated workspace before writing any test or production code.
 
+> **REQUIRED NEXT SKILL:** You must complete `slow-powers:verifying-development-work` next, after the TDD implementation work is done and before claiming the task is complete or handing work back to the user.
+
 ---
 
 ## Red-Green-Refactor Cycle
