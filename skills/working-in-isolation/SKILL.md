@@ -33,19 +33,6 @@ git worktree list              # >1 entry = worktrees already exist
 > **Hard rule: never make changes while on `dev` / `main` / `master`.** If you
 > find yourself on a base branch, branch (rule 3) or worktree (rule 2) first.
 
-## Creating a branch (rule 3)
-
-After syncing the base branch with origin, create the new branch from the
-current `HEAD` with no upstream tracking:
-
-```bash
-git switch --no-track --create <branch-name>
-```
-
-Do not create the branch from `origin/dev`, `origin/main`, or `origin/master`.
-`--no-track` keeps the new branch without an upstream until the user pushes it
-explicitly.
-
 ## Creating a worktree (rule 2)
 
 Prefer your harness's **native git worktree tool** if it exists. Note that the tool my be deferred or lazily-loaded
