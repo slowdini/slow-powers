@@ -5,7 +5,7 @@ description: Use when testing whether a new skill improves agent behavior, or wh
 
 # Evaluating Skills
 
-Skill development has two phases: **drafting** (`slow-powers:writing-skills`) and **evaluation** (this skill). This skill owns the *craft* of evaluation — deciding whether a change needs measuring, designing test cases, devising pressure-testing scenarios, writing assertions, and reading results. The *mechanics* of actually running an eval — building the workspace, staging skills, dispatching subagents, grading, aggregating — are owned by a dedicated tool, **[eval-magic](https://github.com/slowdini/eval-magic)**, which ships as a dependency-less prebuilt binary you invoke as `skill-eval`. See [Running the eval](#running-the-eval) for the hand-off.
+Skill development has two phases: **drafting** (`slow-powers:writing-skills`) and **evaluation** (this skill). This skill owns the *craft* of evaluation — deciding whether a change needs measuring, designing test cases, devising pressure-testing scenarios, writing assertions, and reading results. The *mechanics* of actually running an eval — building the workspace, staging skills, dispatching subagents, grading, aggregating — are owned by a dedicated tool, **[eval-magic](https://github.com/slowdini/eval-magic)**, which ships as a dependency-less prebuilt binary you invoke as `eval-magic`. See [Running the eval](#running-the-eval) for the hand-off.
 
 ## Overview
 
@@ -95,7 +95,7 @@ A test case has these parts:
 - **files** (optional): fixture files the prompt references
 - **skill_should_trigger** (optional, default `true`): set `false` for a *negative* eval where correct behavior is the skill **not** firing (e.g. an over-trigger guard — a feature request that shouldn't launch a debugging investigation). Negative evals are excluded from the skill-invocation rate, so a correct non-invocation isn't mistaken for the skill failing to fire.
 
-Cases live in `<skill>/evals/evals.json`. For the file shape, see the author-template example in the eval-magic README and validate against the bundled schema with `skill-eval validate`; for worked, maintained examples, read the live suites in this repo — e.g. `skills/verifying-development-work/evals/evals.json` and `skills/hardening-plans/evals/evals.json`.
+Cases live in `<skill>/evals/evals.json`. For the file shape, see the author-template example in the eval-magic README and validate against the bundled schema with `eval-magic validate`; for worked, maintained examples, read the live suites in this repo — e.g. `skills/verifying-development-work/evals/evals.json` and `skills/hardening-plans/evals/evals.json`.
 
 Tips for writing good prompts:
 
@@ -142,7 +142,7 @@ Keep the seeded turns short and concrete; the point is to establish momentum, no
 
 **The ceiling — state it plainly.** A seed is *text the subagent reads*, not a state it operates under. It cannot place the agent in a harness-injected mode — a real plan mode, an enforced multi-phase workflow, genuine context-window pressure — it can only *describe* one. So when the wild failure you're chasing was *caused* by such a mode (the documented case: an agent in plan mode that invoked **zero** skills because the mode's own procedure made loading them feel redundant), a text seed cannot fully reproduce it — the causal layer is exactly the one a prompt string can't inject. A seeded **pass is therefore necessary but not sufficient** — it under-estimates real-session difficulty — and a seed that *fails* to reproduce a known wild failure is usually hitting this ceiling, not testing a bad seed. Treat seeded results as a stronger-than-cold signal, not as ground truth, and don't let downstream work over-trust them.
 
-**Narrowing the gap — `--plan-mode`.** For the documented plan-mode case, the runner offers the highest-fidelity in-runner approximation: its `--plan-mode` flag injects the harness's *verbatim* plan-mode procedure into every dispatch as an operating-context layer the subagent is told it is operating under, rather than a paraphrase the agent merely reads in the seed prose. This narrows the gap (verbatim procedure > paraphrase) but does **not** close it: it is still text the agent reads, not an injected mode, so the necessary-not-sufficient ceiling above stands unchanged. Use it as the strongest in-runner signal and pair it with a paraphrase-seed arm. See `skill-eval run --help` for the flag and the per-harness profiles it depends on.
+**Narrowing the gap — `--plan-mode`.** For the documented plan-mode case, the runner offers the highest-fidelity in-runner approximation: its `--plan-mode` flag injects the harness's *verbatim* plan-mode procedure into every dispatch as an operating-context layer the subagent is told it is operating under, rather than a paraphrase the agent merely reads in the seed prose. This narrows the gap (verbatim procedure > paraphrase) but does **not** close it: it is still text the agent reads, not an injected mode, so the necessary-not-sufficient ceiling above stands unchanged. Use it as the strongest in-runner signal and pair it with a paraphrase-seed arm. See `eval-magic run --help` for the flag and the per-harness profiles it depends on.
 
 ## Writing assertions
 
@@ -186,12 +186,12 @@ Once a run is graded and aggregated, the headline is the **delta**: what the ski
 
 ## Running the eval
 
-The mechanics of executing a run live in **[eval-magic](https://github.com/slowdini/eval-magic)** — the `skill-eval` binary. eval-magic's README is the complete operating guide, and every flag is documented in the tool's own help.
+The mechanics of executing a run live in **[eval-magic](https://github.com/slowdini/eval-magic)** — the `eval-magic` binary. eval-magic's README is the complete operating guide, and every flag is documented in the tool's own help.
 
 | Need | Where |
 |------|-------|
 | Quickstart, install, the two modes end-to-end | the eval-magic README |
-| Every subcommand and flag; the `--skill-dir` model; workspace layout | `skill-eval --help` and `skill-eval <subcommand> --help` |
+| Every subcommand and flag; the `--skill-dir` model; workspace layout | `eval-magic --help` and `eval-magic <subcommand> --help` |
 | Full run mechanics: dispatch loop, transcript access, grading, aggregating, baselines | the eval-magic README |
 | Claude Code & Codex harness specifics — isolating from installed plugins, the guard, judging | the README's Harnesses section |
 | What a harness needs to reach Claude-Code-tier support | `docs/harness-parity.md` |
@@ -200,5 +200,5 @@ The mechanics of executing a run live in **[eval-magic](https://github.com/slowd
 
 - `slow-powers:writing-skills` — drafting a skill (Phase 1)
 - `pressure-scenarios.md` — pressure-scenario taxonomy for authoring prompts that stress discipline-enforcing skills
-- eval-magic (the `skill-eval` tool) — runs the evals this skill teaches you to author
+- eval-magic (the `eval-magic` tool) — runs the evals this skill teaches you to author
 - agentskills.io/skill-creation/evaluating-skills — the methodology this skill is derived from
