@@ -64,7 +64,7 @@ The Gate Function above is your discipline at *every* completion claim. When you
 **Copy this checklist into your task tracker the moment you start finishing, and tick each box in order.** The ordering *is* the discipline — and an untracked checklist is one whose middle steps get skipped under momentum:
 
 ```
-- [ ] Phase 1 — reviewed the diff against intent, including comments (per ./code-review.md), ranked findings, and fixed/flagged each; behavior is now frozen
+- [ ] Phase 1 — reviewed the diff against intent, including comments and any file my change grew past 500 lines (per ./code-review.md, which routes to ./long-files.md), ranked findings, and fixed/flagged each; behavior is now frozen
 - [ ] Phase 2 — established final verification evidence for the frozen code, reusing qualifying current-session output or running the command fresh, and presented that output as evidence
 - [ ] Surfaced integration options (merge / push+PR / leave as-is / discard) — did not merge or push on my own
 ```
@@ -109,6 +109,7 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 - About to write "committed", "pushed", "shipped", or "deployed" — did you actually run that command this session? Asserting an action that never happened is fabrication, the worst failure in this skill's domain
 - Echoing a "tests pass" claim you did not directly observe in the primary session
 - Tests run, but no review pass over the diff
+- About to hand back a file your change grew past 500 lines without a long-file review or a declared exception (per ./long-files.md)
 - About to rerun an already-qualifying check just to satisfy ceremony
 - About to merge, push, or discard without asking — or without qualifying verification evidence first
 

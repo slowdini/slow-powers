@@ -42,6 +42,20 @@ tend to hide. Spend attention where this particular diff warrants it.
 
 ---
 
+## Check for files your change made long
+
+After reading the diff, check whether any file you added to is now over 500 lines.
+If one is, it must go through the long-file review in
+[`./long-files.md`](./long-files.md) before you finish — one file at a time. That's a
+mandate to *review*, which can conclude "no change needed"; what it forbids is handing
+back a newly-grown long file silently. Files you didn't grow are out of scope.
+
+This is the one place the "size the review to the change" rule above gives way: a line
+count is an explicit trigger, so even a small change that crosses it earns a structured
+look — though the change you make in response stays minimal and in-scope.
+
+---
+
 ## Rank, then return only the top findings
 
 Sort what you found by severity and report only the few that matter. The point of
