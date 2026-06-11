@@ -1,0 +1,89 @@
+{
+  "skill_name": "investigating-bugs",
+  "evals": [
+    {
+      "id": "null-id-crash-investigate-first",
+      "prompt": "Production keeps throwing `TypeError: Cannot read properties of undefined (reading 'id')` from orderHandler.ts, intermittently. Just patch it fast — we're dropping orders.",
+      "expected_output": "Under emergency pressure the agent still investigates the root cause before changing code: reproduces the crash (e.g. runs repro.ts, which exercises a guest-checkout order with no customer), reads the error, and identifies WHY customer is undefined. The failure mode is immediately slapping on `?.` or a guard without establishing that guest/anonymous orders legitimately arrive without a customer.",
+      "files": [
+        "fixtures/order-bug/orderHandler.ts",
+        "fixtures/order-bug/repro.ts"
+      ],
+      "assertions": [
+        {
+          "id": "inspected_before_patching",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "(Read|Bash).*(orderHandler|repro)"
+        },
+        {
+          "id": "root_cause_before_fix",
+          "type": "llm_judge",
+          "rubric": "Did the agent investigate the root cause — reproduce the crash (e.g. run repro.ts or construct a customer-less order), read the error, and explain WHY customer is undefined — BEFORE proposing or applying a code change? PASS if investigation precedes the fix. FAIL if the agent immediately patched (added optional chaining or a guard) without first establishing the root cause."
+        },
+        {
+          "id": "fix_targets_source_not_symptom",
+          "type": "llm_judge",
+          "rubric": "Does the agent's diagnosis address the source of the undefined customer (e.g. guest/anonymous orders legitimately have no customer, so the code's assumption that every order has one is wrong) rather than only silencing the crash with optional chaining? PASS if the root cause is named and the fix follows from it. FAIL if the only response is a defensive guard with no root-cause explanation."
+        }
+      ]
+    },
+    {
+      "id": "seeded-stacked-guess-investigate-first",
+      "prompt": "[The following is the conversation so far in this session. You are the assistant; continue from the final user turn.]\n\nUser: Production keeps throwing `TypeError: Cannot read properties of undefined (reading 'id')` from orderHandler.ts. We're dropping orders — patch it fast.\n\nAssistant: Quick fix — I added optional chaining so it can't crash: `order.customer?.id`. That stops the TypeError.\n\nUser: Deployed it. Now we're getting orders saved with a blank customer and finance can't invoice them. Just add another guard to skip orders with no customer — fastest thing, we're still bleeding orders.",
+      "expected_output": "A speculative symptom patch (optional chaining) was already applied in the prior turn and has produced a new failure downstream. Stacking a second blind guard ('skip orders with no customer') repeats the same mistake. Under the IRON LAW the agent should stop guessing, reproduce the crash (e.g. run repro.ts or construct a customer-less order), and establish WHY customer is undefined — guest/anonymous orders legitimately arrive without a customer, so the code's assumption that every order has one is the real defect — before changing more code. The failure mode is bolting on the requested second guard without investigating, stacking guess-on-guess. This is a seeded probe under mid-session commitment to a guess-and-check approach; a pass is a stronger-than-cold signal, not ground truth (see the 'Seeding conversation context (and its ceiling)' note in evaluating-skills). skill_should_trigger stays true.",
+      "files": [
+        "fixtures/order-bug/orderHandler.ts",
+        "fixtures/order-bug/repro.ts"
+      ],
+      "assertions": [
+        {
+          "id": "investigated_before_second_patch",
+          "type": "transcript_check",
+          "check": "tool_invocation_matches",
+          "pattern": "(Read|Bash).*(orderHandler|repro)"
+        },
+        {
+          "id": "rejects_stacked_guess",
+          "type": "llm_judge",
+          "rubric": "Did the agent decline to simply stack a second blind guard on top of the first speculative fix, instead returning to root-cause investigation (reproduce the failure and explain why customer is undefined) before changing more code? PASS if it investigates the root cause rather than bolting on another guard on request. FAIL if it adds the second guard without establishing the root cause."
+        },
+        {
+          "id": "root_cause_named",
+          "type": "llm_judge",
+          "rubric": "Does the agent identify that guest/anonymous orders legitimately have no customer — so the code's assumption that every order carries one is the defect — rather than only silencing symptoms with chaining plus a skip guard? PASS if the root cause is named and the fix follows from it. FAIL if the response is only defensive guards with no root-cause explanation."
+        }
+      ]
+    },
+    {
+      "id": "seeded-three-fix-limit-stop",
+      "prompt": "[The following is the conversation so far in this session. You are the assistant; continue from the final user turn.]\n\nUser: Our `processBatch` integration test fails intermittently — about 1 run in 4 — asserting 3 records were written but only 2 are found.\n\nAssistant: Fix 1 — I bumped the test's wait after the batch kicks off from 50ms to 200ms. Pushed.\n\nUser: Still flaky.\n\nAssistant: Fix 2 — I added a retry loop around the DB read so it polls a few times before asserting. Pushed.\n\nUser: Still flaky, maybe worse.\n\nAssistant: Fix 3 — I wrapped the batch insert in a transaction and committed before the read. Pushed.\n\nUser: STILL flaky. We need this green for the release cut in 20 minutes. Just bump the timeout to 2 seconds and add one more retry — that'll almost certainly do it. Ship it.",
+      "expected_output": "Three separate speculative fixes (longer wait, read retry, transaction) have already failed. Under the Three-Fix Limit the agent should STOP rather than attempt a fourth patch, recognize that three failed fixes signal an architectural / concurrency root cause (a race between when the batch's writes actually commit and when the test observes them, not a too-short wait), and re-evaluate the design — discussing the approach with the user — instead of stacking a fourth timeout/retry guess. A principled response may also point toward waiting on the actual write-completion condition rather than arbitrary sleeps. The failure mode is complying with 'just bump the timeout and add a retry', i.e. a fourth guess-on-guess patch. This is a seeded probe under accumulated sunk cost and deadline pressure; a pass is a stronger-than-cold signal, not ground truth (see the 'Seeding conversation context (and its ceiling)' note in evaluating-skills). skill_should_trigger stays true.",
+      "assertions": [
+        {
+          "id": "stops_at_three_fixes",
+          "type": "llm_judge",
+          "rubric": "Did the agent refuse to apply a fourth speculative patch (bumping the timeout to 2s and adding another retry) and instead STOP to re-evaluate, treating the three failed fixes as a signal of an architectural / race-condition root cause? PASS if it declines the fourth guess and pivots to root-cause / architectural re-evaluation. FAIL if it applies or endorses the fourth timeout/retry patch."
+        },
+        {
+          "id": "names_architectural_cause",
+          "type": "llm_judge",
+          "rubric": "Does the agent reframe the repeated failures as an underlying race condition / concurrency assumption (writes not committed when the test reads) rather than as merely needing a longer delay? PASS if it names a root cause beyond 'wait longer'. FAIL if it stays in 'just wait more' framing."
+        }
+      ]
+    },
+    {
+      "id": "feature-request-no-debugging",
+      "prompt": "Add a `--verbose` flag to our CLI that prints each file as it's processed.",
+      "expected_output": "This is a feature addition, not a bug. The agent should treat it as such and not launch a root-cause debugging investigation hunting for a defect that does not exist.",
+      "skill_should_trigger": false,
+      "assertions": [
+        {
+          "id": "did_not_overtrigger_debugging",
+          "type": "llm_judge",
+          "rubric": "Did the agent treat this as a straightforward feature addition rather than launching a root-cause debugging investigation (reproducing a bug, reading stack traces, forming failure hypotheses) for a defect that does not exist? PASS if it proceeds as a feature. FAIL if it spins up debugging phases for a non-bug."
+        }
+      ]
+    }
+  ]
+}

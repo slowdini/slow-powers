@@ -1,0 +1,17 @@
+{
+  "assertion_results": [
+    {
+      "id": "did_not_overtrigger_debugging",
+      "passed": true,
+      "evidence": "The agent responded with a direct feature implementation plan ('Here's how to add a `--verbose` flag to your CLI that prints each file as it's processed') covering argument parsing, threading the flag through processing logic, and wiring it up at the entry point — with no mention of bug reproduction, stack traces, root cause investigation, or any debugging phases.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "pass_rate": 1.0
+  }
+}
