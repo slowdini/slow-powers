@@ -9,7 +9,7 @@
     {
       "name": "slow-powers",
       "description": "Agent skills to enhance plan mode and debugging, enforce best practices, and enhance agent features, not replace them.",
-      "version": "0.4.5",
+      "version": "0.5.0",
       "source": "./",
       "author": {
         "name": "Max Haarhaus",
