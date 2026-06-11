@@ -1,9 +1,9 @@
 ---
-name: systematic-debugging
+name: investigating-bugs
 description: Use when encountering any bug, test failure, build error, or unexpected behavior.
 ---
 
-# Systematic Debugging
+# Investigating Bugs
 
 Avoid "guess-and-check" coding. Always identify the root cause before making changes.
 
@@ -58,13 +58,11 @@ Before changing any code:
 4. **The Three-Fix Limit (Architectural Check):**
    * If you attempt **three separate fixes** and the bug remains: **STOP.**
    * This is a strong signal that the issue is architectural (e.g., wrong model assumptions, coupled state, race conditions).
-   * Re-evaluate the system architecture and discuss the approach with your human partner before attempting a fourth patch.
+   * Re-evaluate the system architecture and discuss the approach with the user before attempting a fourth patch.
 
 ---
 
 ## Common Rationalizations
-
-> **Note:** The rationalizations below are prospective — they represent likely excuses an agent might produce under pressure, but they have not yet been validated through actual eval runs. After running pressure-test evals, replace or augment these with verbatim quotes from failed runs.
 
 | Excuse | Reality |
 |--------|---------|
@@ -78,8 +76,6 @@ Before changing any code:
 ---
 
 ## Red Flags — STOP and Reset
-
-> **Note:** The red flags below are prospective — they represent likely warning signs, but they have not yet been validated through actual eval runs.
 
 - Writing a fix before reproducing the bug or reading the full stack trace
 - "Let's just try changing X to see if it works"

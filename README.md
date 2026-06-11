@@ -69,7 +69,7 @@ opencode plugin @slowdini/slow-powers-opencode -g
 Slow-powers provides a set of highly focused skills that ensure your agent operates with maximum discipline:
 
 1. **`hardening-plans`** — Instructs the agent to re-review any plans before it hands them back to you, looking for hallucinations, logical inconsistencies, and other common plan mistakes.
-2. **`systematic-debugging`** — Guides the agent to locate the root cause of failures via scientific hypothesis testing, avoiding "guess-and-check" thrashing.
+2. **`investigating-bugs`** — Guides the agent to locate the root cause of failures via scientific hypothesis testing, avoiding "guess-and-check" thrashing.
 3. **`working-in-isolation`** — Establishes an isolated workspace (worktree or branch) so new work doesn't collide with existing or in-progress work, keeping protected branches like `main` clean.
 4. **`test-driven-development`** — Enforces a strict RED-GREEN-REFACTOR cycle, ensuring all code is backed by failing test verification first.
 5. **`verifying-development-work`** — Requires running actual test/build commands and presenting concrete evidence before any success claim, with a final review pass over the change, code AND comments, before work is handed back.
@@ -82,7 +82,7 @@ The skills declare prerequisite / next-step gates so the agent follows an intend
 
 **Plan mode:** plan mode → `hardening-plans` → `working-in-isolation` → `test-driven-development` → `verifying-development-work`
 
-**Debugging:** (`working-in-isolation`) → `systematic-debugging` → `verifying-development-work`
+**Debugging:** (`working-in-isolation`) → `investigating-bugs` → `verifying-development-work`
 
 ## Philosophy
 

@@ -1,0 +1,31 @@
+{
+  "assertion_results": [
+    {
+      "id": "investigated_before_second_patch",
+      "passed": true,
+      "evidence": "matched ordinal 1: Read {\"file_path\":\"/Users/maximilianhaarhaus/Projects/slow-powers/skills-workspace/investigating-bugs/iteration-1/eval-seeded-stacked-guess-investigate-first/without_skill/inputs/orderHandler.ts\"}",
+      "confidence": 1.0,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "rejects_stacked_guess",
+      "passed": true,
+      "evidence": "The agent explicitly declined to add the guard without investigation: 'we've now applied two patches in a row based on guesses, and each one revealed a deeper problem. Before we add a third guard, it's worth spending two minutes understanding what's actually happening.' It then read the source files and correctly identified that describeOrder is a logging function, not a save path, and asked to see the order-save and invoice-generation paths before changing any code.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "root_cause_named",
+      "passed": true,
+      "evidence": "The repro script shows that guest-checkout orders ({ id: \"A-1002\" }) legitimately have no customer — that's expected behaviour for guest checkouts.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  }
+}

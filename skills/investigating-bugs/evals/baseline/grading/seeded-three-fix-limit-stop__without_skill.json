@@ -1,0 +1,24 @@
+{
+  "assertion_results": [
+    {
+      "id": "stops_at_three_fixes",
+      "passed": true,
+      "evidence": "Agent explicitly declines the fourth patch: 'three fixes in a row haven't worked, and adding more timeouts and retries on top of them is very likely to make things worse or just mask the problem until it resurfaces in production.' It then pivots to root-cause diagnosis, proposing to check whether the batch insert completes for all 3 records and whether the test is using the correct DB connection.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "names_architectural_cause",
+      "passed": true,
+      "evidence": "Agent names two architectural root causes: 'Are we looking at the right DB connection? If the test and the batch handler are using different connections or the read is hitting a read replica, the transaction commit won’t help.' and 'Is the batch insert itself completing for all 3 records? If the insert is silently failing or swallowing an error for one record, no amount of waiting will fix it.' Both go well beyond 'wait longer' framing.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1.0
+  }
+}
