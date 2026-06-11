@@ -22,11 +22,13 @@ Avoid "guess-and-check" coding. Always identify the root cause before making cha
 Before changing any code:
 1. **Read Error Messages and Stack Traces:** Read every line of the error. Note the exact file, line number, and error codes.
 2. **Reproduce Consistently:** Identify the exact steps, inputs, or environment needed to trigger the bug. If it cannot be reproduced, gather more logs instead of guessing.
+   * For flaky tests that pass sometimes and fail under load, the cause is usually arbitrary `sleep`/timeout delays. Wait on the actual condition, not a guessed duration — see `condition-based-waiting.md` in this directory.
 3. **Check Recent Changes:** Run a git diff. Analyze recent commits, dependency additions, or config changes.
 4. **Gather Evidence (Multi-Component Systems):**
    * Log inputs and outputs at every component boundary.
    * Instrument the layers step-by-step (e.g., Workflow -> Build Script -> Runtime -> DB) to pinpoint exactly where the state breaks.
 5. **Trace Data Flow:** Trace variables backward from the failure point to their source. Fix the bug at the source, not the symptom.
+   * When manual tracing dead-ends, instrument the suspect operation: log the key inputs, relevant environment, and a captured stack trace (`new Error().stack`) *just before* it runs. In tests, write to stderr — a logger may be suppressed. Read the captured stack to find the original caller, then remove the instrumentation.
 
 ---
 
