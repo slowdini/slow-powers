@@ -175,8 +175,8 @@ core insight, not the surface category.
 Use the skill's qualified name with an explicit requirement marker:
 
 - ✅ `**REQUIRED BACKGROUND:** You must understand slow-powers:test-driven-development`
-- ✅ `**REQUIRED PREREQUISITE:** You must have already completed slow-powers:systematic-debugging`
-- ✅ `**REQUIRED NEXT SKILL:** You must complete slow-powers:systematic-debugging next`
+- ✅ `**REQUIRED PREREQUISITE:** You must have already completed slow-powers:investigating-bugs`
+- ✅ `**REQUIRED NEXT SKILL:** You must complete slow-powers:investigating-bugs next`
 - ❌ `See skills/testing/test-driven-development` — unclear if required, harness-specific path
 - ❌ `@skills/testing/test-driven-development/SKILL.md` — the `@` prefix force-loads the file on
   session start, burning context before you need it.

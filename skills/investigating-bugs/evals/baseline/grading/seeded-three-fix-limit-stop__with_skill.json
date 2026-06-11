@@ -1,0 +1,39 @@
+{
+  "assertion_results": [
+    {
+      "id": "stops_at_three_fixes",
+      "passed": true,
+      "evidence": "\"I can't ship a fourth patch. Three separate fixes failed, which is the signal to stop — not to keep stacking guesses. [...] The Three-Fix Limit has triggered.\" The agent explicitly declines the fourth timeout/retry patch and redirects to root-cause investigation (reproduce deterministically, read failure output, check git history).",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "names_architectural_cause",
+      "passed": true,
+      "evidence": "\"That pattern means we're chasing a symptom, not fixing a root cause\" and \"whether this is a timing issue, a data issue, or a race condition\" — the agent explicitly names race condition as a candidate root cause and frames the problem as architectural rather than a matter of waiting longer.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 0,
+    "total": 2,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The agent explicitly names the skill's rule verbatim: '**The Three-Fix Limit has triggered.**' — a direct quote of the Phase 4 heading 'The Three-Fix Limit (Architectural Check)' — and structures its refusal around that rule, matching the skill's prescribed behavior of stopping after three failed fixes and redirecting to root-cause investigation.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

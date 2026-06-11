@@ -18,11 +18,13 @@ Claiming work is complete without verification is an assumption, not a fact. Alw
 Before claiming any task is finished, making a success claim, or declaring a bug fixed:
 
 1. **IDENTIFY:** What exact command or output proves this claim? (e.g., test command, compiler output, linter check).
-2. **RUN:** Execute that command fresh and in full. Do not rely on previous runs or assume "nothing changed."
+2. **ESTABLISH FRESH EVIDENCE:** Use fresh evidence you personally observed in the primary session, or run the command now. "Fresh" means the output proves the current code state: full relevant command, visible output, exit code known, and no behavior-changing edits since it ran.
 3. **READ:** Review the full output, verify exit code is `0`, and check for warning logs.
 4. **VERIFY:** Does the output confirm success?
    * **If NO:** Correct the code or tests. Repeat verification.
    * **If YES:** State your completion claim **and present the fresh verification output** as evidence to the user.
+
+Current-session evidence can count. Do **not** rerun a passing check merely because this skill loaded after you already ran the right command and nothing behavior-changing happened afterward. Do rerun when the evidence is inherited, stale, incomplete, or separated from the returned code by later behavior changes.
 
 ---
 
@@ -30,28 +32,40 @@ Before claiming any task is finished, making a success claim, or declaring a bug
 
 | Success Claim | What is Required | What is NOT Sufficient |
 | :--- | :--- | :--- |
-| **"Tests are passing"** | Fresh execution of the test suite showing `0 failures`. | "They should pass," or a test run from 15 minutes ago. |
-| **"Linter is clean"** | Linter execution output showing `0 errors` and `0 warnings`. | Assumed clean because it compiled. |
-| **"Build succeeds"** | Compiler/build output exiting with code `0`. | Linter passing (compilation could still fail). |
+| **"Tests are passing"** | Current-session test output showing `0 failures` for the relevant suite. | "They should pass," someone else's paste, or a stale run. |
+| **"Linter is clean"** | Current-session linter output showing `0 errors` and `0 warnings`. | Assumed clean because it compiled. |
+| **"Build succeeds"** | Current-session compiler/build output exiting with code `0`. | Linter passing (compilation could still fail). |
 | **"Bug is fixed"** | Consistently running the failing scenario showing it now succeeds. | The code change was made and "seems correct." |
 | **"Requirements met"** | A checklist of the plan's requirements matched against code verification. | Tests pass, but product criteria were skipped. |
 
 ---
 
-## Finishing: Review Code, Verify, Then Review Comments
+## When Existing Evidence Counts
 
-The Gate Function above is your discipline at *every* completion claim. When you believe the work itself is done, run these three finishing phases **in order**. The order is deliberate: every code change happens in phase 1, *before* the verification, so the evidence you hand back is guaranteed to cover the exact code being returned — and comment cleanup comes *after*, where it can't disturb that check.
+Use already-produced evidence only when **all** of these are true:
 
-1. **Review and fix the code** — follow [`code-review.md`](code-review.md). This is the only phase that changes behavior. Review catches what running can't — silent regressions, missed edge cases, leftover debug code, reuse or simplification — then you fix or flag each finding, and *the code is now frozen*. Size the review to the change: a quick check, not a second project. (Comments are **not** reviewed here — they get phase 3.)
-2. **Run the final verification** — apply the Gate Function fresh to the now-frozen code and present *that* output as your evidence. Because all code changes happened in phase 1, this check covers exactly what the user gets.
-3. **Review and clean the comments** — follow [`comment-review.md`](comment-review.md). This pass touches *only* comments, so it changes no behavior and needs **no re-verification**: delete narrative / step-by-step / ticket comments, keeping only true Explanation or exported-member Documentation, before the diff reaches a human.
+- You ran or directly observed the command in the primary session.
+- The output is visible enough to quote or summarize concretely.
+- The command covers the success claim you are about to make.
+- No behavior-changing edits happened after the command ran.
+
+Evidence does **not** count when it came from the user, a teammate, a subagent, a prior session, a hidden/partial run, or a command that ran before later code changes. In those cases, run the appropriate command yourself before claiming success.
+
+---
+
+## Finishing: Review, Verify, Then Handoff
+
+The Gate Function above is your discipline at *every* completion claim. When you believe the work itself is done, run these finishing phases **in order**. Review comes first so any fixes happen before the evidence you hand back; verification comes next so the claim covers the returned code; integration choices come last because they belong to the user.
+
+1. **Review and fix the diff** — follow [`./code-review.md`](./code-review.md), including its comment-hygiene checks. Review catches what running can't: silent regressions, missed edge cases, leftover debug code, noisy comments, reuse or simplification. Fix or flag each finding. Once behavior-changing fixes are done, the code is frozen.
+2. **Establish final verification evidence** — apply the Gate Function to the frozen code. If you already have qualifying current-session evidence and the review made no behavior-changing edits after it, reuse it and present that output. Otherwise run the command fresh and present that output.
+3. **Surface integration options** — state that the work is reviewed and verified, then offer the user choices such as merge, push/open PR, leave as-is, or discard. Do not choose for them.
 
 **Copy this checklist into your task tracker the moment you start finishing, and tick each box in order.** The ordering *is* the discipline — and an untracked checklist is one whose middle steps get skipped under momentum:
 
 ```
-- [ ] Phase 1 — reviewed the CODE against intent, ranked findings, fixed/flagged each (per code-review.md); code is now frozen
-- [ ] Phase 2 — ran the final verification fresh on the frozen code, and presented that output as evidence
-- [ ] Phase 3 — reviewed the COMMENTS (per comment-review.md): deleted narrative / step-by-step / ticket comments, kept only true Explanation or exported Documentation
+- [ ] Phase 1 — reviewed the diff against intent, including comments and any file my change grew past 500 lines (per ./code-review.md, which routes to ./long-files.md), ranked findings, and fixed/flagged each; behavior is now frozen
+- [ ] Phase 2 — established final verification evidence for the frozen code, reusing qualifying current-session output or running the command fresh, and presented that output as evidence
 - [ ] Surfaced integration options (merge / push+PR / leave as-is / discard) — did not merge or push on my own
 ```
 
@@ -75,12 +89,13 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 |--------|---------|
 | "I already manually tested it" | Manual testing is not reproducible verification. |
 | "The change is too small to need verification" | Small changes break things all the time. |
-| "I ran the tests earlier and they passed" | Earlier means a different codebase state. |
-| "Tests pass — a prior turn, a teammate, or the user already said so" | An inherited claim is not evidence. The Gate Function requires fresh output *you* produced, this turn. |
+| "I ran the tests earlier and they passed" | Earlier counts only if you observed the full output in this session and no behavior-changing edits happened afterward. Otherwise rerun. |
+| "The skill loaded after I verified, so I have to rerun everything" | Duplicate runs add heat, not light. Reuse qualifying current-session evidence when it still proves the claim. |
+| "Tests pass — a teammate, subagent, or the user already said so" | An inherited claim is not evidence. The Gate Function requires primary-session output you observed yourself. |
 | "It's obvious this is correct" | Obvious bugs are the most embarrassing. Reading code predicts behavior; only running it proves behavior. |
 | "I'll verify after committing" | Verification after the claim is too late. |
 | "The build should be fine" | "Should" is not evidence. |
-| "Tests pass, so we're done here" | Verification is one phase of finishing, not the whole sequence — review and fix the code, verify the frozen result, then clean the comments. |
+| "Tests pass, so we're done here" | Verification is one phase of finishing, not the whole sequence — review the diff, verify the frozen result, then surface integration options. |
 | "The user said ship it, so I'll just merge" | "Ship it" authorizes the user's choice, not a unilateral merge or push. |
 
 ---
@@ -88,12 +103,14 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 ## Red Flags — STOP and Verify
 
 - "Should work now" / "probably fixed" / "seems correct" / "looks correct"
-- Claiming completion before running verification
-- Relying on partial or scoped test runs
+- Claiming completion before establishing verification evidence
+- Relying on partial or scoped test runs that do not prove the claim
 - "The code was updated successfully" without execution evidence
 - About to write "committed", "pushed", "shipped", or "deployed" — did you actually run that command this session? Asserting an action that never happened is fabrication, the worst failure in this skill's domain
-- Echoing a "tests pass" you didn't produce with a fresh run
+- Echoing a "tests pass" claim you did not directly observe in the primary session
 - Tests run, but no review pass over the diff
-- About to merge, push, or discard without asking — or without a fresh test run first
+- About to hand back a file your change grew past 500 lines without a long-file review or a declared exception (per ./long-files.md)
+- About to rerun an already-qualifying check just to satisfy ceremony
+- About to merge, push, or discard without asking — or without qualifying verification evidence first
 
-All of these mean: STOP. Run the command, analyze the output, and present the evidence.
+All of these mean: STOP. Establish qualifying evidence, read it, and present it before claiming success.

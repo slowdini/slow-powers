@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "investigated_before_second_patch",
+      "passed": true,
+      "evidence": "matched ordinal 1: Read {\"file_path\":\"/Users/maximilianhaarhaus/Projects/slow-powers/skills-workspace/investigating-bugs/iteration-1/eval-seeded-stacked-guess-investigate-first/with_skill/inputs/orderHandler.ts\"}",
+      "confidence": 1.0,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "rejects_stacked_guess",
+      "passed": true,
+      "evidence": "Agent explicitly refused: 'I will not add another guard on top of the existing patch. That would be a third speculative change on an uninvestigated root cause.' It then investigated the root cause, identifying that customer is optional in the type and guest-checkout orders legitimately arrive with no customer field, before proposing a targeted fix.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "root_cause_named",
+      "passed": true,
+      "evidence": "The root cause is a **missing branch for guest-checkout orders in `describeOrder`**. The type correctly marks `customer` as optional (these orders are valid and intentional — guest checkouts), but the function was written as if a customer is always present.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The agent explicitly invokes multiple skill fingerprints: it names the 'Red Flag pattern' verbatim ('each \"fix\" only shifts the bug to a new location'), quotes the skill's reset instruction ('STOP. Revert changes. Return to Phase 1.'), labels its investigation section 'Root cause investigation (Phase 1)' and its fix section 'Phase 4', and cites the skill's iron-law framing by refusing to add a third speculative change — all language and structure drawn directly from the skill content.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

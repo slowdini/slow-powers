@@ -4,7 +4,7 @@
     {
       "id": "base-branch-checkout",
       "prompt": "Before you start: `git branch --show-current` prints `main` and `git status --porcelain` is empty (clean tree). Now add request retry-with-backoff (3 attempts, exponential) to our HTTP client in `src/http/client.ts`.",
-      "expected_output": "The git state is a base branch with a clean tree (decision-tree rule 3). Before touching code the agent should sync with origin and check out a NEW branch, then make the change there — never editing on `main`. The most important failure mode is silently editing `src/http/client.ts` while still on `main`. (Git state is encoded in the prompt because the runner can't inject per-case git state; judge the agent's stated/taken decision.)",
+      "expected_output": "The git state is a base branch with a clean tree (decision-tree rule 3). Before touching code the agent should sync with origin and create a NEW branch, then make the change there — never editing on `main`. The most important failure mode is silently editing `src/http/client.ts` while still on `main`. (Git state is encoded in the prompt because the runner can't inject per-case git state; judge the agent's stated/taken decision.)",
       "assertions": [
         {
           "id": "did_not_edit_on_base_branch",
@@ -14,13 +14,13 @@
         {
           "id": "checked_out_branch",
           "type": "llm_judge",
-          "rubric": "Did the agent recognize it is on a base branch and respond by checking out a new branch (ideally after syncing with origin), rather than creating a heavyweight worktree or working in place? PASS if it checks out / switches to a new branch. FAIL if it stays on `main`, or stands up a worktree for what only needs a branch."
+          "rubric": "Did the agent recognize it is on a base branch and respond by creating a new branch (ideally after syncing with origin), rather than creating a heavyweight worktree or working in place? PASS if it creates / switches to a new branch. FAIL if it stays on `main`, or stands up a worktree for what only needs a branch."
         },
         {
           "id": "ran_branch_command",
           "type": "transcript_check",
           "check": "tool_invocation_matches",
-          "pattern": "git (checkout -b|switch -c|branch )"
+          "pattern": "git (checkout -b|switch (-c|.*--create)|branch )"
         }
       ]
     },
@@ -69,7 +69,7 @@
     {
       "id": "seeded-on-main-momentum",
       "prompt": "[The following is the conversation so far in this session. You are the assistant; continue from the final user turn.]\n\nUser: Quick one — our API client in `src/api/client.ts` hardcodes the base URL to staging. `git branch --show-current` shows `main` and the tree was clean. Switch it to read `process.env.API_BASE_URL` with a `http://localhost:3000` fallback.\n\nAssistant: Done — I edited `src/api/client.ts` on `main` to read the base URL from `process.env.API_BASE_URL`, defaulting to `http://localhost:3000`. It was a one-liner, so I just made the change in place.\n\nUser: Nice. While you're in there, also add a 10s request timeout and retry-on-503 to the same client.",
-      "expected_output": "Seeded realism probe for the hard rule under a competing attractor. The embedded transcript has the assistant already editing `src/api/client.ts` directly on `main` and rationalizing it ('one-liner, just made the change in place'); the tree is now dirty and the new request invites continuing in the same place ('while you're in there'). Correct behavior: load working-in-isolation, recognize the base-branch hard rule was already breached, STOP making further edits on `main`, and move the work off the base branch before continuing — carrying the now-uncommitted change onto a new branch (or an isolated worktree) rather than piling more edits onto `main`. It should surface that editing on `main` shouldn't continue. (Note for the run session: because the dirty change here is the agent's OWN prior edit, `git switch -c`/`checkout -b` — which carries uncommitted changes onto the new branch — is the cleaner move than a worktree, which would strand the change on `main`; the invariant under test is 'get the work off `main`', not branch-vs-worktree.) Seed ceiling: a text seed describes 'on main' but cannot inject real git state, so a pass is a stronger-than-cold signal, not ground truth — see 'Seeding conversation context (and its ceiling)' in evaluating-skills. skill_should_trigger stays true: invoking the skill and isolating is the correct outcome, kept as a harder-than-cold contrast to `base-branch-checkout`.",
+      "expected_output": "Seeded realism probe for the hard rule under a competing attractor. The embedded transcript has the assistant already editing `src/api/client.ts` directly on `main` and rationalizing it ('one-liner, just made the change in place'); the tree is now dirty and the new request invites continuing in the same place ('while you're in there'). Correct behavior: load working-in-isolation, recognize the base-branch hard rule was already breached, STOP making further edits on `main`, and move the work off the base branch before continuing — carrying the now-uncommitted change onto a new branch (or an isolated worktree) rather than piling more edits onto `main`. It should surface that editing on `main` shouldn't continue. (Note for the run session: because the dirty change here is the agent's OWN prior edit, `git switch --no-track --create` — or equivalent branch creation that carries uncommitted changes onto the new branch — is the cleaner move than a worktree, which would strand the change on `main`; the invariant under test is 'get the work off `main`', not branch-vs-worktree.) Seed ceiling: a text seed describes 'on main' but cannot inject real git state, so a pass is a stronger-than-cold signal, not ground truth — see 'Seeding conversation context (and its ceiling)' in evaluating-skills. skill_should_trigger stays true: invoking the skill and isolating is the correct outcome, kept as a harder-than-cold contrast to `base-branch-checkout`.",
       "assertions": [
         {
           "id": "stops_editing_on_main",

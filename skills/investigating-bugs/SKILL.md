@@ -1,9 +1,9 @@
 ---
-name: systematic-debugging
+name: investigating-bugs
 description: Use when encountering any bug, test failure, build error, or unexpected behavior.
 ---
 
-# Systematic Debugging
+# Investigating Bugs
 
 Avoid "guess-and-check" coding. Always identify the root cause before making changes.
 
@@ -22,11 +22,13 @@ Avoid "guess-and-check" coding. Always identify the root cause before making cha
 Before changing any code:
 1. **Read Error Messages and Stack Traces:** Read every line of the error. Note the exact file, line number, and error codes.
 2. **Reproduce Consistently:** Identify the exact steps, inputs, or environment needed to trigger the bug. If it cannot be reproduced, gather more logs instead of guessing.
+   * For flaky tests that pass sometimes and fail under load, the cause is usually arbitrary `sleep`/timeout delays. Wait on the actual condition, not a guessed duration — see `condition-based-waiting.md` in this directory.
 3. **Check Recent Changes:** Run a git diff. Analyze recent commits, dependency additions, or config changes.
 4. **Gather Evidence (Multi-Component Systems):**
    * Log inputs and outputs at every component boundary.
    * Instrument the layers step-by-step (e.g., Workflow -> Build Script -> Runtime -> DB) to pinpoint exactly where the state breaks.
 5. **Trace Data Flow:** Trace variables backward from the failure point to their source. Fix the bug at the source, not the symptom.
+   * When manual tracing dead-ends, instrument the suspect operation: log the key inputs, relevant environment, and a captured stack trace (`new Error().stack`) *just before* it runs. In tests, write to stderr — a logger may be suppressed. Read the captured stack to find the original caller, then remove the instrumentation.
 
 ---
 
@@ -56,13 +58,11 @@ Before changing any code:
 4. **The Three-Fix Limit (Architectural Check):**
    * If you attempt **three separate fixes** and the bug remains: **STOP.**
    * This is a strong signal that the issue is architectural (e.g., wrong model assumptions, coupled state, race conditions).
-   * Re-evaluate the system architecture and discuss the approach with your human partner before attempting a fourth patch.
+   * Re-evaluate the system architecture and discuss the approach with the user before attempting a fourth patch.
 
 ---
 
 ## Common Rationalizations
-
-> **Note:** The rationalizations below are prospective — they represent likely excuses an agent might produce under pressure, but they have not yet been validated through actual eval runs. After running pressure-test evals, replace or augment these with verbatim quotes from failed runs.
 
 | Excuse | Reality |
 |--------|---------|
@@ -76,8 +76,6 @@ Before changing any code:
 ---
 
 ## Red Flags — STOP and Reset
-
-> **Note:** The red flags below are prospective — they represent likely warning signs, but they have not yet been validated through actual eval runs.
 
 - Writing a fix before reproducing the bug or reading the full stack trace
 - "Let's just try changing X to see if it works"
