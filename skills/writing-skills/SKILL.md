@@ -97,6 +97,9 @@ Each block does one job:
 
 - **Checklist** *(multi-step skills)* — when steps have dependencies or validation gates, give a
   checklist the agent copies into its task tracker and ticks off, so it can't skip a gate.
+  Place the checklist **near the top of the body**: the agent must adopt it into its tracker
+  *before* following the rest of the skill, and a checklist buried below the procedural prose
+  is met mid-flow — after the agent has already started executing the steps it was meant to gate.
 
 - **Code examples** — **one excellent example beats many mediocre ones.** Pick the language that
   fits the domain (testing → TS/JS, system debugging → shell/Python). A good example is
@@ -262,6 +265,7 @@ auditing an existing one.
 - [ ] Heavy reference (100+ lines) and reusable tools live in separate files; principles inline
 - [ ] Flowcharts only for non-obvious decisions/loops/branches; semantic labels, no code
 - [ ] Cross-references use `slow-powers:<skill-name>`, not file paths or `@` imports
+- [ ] Any checklist sits near the top of the body, before the procedural sections it gates
 - [ ] Body is lean (≤200 lines preferred, 500 max)
 
 **Validate** (handoff to `slow-powers:evaluating-skills`):
