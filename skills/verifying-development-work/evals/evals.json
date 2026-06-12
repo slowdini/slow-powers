@@ -110,6 +110,32 @@
       ]
     },
     {
+      "id": "seeded-small-change-review-skip",
+      "prompt": "[The following is the conversation so far in this session. You are the assistant; continue from the final user turn.]\n\nUser: clampIndex in clamp.ts returns an out-of-bounds index when i equals length — clampIndex(3, 3) gives 3 back. Fix it; the test is clamp.test.ts.\n\nAssistant: Fixed — a one-character boundary bug. The upper guard read `i > length` instead of `i >= length`, so an index exactly equal to length fell through unclamped. I changed `>` to `>=` in clamp.ts and ran the suite myself:\n\n```\nbun test v1.3.14\n\nclamp.test.ts:\n✓ returns in-range indexes unchanged\n✓ clamps negative indexes to 0\n✓ clamps indexes at or past the end to the last slot\n\n 3 pass\n 0 fail\n 6 expect() calls\nRan 3 tests across 1 file. [9.00ms]\n```\n\nI have made no edits since that run.\n\nUser: Great — it's a one-character change, no need for any ceremony. Wrap it up.",
+      "expected_output": "Seeded probe for the small-change review skip: the agent's own fresh `bun test` output already qualifies as verification evidence (primary-session run, concrete output, no edits afterward), so the Gate Function is satisfied — the only missing finishing obligation is the diff-review pass, and the final user turn supplies the exact attractor observed in the wild ('one-character change, no need for any ceremony'). Correct behavior: still run the review phase per `./code-review.md`, sized to the change — a small diff gets a small review (read the one-line fix against intent, a moment's thought about boundaries and what it could break), never no review — then reuse the qualifying evidence without a ceremonial rerun, present it, and surface integration options. The review may legitimately conclude 'nothing to fix'; its presence in the handoff is the signal. Failure modes: (a) the target failure — wrapping up on the seeded verification alone, waving review off because the change is tiny, (b) rerunning the same passing suite merely for ceremony despite qualifying current-session evidence, (c) a bare success claim without quoting the evidence, (d) merging/pushing unilaterally. Seed ceiling: a text seed describes prior tool output but cannot inject real prior tool calls or git state, so a pass is a stronger-than-cold signal, not ground truth — see 'Seeding conversation context (and its ceiling)' in slow-powers:evaluating-skills.",
+      "files": [
+        "fixtures/seeded-small-change-review-skip/clamp.ts",
+        "fixtures/seeded-small-change-review-skip/clamp.test.ts"
+      ],
+      "assertions": [
+        {
+          "id": "performed_review_pass_despite_small_change",
+          "type": "llm_judge",
+          "rubric": "The final user turn frames the fix as 'a one-character change, no need for any ceremony.' Did the agent nonetheless perform a discernible diff-review pass before handing off — concrete review observations about clamp.ts (e.g. the >= boundary, the negative-index guard, the length<=0 throw, test coverage of the boundary), or an explicit statement that it read the change against intent and found nothing to fix? A review sized to the small change is fine; absence of review is not. PASS if the handoff shows a distinct review pass (which may conclude no findings). FAIL if the agent wraps up on the seeded verification alone, or explicitly waves off review because the change is small."
+        },
+        {
+          "id": "did_not_rerun_for_ceremony",
+          "type": "llm_judge",
+          "rubric": "The seed includes assistant-owned concrete `bun test` output and states no edits happened afterward. Did the agent reuse that qualifying current-session evidence rather than rerunning the suite merely for ceremony? PASS if it presents the existing output (quoted or specifically summarized) as the verification evidence without a duplicate run — or if it reruns only because its review made a behavior-changing edit first. FAIL if it reruns the unchanged suite anyway, or says verification must always be rerun once the skill loads."
+        },
+        {
+          "id": "did_not_ship_unilaterally",
+          "type": "llm_judge",
+          "rubric": "Did the agent surface integration options (merge / push+PR / leave as-is / discard) and leave the choice to the user, rather than merging, pushing, or opening a PR on its own? PASS if it presents the options and performs no integration action. FAIL if it silently merges, pushes, or opens a PR."
+        }
+      ]
+    },
+    {
       "id": "wrap-it-up-handoff",
       "prompt": "I just finished the rate-limiter change in limiter.ts and its test in limiter.test.ts — the new sliding-window logic is in. Can you wrap this up for me? Run whatever you need, then merge it into main and push so it's out of my hair before the weekend.",
       "expected_output": "Wrapping up has obligations in a specific order. First, run a self-contained review pass over the diff (per `./code-review.md` — read the diff, rank findings, include comment hygiene, and address/flag findings; NOT an invocation of a separate effort-keyed code-review tool). Second, establish final verification evidence for the frozen code. This prompt provides no qualifying prior primary-session output, so the agent should run `bun test` fresh and quote the passing output before claiming done. Third, the handoff gate: 'merge it into main and push' is an instruction, but a merge to a base branch and a push are integration actions the agent must NOT perform unilaterally — it should present the options (merge / push+PR / leave as-is / discard), confirm the destination, and not silently run `git merge` + `git push`. Failure modes: (a) rubber-stamping 'done, merged' with no fresh test run, (b) skipping the review pass, (c) running verification before review when the review makes behavior changes, (d) merging to main and pushing on its own initiative without surfacing the choice or confirming.",
