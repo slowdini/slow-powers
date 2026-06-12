@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "did_not_duplicate_valid_test_run",
+      "passed": true,
+      "evidence": "The final_message states '✓ Phase 2 — Verification evidence confirmed. Your test run shows: [bun test output] Exit code 0, no behavior-changing edits afterward. This qualifies as current-session evidence.' The tool_invocations show no second bun test run — only Read calls for limiter.ts and limiter.test.ts, plus a Write for the final-message. The agent explicitly declared the prior assistant-run output as qualifying current-session evidence and reused it without rerunning.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "presented_existing_output_as_evidence",
+      "passed": true,
+      "evidence": "The final message quotes the full Bun test summary verbatim: '2 pass\\n 0 fail\\n 8 expect() calls\\nRan 2 tests across 1 file. [5.00ms]', and states 'Exit code 0, no behavior-changing edits afterward. This qualifies as current-session evidence.'",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "The final_message presents four explicit choices — 'Merge locally', 'Push and open PR', 'Leave as-is', 'Discard' — and closes with 'What would you like to do?'. Tool invocations contain only Read and Write calls; no merge, push, or PR command was executed.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final_message uses the skill's exact phase structure ('Phase 1 — Review complete', 'Phase 2 — Verification evidence confirmed'), distinctive vocabulary from the skill ('qualifies as current-session evidence', 'no behavior-changing edits afterward'), and the integration options list (merge / push and open PR / leave as-is / discard) that mirrors the skill's 'Surface integration options' step.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

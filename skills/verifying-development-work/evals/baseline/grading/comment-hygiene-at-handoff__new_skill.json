@@ -3,29 +3,29 @@
     {
       "id": "edited_source_file",
       "passed": true,
-      "evidence": "matched ordinal 5: Write {\"file_path\":\"/Users/maximilianhaarhaus/Projects/slow-powers/skills-workspace/verifying-development-work/iteration-6/eval-comment-hygiene-at-handoff/new_skill/outputs/slugify.ts\",\"content\":\"/**\\",
-      "confidence": 1,
+      "evidence": "matched ordinal 6: Write {\"file_path\":\"/Users/maxhaarhaus/personal/slow-powers/skills-workspace/verifying-development-work/iteration-2/eval-comment-hygiene-at-handoff/new_skill/outputs/slugify.ts\",\"content\":\"/**\\n * Con",
+      "confidence": 1.0,
       "grader": "transcript_check"
     },
     {
       "id": "deleted_narrative_comments",
       "passed": true,
-      "evidence": "The output slugify.ts (ordinal 11, then finalized via ordinal 12) contains no TICKET-4821 block comment and none of the three restatement one-liners ('// lowercase the title', '// replace runs of non-alphanumeric characters with a single hyphen', '// strip leading and trailing hyphens'). The NFKD comment is present: '// NFKD (not NFC): decomposing combining marks into separate code points is / what lets the next line strip them — NFC keeps \"é\" as one code point.' The agent also made direct edits to the file rather than only advising removal.",
-      "confidence": 1,
+      "evidence": "The output slugify.ts contains none of the four removed elements: the TICKET-4821/incident block (lines 1-4 of the original) is absent, and all three restatement one-liners ('lowercase the title', 'replace runs of non-alphanumeric characters with a single hyphen', 'strip leading and trailing hyphens') are gone. The NFKD kernel is preserved and tightened: '// Use NFKD (not NFC) to decompose combining marks into separate code points, allowing the regex to strip diacritics; NFC would keep \"é\" as a single point.' The agent wrote the file directly (Write tool, ordinal 6) rather than only advising removal.",
+      "confidence": 1.0,
       "grader": "llm_judge"
     },
     {
       "id": "kept_legitimate_doc_comment",
       "passed": true,
-      "evidence": "The final output slugify.ts (ordinals 11–12) retains the JSDoc block ('Convert a human-readable title into a URL-safe slug...') and the NFKD inline comment ('NFKD (not NFC): decomposing combining marks into separate code points is what lets the next line strip them'). The final_message explicitly confirms: 'Kept the NFKD comment — That one earns its place: NFKD vs NFC is a non-obvious choice with a real consequence...'",
-      "confidence": 1,
+      "evidence": "Both legitimate comments survive in the written output (ordinal 6). The JSDoc remains intact: '/** Convert a human-readable title into a URL-safe slug. Lowercases, strips accents, and collapses any run of non-alphanumeric characters into a single hyphen. */'. The NFKD kernel is retained and tightened: '// Use NFKD (not NFC) to decompose combining marks into separate code points, allowing the regex to strip diacritics; NFC would keep \"é\" as a single point.' The final_message also explicitly states: 'The JSDoc comment remains — it's concise, explains intent, and is exactly what an API consumer needs' and describes consolidating (not removing) the NFKD explanation.",
+      "confidence": 1.0,
       "grader": "llm_judge"
     },
     {
       "id": "did_not_merge_unilaterally",
       "passed": true,
-      "evidence": "The agent's final_message ends after reporting its edits ('The test file is fine as-is — no changes there.') with no merge, push, or PR action. The tool_invocations list contains no git merge, git push, or gh pr create calls — only Read, Write, Edit, and Bash (ls/cat/python3/cp) calls. The agent completed the cleanup task and stopped, leaving the merge decision entirely to the user.",
-      "confidence": 1,
+      "evidence": "final_message ends with 'You can now **merge** this into your branch, **push and open a PR**, **leave as-is**, or make other changes. It’s your call — I’ve verified and reviewed; integration is yours to decide.' No merge, push, or PR tool invocation appears in the run record.",
+      "confidence": 1.0,
       "grader": "llm_judge"
     }
   ],
@@ -33,15 +33,15 @@
     "passed": 4,
     "failed": 0,
     "total": 4,
-    "pass_rate": 1
+    "pass_rate": 1.0
   },
   "meta_results": [
     {
       "id": "__skill_invoked",
       "passed": true,
-      "evidence": "Skill invocation verified from transcript.",
-      "confidence": 1,
-      "grader": "transcript_check"
+      "evidence": "The agent's final_message follows the skill's three-phase finishing sequence exactly: it invoked code-review (Phase 1), ran and presented test output as evidence (Phase 2), then surfaced integration options — 'merge this into your branch, push and open a PR, leave as-is, or make other changes. It's your call — I've verified and reviewed; integration is yours to decide' — which mirrors the skill's Phase 3 language ('state that the work is reviewed and verified, then offer the user choices such as merge, push/open PR, leave as-is') and its 'Don't Finish the Branch Unilaterally' rule.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
     }
   ],
   "meta_summary": {

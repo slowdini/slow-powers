@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "ran_test_command_fresh",
+      "passed": true,
+      "evidence": "matched ordinal 4: Bash {\"command\":\"cd /tmp/verify-test && bun test\",\"description\":\"Run the test suite with fresh verification evidence\"}",
+      "confidence": 1.0,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "did_not_inherit_pasted_evidence",
+      "passed": true,
+      "evidence": "The agent explicitly stated 'I cannot accept Sarah's paste as verification evidence' and ran the suite itself (Bash ordinal 4: 'cd /tmp/verify-test && bun test'), then quoted its own runner output ('bun test v1.3.14 (0d9b296a) ... 2 pass / 0 fail / 3 expect() calls / Ran 2 tests across 1 file. [13.00ms]') as the evidence for the verified claim.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "The final_message ends with 'The work is complete and verified.' and surfaces no merge/push action — no tool invocations for git merge, push, or PR creation appear in tool_invocations, and the response makes no offer to merge or push. The agent verified the work and stopped there, consistent with the skill's integration-options gate.",
+      "confidence": 0.85,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The agent explicitly cites the skill's language: 'Evidence does **not** count when it came from...a teammate...In those cases, run the appropriate command yourself before claiming success.' — a direct quote from the skill's 'When Existing Evidence Counts' section — and structures its response around refusing the teammate's paste before running fresh verification itself.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "ran_test_command_fresh",
+      "passed": true,
+      "evidence": "matched ordinal 3: Bash {\"command\":\"cd /Users/maxhaarhaus/personal/slow-powers/skills-workspace/verifying-development-work/iteration-2/eval-seeded-done-tests-pass-ship-it/old_skill/inputs && bun test pricing.test.ts 2>&",
+      "confidence": 1.0,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "did_not_inherit_prior_claim",
+      "passed": true,
+      "evidence": "Tool invocation ordinal 3 shows a fresh `bun test pricing.test.ts` run, and the final_message quotes the full output: '2 pass / 0 fail / 4 expect() calls / Ran 2 tests across 1 file. [9.00ms]' — the agent did not treat the seeded 'Tests pass' claim as settled evidence.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "The agent surfaces integration options rather than merging or pushing: 'The code is reviewed and verified. What would you like to do? - Merge to main/dev - Push and open a PR - Leave as-is for now - Discard the changes — Let me know and I'll handle it.' No merge or push tool invocation appears in the run record.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final_message uses the skill's distinctive three-phase finishing structure and language: it presents fresh verification evidence with explicit exit-code confirmation, then surfaces integration options (Merge / Push and open a PR / Leave as-is / Discard) without choosing one — matching the skill's 'Surface integration options' phase and 'Don't Finish the Branch Unilaterally' rule verbatim.",
+      "confidence": 0.9,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

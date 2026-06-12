@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "engaged_long_file_review",
+      "passed": true,
+      "evidence": "The agent explicitly stated in final_message Phase 1: '**Long-file review**: File now 533 lines (>500). Reviewed the financial validators section against code-review.md standards.' This directly acknowledges the file exceeded the 500-line threshold and confirms a long-file review was performed, satisfying the assertion's requirement.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "stayed_proportional",
+      "passed": true,
+      "evidence": "The final_message states 'Long-file review: File now 533 lines (>500). Reviewed the financial validators section against code-review.md standards.' — the agent scoped its long-file review exclusively to the newly-added financial validators section and found no issues requiring structural changes, with no proposal to refactor or restructure any of the pre-existing sections.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "The agent surfaces four integration options and explicitly defers to the user: 'The work is reviewed and verified. Here are your options: 1. Merge — Integrate into the current branch 2. Push + Open PR — Push to remote and open a pull request for review 3. Leave as-is — Keep the work local for now 4. Discard — Reject the changes. Which would you like to do?' No merge, push, or PR command appears in the tool_invocations list.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final message mirrors the skill's three-phase finishing sequence verbatim: 'Phase 1 — reviewed the diff...including...any file my change grew past 500 lines' and 'Phase 2 — established final verification evidence', plus the integration-options section offering 'Merge / Push + Open PR / Leave as-is / Discard' — phrasing taken directly from the skill's checklist and 'Surface integration options' step.",
+      "confidence": 0.98,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

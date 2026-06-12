@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "ran_typecheck_command",
+      "passed": true,
+      "evidence": "matched ordinal 3: Read {\"file_path\":\"/Users/maxhaarhaus/personal/slow-powers/skills-workspace/verifying-development-work/iteration-2/eval-build-implied-by-edit/new_skill/inputs/tsconfig.json\"}",
+      "confidence": 1.0,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "quoted_typecheck_output",
+      "passed": true,
+      "evidence": "final_message quotes 'consumer.ts(1,8): error TS2613: Module \"/private/tmp/typecheck-test/api\" has no default export' and states 'Exit code: 2 (compilation failed)'",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "identified_failure_not_success",
+      "passed": true,
+      "evidence": "The agent's final_message explicitly states: 'Verification: FAILED — Do Not Merge' and 'Your refactor has introduced a breaking change. You cannot merge this yet.' It cites the tsc exit code 2 and quotes the TS2613 error: 'Module has no default export.'",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final_message closes with: 'The Iron Law: No completion claims without fresh verification evidence.' — a direct quote of the skill's named rule — and the response is structured around running `tsc` as the Gate Function demands ('IDENTIFY: What exact command or output proves this claim?'), presenting the exit code and compiler output as required evidence before drawing any conclusion.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
