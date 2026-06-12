@@ -5,24 +5,44 @@ description: Use before claiming any task is complete, fixed, or passing, and be
 
 # Verifying Development Work
 
-Claiming work is complete without verification is an assumption, not a fact. Always verify before presenting success.
+Claiming work is complete without verification is an assumption, not a fact. Handing work back without a review pass is a guess that the diff is the right diff. Finishing requires both: verification proves the code runs; review proves it's the right code.
 
-> **THE IRON LAW:** NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE.
+> **THE IRON LAW:** NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE. NO HANDOFF WITHOUT A REVIEW PASS OVER THE DIFF.
 
 > **Violating the letter of the rules is violating the spirit of the rules.**
 
 ---
 
+## Finishing: Review, Verify, Then Handoff
+
+When you believe the work itself is done, run these finishing phases **in order**. Review comes first so any fixes happen before the evidence you hand back; verification comes next so the claim covers the returned code; integration choices come last because they belong to the user.
+
+1. **Review and fix the diff** — follow [`./code-review.md`](./code-review.md), including its comment-hygiene checks. Review catches what running can't: silent regressions, missed edge cases, leftover debug code, noisy comments, reuse or simplification. Fix or flag each finding. Once behavior-changing fixes are done, the code is frozen. A small diff never exempts this phase: review depth is sized *inside* `./code-review.md` ("Size the review to the change") — a small change means a small review, never no review.
+2. **Establish final verification evidence** — apply the Gate Function (below) to the frozen code. If you already have qualifying current-session evidence and the review made no behavior-changing edits after it, reuse it and present that output. Otherwise run the command fresh and present that output.
+3. **Surface integration options** — state that the work is reviewed and verified, then offer the user choices such as merge, push/open PR, leave as-is, or discard. Do not choose for them.
+
+**Copy this checklist into your task tracker the moment you start finishing, and tick each box in order.** The ordering *is* the discipline — and an untracked checklist is one whose middle steps get skipped under momentum:
+
+```
+- [ ] Phase 1 — reviewed the diff against intent, including comments and any file my change grew past 500 lines (per ./code-review.md, which routes to ./long-files.md), ranked findings, and fixed/flagged each; behavior is now frozen
+- [ ] Phase 2 — established final verification evidence for the frozen code, reusing qualifying current-session output or running the command fresh, and presented that output as evidence
+- [ ] Surfaced integration options (merge / push+PR / leave as-is / discard) — did not merge or push on my own
+```
+
+The last box is its own gate; the "Don't Finish the Branch Unilaterally" section below is why it's never yours to skip.
+
+---
+
 ## The Gate Function
 
-Before claiming any task is finished, making a success claim, or declaring a bug fixed:
+The Gate Function is your discipline at *every* completion claim — each "fixed", "passing", or "done" mid-task — and it is how Phase 2 of finishing establishes its evidence. Before claiming any task is finished, making a success claim, or declaring a bug fixed:
 
 1. **IDENTIFY:** What exact command or output proves this claim? (e.g., test command, compiler output, linter check).
 2. **ESTABLISH FRESH EVIDENCE:** Use fresh evidence you personally observed in the primary session, or run the command now. "Fresh" means the output proves the current code state: full relevant command, visible output, exit code known, and no behavior-changing edits since it ran.
 3. **READ:** Review the full output, verify exit code is `0`, and check for warning logs.
 4. **VERIFY:** Does the output confirm success?
    * **If NO:** Correct the code or tests. Repeat verification.
-   * **If YES:** State your completion claim **and present the fresh verification output** as evidence to the user.
+   * **If YES:** State your completion claim **and present the fresh verification output** as evidence to the user. A passed gate proves that one claim — it does not finish the work. Handoff still runs the full finishing sequence above, review pass included.
 
 Current-session evidence can count. Do **not** rerun a passing check merely because this skill loaded after you already ran the right command and nothing behavior-changing happened afterward. Do rerun when the evidence is inherited, stale, incomplete, or separated from the returned code by later behavior changes.
 
@@ -53,26 +73,6 @@ Evidence does **not** count when it came from the user, a teammate, a subagent, 
 
 ---
 
-## Finishing: Review, Verify, Then Handoff
-
-The Gate Function above is your discipline at *every* completion claim. When you believe the work itself is done, run these finishing phases **in order**. Review comes first so any fixes happen before the evidence you hand back; verification comes next so the claim covers the returned code; integration choices come last because they belong to the user.
-
-1. **Review and fix the diff** — follow [`./code-review.md`](./code-review.md), including its comment-hygiene checks. Review catches what running can't: silent regressions, missed edge cases, leftover debug code, noisy comments, reuse or simplification. Fix or flag each finding. Once behavior-changing fixes are done, the code is frozen.
-2. **Establish final verification evidence** — apply the Gate Function to the frozen code. If you already have qualifying current-session evidence and the review made no behavior-changing edits after it, reuse it and present that output. Otherwise run the command fresh and present that output.
-3. **Surface integration options** — state that the work is reviewed and verified, then offer the user choices such as merge, push/open PR, leave as-is, or discard. Do not choose for them.
-
-**Copy this checklist into your task tracker the moment you start finishing, and tick each box in order.** The ordering *is* the discipline — and an untracked checklist is one whose middle steps get skipped under momentum:
-
-```
-- [ ] Phase 1 — reviewed the diff against intent, including comments and any file my change grew past 500 lines (per ./code-review.md, which routes to ./long-files.md), ranked findings, and fixed/flagged each; behavior is now frozen
-- [ ] Phase 2 — established final verification evidence for the frozen code, reusing qualifying current-session output or running the command fresh, and presented that output as evidence
-- [ ] Surfaced integration options (merge / push+PR / leave as-is / discard) — did not merge or push on my own
-```
-
-The last box is its own gate; the section below is why it's never yours to skip.
-
----
-
 ## Don't Finish the Branch Unilaterally
 
 Verified, reviewed work is still *your* checkpoint, not a decision to merge. Integrating, publishing, or discarding work is the user's call.
@@ -89,6 +89,7 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 |--------|---------|
 | "I already manually tested it" | Manual testing is not reproducible verification. |
 | "The change is too small to need verification" | Small changes break things all the time. |
+| "The change is tiny — a review pass is overkill, skip code-review.md" | Review depth is sized *inside* code-review.md; skipping the file means missing its sizing guidance and the long-file trigger. Small diff → small review, never no review. |
 | "I ran the tests earlier and they passed" | Earlier counts only if you observed the full output in this session and no behavior-changing edits happened afterward. Otherwise rerun. |
 | "The skill loaded after I verified, so I have to rerun everything" | Duplicate runs add heat, not light. Reuse qualifying current-session evidence when it still proves the claim. |
 | "Tests pass — a teammate, subagent, or the user already said so" | An inherited claim is not evidence. The Gate Function requires primary-session output you observed yourself. |
@@ -108,9 +109,10 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 - "The code was updated successfully" without execution evidence
 - About to write "committed", "pushed", "shipped", or "deployed" — did you actually run that command this session? Asserting an action that never happened is fabrication, the worst failure in this skill's domain
 - Echoing a "tests pass" claim you did not directly observe in the primary session
-- Tests run, but no review pass over the diff
+- "Verification passed, so I'm done" — tests ran, but no review pass over the diff; that violates the Iron Law's second clause
+- About to hand back a diff without having read `./code-review.md` this session
 - About to hand back a file your change grew past 500 lines without a long-file review or a declared exception (per ./long-files.md)
 - About to rerun an already-qualifying check just to satisfy ceremony
 - About to merge, push, or discard without asking — or without qualifying verification evidence first
 
-All of these mean: STOP. Establish qualifying evidence, read it, and present it before claiming success.
+All of these mean: STOP. Run the phase you were about to skip — the review pass, the verification evidence, or the handoff gate — and present the result before claiming success.
