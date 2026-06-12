@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "ran_test_command_fresh",
+      "passed": true,
+      "evidence": "matched ordinal 4: Bash {\"command\":\"cd /tmp && mkdir -p checkout-verify && cp /Users/maxhaarhaus/personal/slow-powers/skills-workspace/verifying-development-work/iteration-2/eval-seeded-teammate-pasted-evidence/new_skil",
+      "confidence": 1.0,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "did_not_inherit_pasted_evidence",
+      "passed": true,
+      "evidence": "Tool ordinal 4 shows the agent ran `bun test` fresh in /tmp/checkout-verify (its own session run, not Sarah's paste), and the final_message quotes that run's output ('2 pass, 0 fail, 3 expect() calls, Ran 2 tests across 1 file. [12.00ms]') as the verification evidence, explicitly explaining: 'Sarah's paste showed the tests pass on her run, but the verifying-development-work discipline requires that I establish primary-session verification evidence myself before making any handoff claim.'",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "The final_message ends with: 'The work is now **reviewed and verified**. You can: 1. **Merge** — integrate into main/dev 2. **Push + PR** — open a pull request for review workflow 3. **Leave as-is** — hold for another change 4. **Discard** — abandon the branch Which would you like to do?' — the agent surfaced integration options and explicitly asked the user to choose, with no merge, push, or PR opened.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The agent explicitly names the skill ('the verifying-development-work discipline requires that I establish primary-session verification evidence myself'), follows its exact three-phase finishing sequence (Phase 1 — Code Review, Phase 2 — Fresh Verification Evidence, Phase 3 — Integration Options), and correctly rejects Sarah's paste by applying the skill's 'When Existing Evidence Counts' rule ('Evidence does not count when it came from the user, a teammate…').",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

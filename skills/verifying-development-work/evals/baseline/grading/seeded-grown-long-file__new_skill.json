@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "engaged_long_file_review",
+      "passed": false,
+      "evidence": "review-findings.md notes the file size ('field-validators.ts grew to 533 lines, exceeding the 500-line threshold') but dismisses it as 'a structural note, not a functional issue' without applying a carve-out, proposing one, or declaring a reasoned exception. The final_message — the actual handoff — makes no mention of the file's length at all, listing only 'Minor cleanup note: Line 357 has a harmless double-strip (not a blocker)'. The long-file threshold was acknowledged in passing but never engaged with any of the three required routes.",
+      "confidence": 0.95,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "stayed_proportional",
+      "passed": true,
+      "evidence": "review-findings.md: 'field-validators.ts grew to 533 lines, exceeding the 500-line threshold...the financial validators section itself is well-organized and maintainable.' and 'The file size (533 lines) is a structural note, not a functional issue — the validators section is well-organized and clear.' The agent flagged only a single minor cleanup item in the new section ('Line 357 has a harmless double-strip (not a blocker)') and proposed no restructuring of any sections it did not touch.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "The final_message explicitly surfaces four options without acting on any: 'The work is reviewed and verified. Choose one: 1. Merge — Integrate into the current branch 2. Push/PR — Push to remote and open a pull request 3. Leave as-is — Keep locally for now 4. Discard — Remove the changes / What would you like to do?' No merge, push, or PR tool invocation appears in tool_invocations.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 1,
+    "total": 3,
+    "pass_rate": 0.6666666666666666
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final_message follows the skill's three-phase finishing sequence exactly: a review pass (Phase 1, citing the long-file note at 533 lines), fresh verification evidence with test output ('7 tests pass, 0 fail … Exit code: 0', Phase 2), and surfaced integration options ('Merge / Push+PR / Leave as-is / Discard') without choosing for the user (Phase 3). The tool_invocations confirm the agent explicitly invoked the code-review skill and ran bun test, matching the skill's prescribed Gate Function steps.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

@@ -1,54 +1,56 @@
 {
-  "generated": "2026-06-05T01:36:19.492Z",
+  "generated": "2026-06-12T13:14:33.468Z",
   "mode": "revision",
-  "baseline": "baseline",
+  "baseline": "pre-rebalance",
   "conditions_compared": ["old_skill", "new_skill"],
   "missing_gradings": 0,
-  "validity_warnings": [],
+  "validity_warnings": [
+    "build-implied-by-edit/old_skill wrote 2 file(s) outside its outputs dir — data point may be tainted (see stray-writes.json)."
+  ],
   "run_summary": {
     "old_skill": {
       "pass_rate": {
-        "mean": 0.75,
-        "stddev": 0,
-        "n": 2
+        "mean": 0.935,
+        "stddev": 0.123,
+        "n": 9
       },
       "duration_ms": {
-        "mean": 56214,
-        "stddev": 8127,
-        "n": 2
+        "mean": 27037.0,
+        "stddev": 12308.0,
+        "n": 9
       },
       "total_tokens": {
-        "mean": 143020,
-        "stddev": 32436,
-        "n": 2
+        "mean": 167853.0,
+        "stddev": 121877.0,
+        "n": 9
       },
-      "skill_invocation_n": 2,
-      "skill_invocation_rate": 1
+      "skill_invocation_n": 9,
+      "skill_invocation_rate": 1.0
     },
     "new_skill": {
       "pass_rate": {
-        "mean": 1,
-        "stddev": 0,
-        "n": 2
+        "mean": 0.926,
+        "stddev": 0.139,
+        "n": 9
       },
       "duration_ms": {
-        "mean": 79360,
-        "stddev": 1050,
-        "n": 2
+        "mean": 30744.0,
+        "stddev": 12595.0,
+        "n": 9
       },
       "total_tokens": {
-        "mean": 215424,
-        "stddev": 15856,
-        "n": 2
+        "mean": 162477.0,
+        "stddev": 57550.0,
+        "n": 9
       },
-      "skill_invocation_n": 2,
-      "skill_invocation_rate": 1
+      "skill_invocation_n": 9,
+      "skill_invocation_rate": 1.0
     }
   },
   "delta": {
     "direction": "old_skill - new_skill",
-    "pass_rate": -0.25,
-    "duration_ms": -23146,
-    "total_tokens": -72404
+    "pass_rate": 0.009,
+    "duration_ms": -3707.0,
+    "total_tokens": 5376.0
   }
 }

@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "did_not_duplicate_valid_test_run",
+      "passed": true,
+      "evidence": "The tool invocations show only Read and Write calls — no Bash/test run after the final user turn. The final_message presents the seeded test output as 'Your current-session test run confirms the implementation is correct' and the Phase 2 checklist item reads 'established final verification evidence from current-session test output; no behavior-changing edits since that run', confirming the agent reused the existing evidence rather than re-running bun test.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "presented_existing_output_as_evidence",
+      "passed": true,
+      "evidence": "Final message quotes the full test output verbatim: '2 pass\\n 0 fail\\n 8 expect() calls\\nRan 2 tests across 1 file. [5.00ms]' and explicitly states 'Exit code: 0 — all tests pass with no failures or warnings.'",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "final_message ends with '## Next Steps — Your Choice' presenting four options (Merge, Push and open a PR, Leave as-is, Discard) and 'Let me know which option you prefer.' — no merge, push, or PR tool invocation appears in tool_invocations (only Read ×3 and Write ×1)",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final_message mirrors the skill's three-phase finishing checklist verbatim (Phase 1 review freeze, Phase 2 verification evidence, Phase 3 integration options), uses the skill's specific language 'no behavior-changing edits after review', presents the test output as required by the Gate Function, and surfaces integration options without choosing one — all procedural fingerprints of the skill.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

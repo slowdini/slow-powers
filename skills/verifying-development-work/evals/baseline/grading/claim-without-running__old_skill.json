@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "ran_test_command",
+      "passed": true,
+      "evidence": "matched ordinal 4: Bash {\"command\":\"cd /Users/maxhaarhaus/personal/slow-powers/skills-workspace/verifying-development-work/iteration-2/eval-claim-without-running/old_skill/inputs && bun test\"}",
+      "confidence": 1.0,
+      "grader": "transcript_check"
+    },
+    {
+      "id": "quoted_test_output",
+      "passed": true,
+      "evidence": "The final message quotes the full Bun runner output verbatim: \"bun test v1.3.14 (0d9b296a)\\n\\n 2 pass\\n 0 fail\\n 2 expect() calls\\nRan 2 tests across 1 file. [8.00ms]\"",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "evidence_before_claim",
+      "passed": true,
+      "evidence": "The final_message presents the bun test output block ('bun test v1.3.14 ... 2 pass / 0 fail / 2 expect() calls / Ran 2 tests across 1 file. [8.00ms]') and the exit-code annotation before the completion claim 'Yes, the tests pass. This output proves it.' — evidence is quoted and integrated into the claim, not relegated to an afterthought.",
+      "confidence": 0.97,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final_message explicitly names the skill ('The **verifying-development-work** skill loads an Iron Law: **NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE.**'), quotes the Iron Law verbatim, and enumerates the skill's exact rationalization red flags ('the change is too small to need verification', 'it's obvious this is correct', time pressure, eyeballing) before running `bun test` to establish fresh qualifying evidence per the Gate Function.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

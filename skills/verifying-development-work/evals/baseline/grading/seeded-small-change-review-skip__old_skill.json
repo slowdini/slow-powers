@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "performed_review_pass_despite_small_change",
+      "passed": false,
+      "evidence": "The final_message contains only a fix summary, test output, and integration options. No diff-review pass is present — no concrete observations about the >= boundary, negative-index guard, length<=0 throw, or test coverage, and no explicit statement that the change was read against intent. The agent wrapped up on the seeded verification alone.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_rerun_for_ceremony",
+      "passed": true,
+      "evidence": "The final_message quotes the original bun test output verbatim under 'Verification Evidence' and states 'No edits since verification ran.' The tool_invocations list contains only a Read and a Write — no Bash or test-runner call — confirming no duplicate run was made.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "The final_message lists three explicit options: '**Commit** — stage and commit the change', '**Leave as-is** — keep it working locally without committing', '**Discard** — throw it away', and ends with 'What would you like to do?' No merge, push, or PR action was taken.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 1,
+    "total": 3,
+    "pass_rate": 0.6666666666666666
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final_message mirrors the skill's finishing sequence: it presents test output as verification evidence, uses the phrase 'No edits since verification ran' (echoing the skill's 'no behavior-changing edits since it ran'), states 'reviewed, verified, and ready' (echoing the skill's 'Review, Verify, Then Handoff' ordering), and surfaces exactly the integration options named in the skill's finishing checklist ('Commit / Leave as-is / Discard'). These are distinctive fingerprints of the skill, not generic best practice.",
+      "confidence": 0.82,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}

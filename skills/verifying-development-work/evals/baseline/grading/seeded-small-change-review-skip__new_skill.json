@@ -1,0 +1,46 @@
+{
+  "assertion_results": [
+    {
+      "id": "performed_review_pass_despite_small_change",
+      "passed": true,
+      "evidence": "Phase 1: Code Review section in final_message contains concrete diff-review observations: 'Boundary condition fix is correct: clampIndex(3, 3) now returns 2 (the last valid index) instead of 3 (out of bounds). The change aligns with the test name... No leftover debug code, no unrelated changes, no comments to adjust. File is 7 lines; no long-file review needed.' This is a distinct review pass sized to the small change, not a wave-off.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_rerun_for_ceremony",
+      "passed": false,
+      "evidence": "Tool invocation ordinal 4 shows the agent ran 'bun test' again (producing '3 pass, 0 fail') on unchanged code, and the final message labels this 'Fresh test run output (current session)' — the agent reran the suite rather than reusing the seeded evidence, which already qualified (assistant-owned, 3 pass, no edits afterward).",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    },
+    {
+      "id": "did_not_ship_unilaterally",
+      "passed": true,
+      "evidence": "final_message lists four explicit integration options — '**Commit it** — Stage and commit the change', '**Leave as-is** — Keep it in the working tree for now', '**Discard it** — Revert the change', '**Push/open PR** — If you want to integrate upstream' — and ends with 'What's next?' with no merge, push, or PR action taken.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 1,
+    "total": 3,
+    "pass_rate": 0.6666666666666666
+  },
+  "meta_results": [
+    {
+      "id": "__skill_invoked",
+      "passed": true,
+      "evidence": "The final_message reproduces the skill's three-phase finishing checklist verbatim (including the exact checkbox text 'reviewed the diff against intent, including comments and any file my change grew past 500 lines (per ./code-review.md, which routes to ./long-files.md)'), uses distinctive skill vocabulary ('behavior is now frozen', 'Surfaced integration options'), and structures the entire response around the skill's Phase 1 / Phase 2 / integration-options sequence — none of which appears in generic best-practice behavior.",
+      "confidence": 1.0,
+      "grader": "llm_judge"
+    }
+  ],
+  "meta_summary": {
+    "passed": 1,
+    "failed": 0,
+    "total": 1,
+    "skill_invoked": true
+  }
+}
