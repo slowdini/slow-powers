@@ -7,15 +7,17 @@ description: Use when creating new skills or editing existing skills. Drafting o
 
 ## Overview
 
-Skill development has two phases: **drafting** (this skill) and **evaluation**
-(`slow-powers:evaluating-skills`). This skill is your template for authoring a new skill and
-your checklist for auditing an existing one — it covers structure, building blocks, description
-writing, and rationalization-proofing.
+Skill development connects **drafting** (this skill) with **evaluation**
+(`slow-powers:evaluating-skills`). Start with the problem the skill should solve and the
+outcomes that would make it useful. Draft the guidance and design its eval coverage against
+those same goals. This skill covers structure, building blocks, description writing, and
+rationalization-proofing; evaluating-skills owns measurement.
 
-A behavioral draft you didn't measure is a claim you didn't verify. After drafting, hand off to
-`slow-powers:evaluating-skills` to decide whether the change is behavior-shaping (measure it) or
-deterministic instruction-following (declare the decision and reasoning, then skip). Default to
-measuring; the skip is a narrow, announced exception, not an escape hatch.
+A behavioral draft you didn't measure is a claim you didn't verify. Build a reusable suite
+with a new skill, and reuse it when revising the prose. Define new cases when goals change
+or evidence reveals a coverage gap or defective grader. Deterministic edits can skip
+behavioral measurement with a stated reason; see "When to run" in
+`slow-powers:evaluating-skills`. Mark draft or exploratory work as such until measured.
 
 ## Validation checklist
 
@@ -24,6 +26,7 @@ auditing an existing one — copy it into your tracker before you start, then wo
 rest of this skill against it.
 
 **Draft:**
+- [ ] State the motivating problem, intended goals, and observable success before drafting prose
 - [ ] Name uses only lowercase letters, numbers, hyphens
 - [ ] Frontmatter has `name` and `description` (under 1024 chars total)
 - [ ] Description starts with "Use when…", is third person, includes triggers/symptoms, and
@@ -36,17 +39,18 @@ rest of this skill against it.
 
 **Validate** (handoff to `slow-powers:evaluating-skills`):
 - [ ] Decide whether the change is behavior-shaping or deterministic, and announce the decision
-      and reasoning (see "Choosing to test with evals"). Default to behavior-shaping when unsure.
-- [ ] If behavior-shaping (or the user opts in): author `evals/evals.json` with 2–3 realistic
-      prompts
-- [ ] For discipline-enforcing skills, write pressure prompts combining multiple pressures, plus
-      at least one **seeded** case (embeds a prior transcript) alongside a cold contrast case
-- [ ] Run the eval. Iterate until the with-skill pass rate is materially higher than baseline.
+      and reasoning (see "When to run"). Default to behavior-shaping when unsure.
+- [ ] Reuse a trustworthy suite; for an uncovered goal, explore realistic work and author
+      cases in `evals/evals.json`, with a goal-based `COVERAGE.md` beside it
+- [ ] For discipline-enforcing skills, include realistic pressure and at least one **seeded**
+      case (embeds a prior transcript) alongside a cold contrast case
+- [ ] Calibrate new or revised graders, then measure the frozen suite across fresh sessions;
+      report regressions, benefits, cost, and uncertainty against the goals
 
 **Deploy:**
 - [ ] Commit the skill (and its `evals/evals.json`, when authored) together
-- [ ] In the PR, include before/after eval results — or, for a deterministic change, the stated
-      decision and reasoning to skip
+- [ ] In the PR, include before/after eval evidence and its limitations — or, for a deterministic
+      change, the stated decision and reasoning to skip; label unfinished measurement explicitly
 
 ## What is a skill?
 
@@ -121,7 +125,7 @@ Each block does one job:
 
 - **Red flags / rationalization table** *(discipline skills only)* — these look like gotchas but
   are **not** the same: gotchas correct *facts*, red flags counter *motivated reasoning* under
-  pressure, and they come from eval pressure-testing rather than domain knowledge. See
+  pressure, and they come from observed failures in real work or eval pressure-testing. See
   "Rationalization-proofing" below for how to build them.
 
 - **Quick-reference table** — for scanning common operations. Tables and lists, not prose.
@@ -259,8 +263,11 @@ Skills that enforce discipline (TDD, verifying-development-work, hardening-plans
 must survive pressure — agents find loopholes under time, sunk-cost, or authority pressure.
 Drafting an enforceable rule differs from drafting a guideline. In one controlled study, persuasion cues more than doubled compliance for the tested model and prompts. See the [persuasion principles](references/persuasion-principles.md) for the seven principles, when each applies, the study's limits, and citations (Cialdini, 2021; Meincke et al., 2026).
 
-**Close every loophole explicitly.** State the rule, then forbid the specific workarounds you
-can predict — the agent will reach for the ambiguity under pressure.
+**Close the loopholes behind observed failures.** State the rule and counter the workarounds
+that evidence connects to a failed goal. Ordinary mechanical instructions, such as naming a
+next skill verbatim, do not merit red flags, repeated enforcement, or performance eval cases
+merely because the skill requires them. If real work or eval evidence shows an apparently
+mechanical step actually fails, targeted coverage and stronger guidance can be warranted.
 
 ```markdown
 ✅ Write code before test? Delete it. Start over.
@@ -272,9 +279,11 @@ can predict — the agent will reach for the ambiguity under pressure.
 
 > **Violating the letter of the rules is violating the spirit of the rules.**
 
-**Build the rationalization table and red-flags list *from* the eval loop** — they aren't
-something you write up front. The eval surfaces the specific excuses an agent reaches for; capture
-them verbatim and bake them back in:
+**Build the rationalization table and red-flags list from failure evidence** — they aren't
+an inventory of instructions to reinforce up front. Capture relevant excuses verbatim from
+real work or evals, then check them against the agent's actions. Add a counter when the
+evidence points to a gap in the guidance, and measure
+the revision on the same cases:
 
 ```markdown
 | Excuse | Reality |
@@ -288,13 +297,19 @@ them verbatim and bake them back in:
 - "This is different because…"
 ```
 
-The mid-session rationalizations that belong here surface most reliably from *seeded* eval cases
-— ones that embed a prior transcript so the agent meets the rule already committed to skipping
-it. See `slow-powers:evaluating-skills` ("Seeding conversation context") and its [pressure-scenarios reference](../evaluating-skills/references/pressure-scenarios.md) for the pressure taxonomy.
+Use *seeded* eval cases to investigate mid-session rationalizations: embed a short prior
+transcript so the agent meets the decision already committed to an approach. Check explanations
+against actions and outcomes before adding a counter. See the [pressure-scenarios reference](../evaluating-skills/references/pressure-scenarios.md)
+for realistic context and the limits of text seeds.
+
+Evaluation can also reveal guidance the base agent or intended harness already supplies.
+When the evidence supports that conclusion, simplify or narrow the skill for that
+population and remeasure. Do not demand a harder case or stronger enforcement just to
+produce a benefit; `slow-powers:evaluating-skills` owns that interpretation.
 
 ## Further reading
 
-- `slow-powers:evaluating-skills` — phase 2: measuring whether the draft works
+- `slow-powers:evaluating-skills` — goal coverage, suite authoring, and measurement
 - `slow-powers:writing-technical-docs` — the general technical-writing skill
   (comments, PR descriptions, READMEs, design docs). This skill is the doc-type
   authority for skills: it owns skill structure, frontmatter, and skill-specific

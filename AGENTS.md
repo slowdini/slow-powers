@@ -53,18 +53,21 @@ All skills MUST use cross-harness vocabulary, as described in `slow-powers/writi
 If you modify skill content:
 
 - Use `slow-powers:writing-skills` to develop and test changes.
+- Define coverage against the skill's intended goals. Reuse the suite for prose
+  revisions; change cases for changed goals, uncovered failures, or defective grading.
 - Run adversarial pressure testing across multiple sessions, not just the
   happy path.
 - For behavior-shaping changes, show before/after eval results in the PR
   description. For deterministic changes (instruction-following the agent
   reliably does anyway), state the decision and reasoning to skip the eval
-  instead — see "Choosing to test with evals" in `slow-powers:evaluating-skills`.
+  instead — see "When to run" in `slow-powers:evaluating-skills`. Label exploratory
+  evidence and unfinished measurement explicitly.
 - Ensure skills are cross-harness compatible: avoid harness-specific tool or feature names.
 - Our discipline-enforcing skills should carry at least one *seeded* eval case — one
   that embeds a short prior transcript so the skill is met mid-session under a
   competing attractor — because their real-world failures happen in-flight and a
-  cold prompt alone under-measures them (see "Seeding conversation context" in
-  `slow-powers:evaluating-skills`). `hardening-plans` is the reference example.
+  cold prompt alone under-measures them. Keep a cold contrast and see "Seeding
+  conversation context" in the [pressure-scenarios reference](skills/evaluating-skills/references/pressure-scenarios.md).
 
 ## Local development
 
