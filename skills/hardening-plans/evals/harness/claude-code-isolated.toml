@@ -1,0 +1,38 @@
+# claude-code, with user-scope setting sources excluded from every eval-agent
+# dispatch.
+#
+# Why: slow-powers is normally installed as an enabled plugin on a developer's
+# machine, so the harness can discover a live `hardening-plans` in BOTH arms of
+# the comparison. That makes the control arm not skill-free and invalidates the
+# delta. `eval-magic run` reports it as a `[subject]` skill-shadow finding.
+#
+# `--setting-sources project,local` hides user-scope plugins and
+# ~/.claude/skills while keeping the project- and local-scope settings the run
+# depends on: the staged skill under <env>/.claude/skills and the write guard
+# in <env>/.claude/settings.local.json. Authentication is unchanged.
+#
+# The flag is applied to the resume template as well as the opening dispatch,
+# because a plan-mode approval turn and every responder round are separate
+# `claude` invocations; isolating only the first round lets the live copy
+# return on the next one.
+#
+# Usage: pass --harness-file to every eval-magic command of the run, exactly as
+# the generated RUNBOOK.md re-emits it.
+
+label = "claude-code"
+
+[dispatch]
+exec_template = '''
+cd <eval-root> && claude -p --setting-sources project,local --output-format stream-json --verbose{mode_args}{model_arg} \
+  "Read the file at <dispatch_prompt_path> and follow its instructions exactly." \
+  </dev/null \
+  > <outputs_dir>/claude-events.jsonl \
+  2> <outputs_dir>/claude-stderr.log'''
+
+[conversation]
+resume_exec_template = '''
+cd <eval-root> && claude -p --resume {session_arg} --setting-sources project,local --output-format stream-json --verbose{mode_args}{model_arg} \
+  {prompt_arg} \
+  </dev/null \
+  > <outputs_dir>/claude-events.jsonl \
+  2> <outputs_dir>/claude-stderr.log'''

@@ -204,13 +204,17 @@ describe("shared assets (delivered by every harness)", () => {
     path: evalsPath,
   }) => {
     const config = JSON.parse(fs.readFileSync(evalsPath, "utf8")) as {
-      evals?: Array<{ files?: string[]; id?: string }>;
+      evals?: Array<{ files?: string[]; files_root?: string; id?: string }>;
     };
     const missing: string[] = [];
 
     for (const ev of config.evals ?? []) {
+      const filesRoot = path.join(
+        path.dirname(evalsPath),
+        ev.files_root ?? ".",
+      );
       for (const file of ev.files ?? []) {
-        if (!fs.existsSync(path.join(path.dirname(evalsPath), file))) {
+        if (!fs.existsSync(path.join(filesRoot, file))) {
           missing.push(`${ev.id ?? "(unknown eval)"}: ${file}`);
         }
       }
