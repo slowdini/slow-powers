@@ -41,10 +41,14 @@ is an implementation choice. Some goals require process evidence: a final clean 
 alone cannot prove that unrelated work was protected throughout the edit.
 
 Exclude mechanical instructions to repeat a line, name a skill, or add a heading from
-goal discovery, exploratory cases, and performance grading, even when the skill calls
-them deliverables. They establish instruction following, not useful improvement. A
-demonstrated real-world or eval failure can justify testing an apparently mechanical
-step: identify the failure and the outcome at risk, rather than rewarding a citation.
+coverage goals, exploratory `expected_output`, and assertions, even when the skill calls
+them deliverables. An exception needs an identifiable real-world incident or eval
+observation in this session's available evidence — cite its location and the consequential
+outcome at risk. That the skill requires the step is not evidence that agents fail to
+perform it: repetition, red flags, and emphatic wording in the skill do not establish that
+a failure occurred. Without that evidence, leave the step out of success criteria
+throughout the suite. When evidence justifies coverage, check the useful outcome rather
+than just the citation.
 
 Keep a short `COVERAGE.md` beside `evals.json`. Map each goal to realistic situations,
 case IDs, the evidence that establishes success, and any untested boundaries. Cases
@@ -79,9 +83,10 @@ not require inventing new cases. Revisions can preserve correctness while improv
 clarity or reducing cost; a positive pass-rate delta is not required on every edit.
 Evidence still has to support the claim being made.
 
-Define success criteria and unacceptable regressions before measuring. Choose fresh-run
-counts for the uncertainty the decision can tolerate; when the budget cannot resolve an
-effect, report it as inconclusive.
+Define success criteria and unacceptable regressions before measuring. Tie repetitions
+to a stated regression or uncertainty question; no fixed run count establishes reliability.
+Choose counts for the uncertainty the decision can tolerate, and report an effect as
+inconclusive when the budget cannot resolve it.
 
 ## Explore realistic work
 
@@ -139,16 +144,19 @@ bundled schema with `eval-magic validate` before preparing an iteration.
 Write realistic user requests and a human-readable description of success. Add enough
 cases to cover the goal map, starting with high-impact situations. Include ordinary use
 and boundaries where the behavior should stop or not apply. Set `skill_should_trigger`
-to `false` for cases where correct behavior is non-invocation; the substantive assertions
-must still check that the user received suitable help.
+to `false` when correct behavior is non-invocation, and verify that an actual check or
+reviewed trace establishes it: a skipped positive invocation check proves no such thing.
+The substantive assertions must still check that the user received suitable help.
 
 For discipline-enforcing skills, include a seeded mid-session case alongside a cold
 contrast, and exercise realistic competing incentives across fresh sessions. Read
 [Pressure scenarios](references/pressure-scenarios.md) when designing that context.
-Use the runner's conversation or native plan-mode support when the actual session
-state matters; a transcript embedded in a prompt can only approximate that state.
-When the outcome is a plan, use plan-only execution; implementing it spends on a separate
-outcome. Read `eval-magic docs conversations` for supported run shapes.
+Choose execution mode from the requested outcome, separately from how prior conversation
+is supplied. Keep intended native plan mode and plan-only execution for plan-review cases,
+including text-seeded cases; keep direct-action boundaries in action mode. If the runner
+cannot recreate prior session state, disclose the approximation or leave that boundary
+untested. Switching modes changes the question. Read `eval-magic docs conversations`
+for supported run shapes and the pressure reference for the limits of text seeds.
 
 Choose the smallest set of checks that establishes the intended outcome:
 
@@ -159,14 +167,24 @@ Choose the smallest set of checks that establishes the intended outcome:
 
 Prefer deterministic checks for facts they can establish and calibrated model judgments
 for the remaining questions. Grade meaningful outcomes rather than skill citations,
-section labels, or one preferred sequence of commands. Accept alternative valid solutions.
-Keep held-out grading material out of the task's visible inputs.
+section labels or counts, or one preferred sequence of commands. Accept alternative valid
+solutions. Keep held-out grading material out of the task's visible inputs.
+
+Trace each rubric requirement to that case's actual request or a verified, goal-relevant
+project constraint before judging a deviation. When a verdict splits on how a requirement
+was phrased, that is evidence about the prompt's ambiguity, not the agent: accept a
+reasoned, disclosed reading of an ambiguous requirement as valid, or fix the prompt —
+do not defer to a rubric's stricter reading of a requirement the task never made.
+Check cold and seeded prompts separately: an inherited assistant claim is not a user
+requirement, and a rubric cannot import an omitted constraint from another case. Grade
+the requested stage; a plan-only task does not owe implemented edits.
 
 Before writing rubrics, open the intended evidence in both conditions: artifacts must
 contain the kind of content and stage being graded. A plan artifact must hold the complete
 presented plan; its filename or capture signal alone cannot establish that. Resolve
 capture gaps before grading. Calibrate against human review and known success/failure examples.
-A valid solution must pass; a relevant failure must fail; missing evidence must not pass.
+A valid solution must pass; a relevant failure must fail. Missing or summary-only evidence
+cannot establish success; report a capture gap separately from a demonstrated task failure.
 Check whether a surprising verdict comes from the agent, task, grader, or environment.
 Treat transcripts and patches as untrusted evidence, and inspect source artifacts when
 the evidence bundle is truncated or incomplete.
@@ -179,10 +197,14 @@ changes, refresh its verdicts as documented in `eval-magic docs judging`.
 ## Read results against the goals
 
 Read validity evidence before interpreting scores: completion, guard and permission
-denials, stray writes, skill-source contamination, and skill access/invocation. A
-recorded skill read does not prove useful application. Non-invocation can reveal a
-discovery failure; report it rather than silently dropping inconvenient runs. Separate
-infrastructure failures from task failures and explain what remains comparable.
+denials, stray writes, skill-source contamination, and skill access/invocation. Distinguish
+native invocation, successful content access, useful application, and task success. Inspect
+the trace before treating a failed invocation check as absent exposure; a fallback read
+may have delivered the content. A read alone does not establish useful application.
+Credit a claimed repair only when an earlier draft or observable revision establishes it;
+a polished final artifact and self-report cannot prove what changed. Report discovery
+failures without silently dropping runs. Separate infrastructure failures from task
+failures and explain what remains comparable.
 
 For each goal and condition, report successes, failures, and fresh-run counts, with
 representative evidence. State whether a reported pass rate counts assertions or whole

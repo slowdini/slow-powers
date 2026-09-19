@@ -68,11 +68,18 @@ handoff's verification claims match observed checks on the final code. A claim t
 "tests pass" cannot establish either by itself. The cold contrast uses the same starting
 code and task without the prior assistant commitment.
 
-A seed is text, not a resumed session. It cannot create native plan-mode permissions,
-actual context exhaustion, or genuine earlier tool activity. If those cause the failure,
-use the runner's conversation or native plan-mode capabilities and document any remaining
-approximation. Read `eval-magic docs conversations` to choose the supported mechanism;
-do not describe a prompt simulation as a native mode test.
+A seed supplies conversation text; execution mode supplies permissions and workflow.
+For a plan-review case, embed the prior draft while retaining native plan mode and
+plan-only execution in both the seeded case and its cold contrast. Lack of native
+pre-seeding support is not a reason to switch to action mode or grade implementation.
+A direct-action boundary should instead retain its ordinary action mode.
+
+Text cannot recreate genuine earlier tool activity or context exhaustion. Use the runner's
+conversation capabilities when those properties matter, and disclose any approximation
+or untested boundary. Read `eval-magic docs conversations` for supported mechanisms.
+Describe text-seeded native planning accurately: the mode is real; the prior session is
+simulated. Keep user requirements equivalent across the cold and seeded contrast unless
+the changed requirement is itself the declared comparison.
 
 ## Check outcomes under pressure
 
@@ -95,7 +102,8 @@ established. A short, credible deadline is enough when time pressure is the hypo
 Read the action history alongside the output. Record a rationalization verbatim when it
 helps explain the failure, with its evidence location, but check whether the tools and
 artifacts support that explanation. An agent's explanation of its own mistake is a
-hypothesis, not proof of its cause.
+hypothesis, not proof of its cause. Likewise, a claim that review repaired a defect needs
+the earlier draft or an observable revision; the final artifact alone cannot show a repair.
 
 Identify whether the failure belongs to the skill, task setup, grading, or runner. Revise
 guidance only when the evidence points there, and generalize the correction beyond the
