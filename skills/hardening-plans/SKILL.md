@@ -1,6 +1,6 @@
 ---
 name: hardening-plans
-description: Use right after you've drafted or revised an implementation plan and before you present it or start coding — a fresh-eyes review that catches placeholders, hallucinated file references, irrelevant steps, and coverage gaps before the user has to
+description: Use right after you've drafted or revised an implementation plan and before you present it or start coding — a fresh-eyes review that catches placeholders, hallucinated file references, irrelevant steps, coverage gaps, inconsistent names, and structural drift before the user has to
 ---
 
 # Harden a drafted plan
