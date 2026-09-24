@@ -1,10 +1,10 @@
-# Testing Anti-Patterns
+# Testing anti-patterns
 
-**Load this reference when:** a test you're writing or changing matches one of the anti-patterns below — the `working-with-tdd` SKILL's "Testing anti-patterns" table points here — or any time you're adding mocks or other test scaffolding. Each anti-pattern carries a **Gate**: check it before you commit the test.
+**Load this reference when:** a test you're writing or changing matches one of the anti-patterns below — the `working-with-tdd` skill's "Testing anti-patterns" table points here — or any time you're adding mocks or other test scaffolding. Each anti-pattern carries a **gate**: check it before you commit the test.
 
 ## Overview
 
-This is a catalog of recurring testing anti-patterns — the ways a test stops verifying real behavior, or quietly couples itself to test scaffolding instead of the code under test. Mocks are the most common source (anti-patterns 1, 3, 4, and 6 all involve them), but not the only one: test-only methods leak into production (2), and tests get bolted on after the fact (5).
+This is a catalog of recurring testing anti-patterns — the ways a test stops verifying real behavior, or quietly couples itself to test scaffolding instead of the code under test. Mocks are the most common source (anti-patterns 1, 3, 4, and 6 all involve them), but not the only one: test-only methods leak into production (2), and tests get added after the implementation (5).
 
 **Core principle:** Test what the code does, not what your test scaffolding does. If a test passes because of how a mock, fixture, or helper is set up — rather than what the code under test actually does — it's verifying the wrong thing.
 
@@ -16,7 +16,7 @@ This is a catalog of recurring testing anti-patterns — the ways a test stops v
 3. NEVER mock without understanding dependencies
 ```
 
-## Anti-Pattern 1: Testing Mock Behavior
+## Anti-pattern 1: testing mock behavior
 
 **The violation:**
 ```typescript
@@ -43,7 +43,7 @@ test('renders sidebar', () => {
 
 **Gate:** Before asserting on any mock element, ask "Am I testing real component behavior or just mock existence?" If the latter, delete the assertion or unmock the component.
 
-## Anti-Pattern 2: Test-Only Methods in Production
+## Anti-pattern 2: test-only methods in production
 
 **The violation:**
 ```typescript
@@ -80,7 +80,7 @@ afterEach(() => cleanupSession(session));
 
 **Gate:** Before adding any method to a production class, ask "Is this only used by tests?" — if so, put it in test utilities instead. Then ask "Does this class own this resource's lifecycle?" — if not, it's the wrong class for the method.
 
-## Anti-Pattern 3: Mocking Without Understanding
+## Anti-pattern 3: mocking without understanding
 
 **The violation:**
 ```typescript
@@ -112,11 +112,11 @@ test('detects duplicate server', () => {
 
 **Gate:** Before mocking, ask what side effects the real method has and whether the test depends on any of them. If it does, mock at a lower level (the actual slow/external operation), not the high-level method the test relies on. If you're unsure what the test needs, run it against the real implementation first, observe what has to happen, then add minimal mocking at the right level.
 
-## Anti-Pattern 4: Incomplete Mocks
+## Anti-pattern 4: incomplete mocks
 
 **The violation:**
 ```typescript
-// ❌ BAD: Partial mock - only fields you think you need
+// ❌ BAD: Partial mock — only fields you think you need
 const mockResponse = {
   status: 'success',
   data: { userId: '123', name: 'Alice' }
@@ -143,7 +143,7 @@ const mockResponse = {
 
 **Gate:** Before creating a mock response, check what fields the real API returns (docs/examples) and include all of them — if you're mocking it, you must understand the entire structure. When uncertain, include all documented fields.
 
-## Anti-Pattern 5: Tests as Afterthought
+## Anti-pattern 5: tests as afterthought
 
 ```
 ✅ Implementation complete
@@ -153,7 +153,7 @@ const mockResponse = {
 
 Testing is part of implementation, not an optional follow-up — you can't claim complete without tests, and TDD would have caught this. Write the failing test first; see the [TDD cycle](../SKILL.md).
 
-## Anti-Pattern 6: Order-Dependent Mocks and Assertions
+## Anti-pattern 6: order-dependent mocks and assertions
 
 **The violation:**
 ```typescript
@@ -169,7 +169,7 @@ const lastCall = fetchUser.mock.calls.at(-1);
 expect(lastCall[1]).toMatchObject({ page: 2 });
 ```
 
-**Why this is wrong:** The code under test doesn't *guarantee* it calls the dependency exactly twice, in this order — retries, cache refetches/revalidation, re-renders, and effects firing on mount can add or reorder calls. When an extra call appears, the `Once` queue runs dry and the next real call gets the mock's default — usually `undefined` — which cascades into an error or empty state that looks like a product bug. Reading "the last call" or "call N" assumes that call is the one you care about, but an unmodeled refetch makes the assertion read the wrong one. The result is a test that passes or fails on timing — flaky. It's the same footgun in any framework: Sinon `onCall(n)`, a Python `side_effect=[...]` list, consecutive Mockito `thenReturn(a, b)`.
+**Why this is wrong:** The code under test doesn't *guarantee* it calls the dependency exactly twice, in this order — retries, cache refetches/revalidation, re-renders, and effects firing on mount can add or reorder calls. When an extra call appears, the `Once` queue runs dry and the next real call gets the mock's default — usually `undefined` — which cascades into an error or empty state that looks like a product bug. Reading "the last call" or "call N" assumes that call is the one you care about, but an unmodeled refetch makes the assertion read the wrong one. The result is a test that passes or fails on timing — flaky. The same failure mode appears in any framework: Sinon `onCall(n)`, a Python `side_effect=[...]` list, consecutive Mockito `thenReturn(a, b)`.
 
 **The fix:**
 ```typescript
@@ -187,19 +187,19 @@ expect(fetchUser).toHaveBeenCalledWith(
 
 **Gate:** Before using a `...Once` queue, a per-call-index stub, or a "last call / call N" assertion, ask "Can the code under test call this a different number of times, or in a different order, than I expect?" (retries? cache refetch/revalidation? re-render? effect on mount? parallelism?) If yes — or you're unsure — stub by input: return the right value for any matching call and a sensible default for the rest, never letting the stub return `undefined` for a value the code consumes; and assert by matching (`toHaveBeenCalledWith` / `objectContaining`), not by index. Also reduce non-determinism at the source: in tests, disable retries and background revalidation, and control timers, so the call count is predictable.
 
-When this footgun surfaces as a flaky CI failure, use the `slow-powers:investigating-bugs` [flaky-test diagnostic](../../investigating-bugs/references/diagnosing-flaky-tests.md).
+When this failure mode surfaces as a flaky CI failure, use the `slow-powers:investigating-bugs` [flaky-test diagnostic](../../investigating-bugs/references/diagnosing-flaky-tests.md).
 
-## When Mocks Become Too Complex
+## When mocks become too complex
 
 **Warning signs:** mock setup longer than the test logic, mocking everything to make the test pass, mocks missing methods the real components have, or tests that break when the mock changes.
 
 **Consider:** integration tests with real components are often simpler than complex mocks.
 
-## TDD Prevents These Anti-Patterns
+## TDD prevents these anti-patterns
 
-Writing the test first forces you to think about what you're actually testing; watching it fail confirms it tests real behavior, not mocks; a minimal implementation keeps test-only methods from creeping in; and using real dependencies shows you what the test actually needs before you mock. If you're testing mock behavior, you added mocks without watching the test fail against real code first — you violated TDD.
+Writing the test first forces you to think about what you're actually testing; watching it fail confirms it tests real behavior, not mocks; a minimal implementation keeps test-only methods out of production; and using real dependencies shows you what the test actually needs before you mock. If you're testing mock behavior, you added mocks without watching the test fail against real code first — you violated TDD.
 
-## Red Flags
+## Red flags
 
 - Assertion checks for `*-mock` test IDs
 - Methods only called in test files

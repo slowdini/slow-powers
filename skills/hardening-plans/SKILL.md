@@ -1,9 +1,9 @@
 ---
 name: hardening-plans
-description: Use right after you've drafted or revised an implementation plan and before you present it or start coding — a fresh-eyes review that catches placeholders, hallucinated file references, irrelevant steps, and coverage gaps before the user has to
+description: Use right after you've drafted or revised an implementation plan and before you present it or start coding — a fresh-eyes review that catches placeholders, hallucinated file references, irrelevant steps, coverage gaps, inconsistent names, and structural drift before the user has to
 ---
 
-# Hardening a Drafted Plan
+# Harden a drafted plan
 
 A drafted plan is a hypothesis, not a deliverable. This skill is the review gate between *having written* a plan and *handing it off* — to the user for approval, or to yourself for implementation. Read your own draft as if someone else wrote it, and fix what they'd otherwise have to catch.
 
@@ -13,13 +13,13 @@ This skill applies **once a plan draft exists**. It does not push you into plann
 
 ---
 
-## When to Use
+## When to use
 
 * You've drafted a plan in a harness plan mode and are about to present it for review.
 * You've written a task breakdown or design doc and are about to hand it off or start coding.
 * You're revising an existing plan file (`implementation.md`, `implementation_plan.md`, `task.md`, or equivalent) before acting on it.
 
-## When NOT to Use
+## When not to use
 
 * The user asked to "just build", "go fix", or "implement" something — trust the intent.
 * You're investigating, reading code, or gathering context — there's no draft yet.
@@ -27,7 +27,7 @@ This skill applies **once a plan draft exists**. It does not push you into plann
 
 ---
 
-## The Fresh-Eyes Review
+## The fresh-eyes review
 
 Before the plan leaves your hands, re-read the whole draft once, top to bottom, as a skeptical reviewer who will have to *execute* it. Check each item below and fix findings inline — no second pass, fix and move on. The bar: the user should never be the one to discover a problem you could have caught.
 
@@ -40,7 +40,7 @@ Before the plan leaves your hands, re-read the whole draft once, top to bottom, 
 
 ---
 
-## Choosing the Next Step
+## Choose the next step
 
 When the plan is approved, the next move depends on what kind of work the plan
 describes. Route by the **first** branch that matches — then **close your hand-off
@@ -67,7 +67,7 @@ flowchart TD
 
 ---
 
-## Red Flags — Stop and Fix
+## Red flags — stop and fix
 
 * The plan references a file you never confirmed exists.
 * A step doesn't map to the plan's goal — you can't say what it contributes.
@@ -81,7 +81,7 @@ If you hit a Red Flag: stop and fix it before the plan leaves your hands. Approv
 
 ---
 
-## Common Rationalizations
+## Common rationalizations
 
 | Excuse | Reality |
 |--------|---------|

@@ -1,20 +1,19 @@
-// Complete, non-standalone reference implementation of condition-based waiting
-// utilities. This domain-specific example (an event-driven thread manager) shows
-// how the generic waitFor pattern specializes into helpers for a real codebase.
+// This non-standalone reference implements condition-based waiting utilities for
+// an event-driven thread manager. It shows how the generic `waitFor` pattern can
+// specialize into helpers for a concrete domain.
 
 import type { ThreadManager } from "~/threads/thread-manager";
 import type { LaceEvent, LaceEventType } from "~/threads/types";
 
 /**
- * Wait for a specific event type to appear in thread
+ * Waits for the first event of a specified type in a thread.
  *
- * @param threadManager - The thread manager to query
- * @param threadId - Thread to check for events
- * @param eventType - Type of event to wait for
- * @param timeoutMs - Maximum time to wait (default 5000ms)
- * @returns Promise resolving to the first matching event
- *
- * Example:
+ * @param threadManager - The thread manager to query.
+ * @param threadId - The thread to check for events.
+ * @param eventType - The event type to wait for.
+ * @param timeoutMs - The maximum wait. Default: 5,000 ms.
+ * @returns A promise that resolves to the first matching event.
+ * @example
  *   await waitForEvent(threadManager, agentThreadId, 'TOOL_RESULT');
  */
 export function waitForEvent(
@@ -35,11 +34,11 @@ export function waitForEvent(
       } else if (Date.now() - startTime > timeoutMs) {
         reject(
           new Error(
-            `Timeout waiting for ${eventType} event after ${timeoutMs}ms`,
+            `Timeout waiting for ${eventType} event after ${timeoutMs} ms`,
           ),
         );
       } else {
-        setTimeout(check, 10); // Poll every 10ms for efficiency
+        setTimeout(check, 10); // Poll every 10 ms.
       }
     };
 
@@ -48,16 +47,15 @@ export function waitForEvent(
 }
 
 /**
- * Wait for a specific number of events of a given type
+ * Waits for a specified number of events of one type.
  *
- * @param threadManager - The thread manager to query
- * @param threadId - Thread to check for events
- * @param eventType - Type of event to wait for
- * @param count - Number of events to wait for
- * @param timeoutMs - Maximum time to wait (default 5000ms)
- * @returns Promise resolving to all matching events once count is reached
- *
- * Example:
+ * @param threadManager - The thread manager to query.
+ * @param threadId - The thread to check for events.
+ * @param eventType - The event type to wait for.
+ * @param count - The number of events to wait for.
+ * @param timeoutMs - The maximum wait. Default: 5,000 ms.
+ * @returns A promise that resolves to all matching events once the count is reached.
+ * @example
  *   // Wait for 2 AGENT_MESSAGE events (initial response + continuation)
  *   await waitForEventCount(threadManager, agentThreadId, 'AGENT_MESSAGE', 2);
  */
@@ -80,7 +78,7 @@ export function waitForEventCount(
       } else if (Date.now() - startTime > timeoutMs) {
         reject(
           new Error(
-            `Timeout waiting for ${count} ${eventType} events after ${timeoutMs}ms (got ${matchingEvents.length})`,
+            `Timeout waiting for ${count} ${eventType} events after ${timeoutMs} ms (got ${matchingEvents.length})`,
           ),
         );
       } else {
@@ -93,17 +91,16 @@ export function waitForEventCount(
 }
 
 /**
- * Wait for an event matching a custom predicate
- * Useful when you need to check event data, not just type
+ * Waits for the first event that matches a custom predicate.
+ * Use this helper to check event data rather than only the event type.
  *
- * @param threadManager - The thread manager to query
- * @param threadId - Thread to check for events
- * @param predicate - Function that returns true when event matches
- * @param description - Human-readable description for error messages
- * @param timeoutMs - Maximum time to wait (default 5000ms)
- * @returns Promise resolving to the first matching event
- *
- * Example:
+ * @param threadManager - The thread manager to query.
+ * @param threadId - The thread to check for events.
+ * @param predicate - A function that returns true when an event matches.
+ * @param description - A human-readable description for error messages.
+ * @param timeoutMs - The maximum wait. Default: 5,000 ms.
+ * @returns A promise that resolves to the first matching event.
+ * @example
  *   // Wait for TOOL_RESULT with specific ID
  *   await waitForEventMatch(
  *     threadManager,
@@ -130,7 +127,7 @@ export function waitForEventMatch(
         resolve(event);
       } else if (Date.now() - startTime > timeoutMs) {
         reject(
-          new Error(`Timeout waiting for ${description} after ${timeoutMs}ms`),
+          new Error(`Timeout waiting for ${description} after ${timeoutMs} ms`),
         );
       } else {
         setTimeout(check, 10);
@@ -141,10 +138,9 @@ export function waitForEventMatch(
   });
 }
 
-// Usage example from actual debugging session:
+// Comparison example:
 //
-// BEFORE (flaky):
-// ---------------
+// Fixed delays (flaky):
 // const messagePromise = agent.sendMessage('Execute tools');
 // await new Promise(r => setTimeout(r, 300)); // Hope tools start in 300ms
 // agent.abort();
@@ -152,13 +148,10 @@ export function waitForEventMatch(
 // await new Promise(r => setTimeout(r, 50));  // Hope results arrive in 50ms
 // expect(toolResults.length).toBe(2);         // Fails randomly
 //
-// AFTER (reliable):
-// ----------------
+// Condition-based waits (reliable):
 // const messagePromise = agent.sendMessage('Execute tools');
 // await waitForEventCount(threadManager, threadId, 'TOOL_CALL', 2); // Wait for tools to start
 // agent.abort();
 // await messagePromise;
 // await waitForEventCount(threadManager, threadId, 'TOOL_RESULT', 2); // Wait for results
-// expect(toolResults.length).toBe(2); // Always succeeds
-//
-// Result: 60% pass rate → 100%, 40% faster execution
+// expect(toolResults.length).toBe(2);

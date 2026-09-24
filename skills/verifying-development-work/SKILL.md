@@ -3,7 +3,7 @@ name: verifying-development-work
 description: Use before claiming any task is complete, fixed, or passing, and before handing finished work back to the user.
 ---
 
-# Verifying Development Work
+# Verifying development work
 
 Claiming work is complete without verification is an assumption, not a fact. Handing work back without a review pass is a guess that the diff is the right diff. Finishing requires both: verification proves the code runs; review proves it's the right code.
 
@@ -13,7 +13,7 @@ Claiming work is complete without verification is an assumption, not a fact. Han
 
 ---
 
-## Finishing: Review, Verify, Then Handoff
+## Finish: review, verify, then hand off
 
 When you believe the work itself is done, run these finishing phases **in order**. Review comes first so any fixes happen before the evidence you hand back; verification comes next so the claim covers the returned code; integration choices come last because they belong to the user.
 
@@ -33,11 +33,11 @@ The last box is its own gate; the "Don't Finish the Branch Unilaterally" section
 
 ---
 
-## The Gate Function
+## The Gate function
 
 The Gate Function is your discipline at *every* completion claim — each "fixed", "passing", or "done" mid-task — and it is how Phase 2 of finishing establishes its evidence. Before claiming any task is finished, making a success claim, or declaring a bug fixed:
 
-1. **IDENTIFY:** What exact command or output proves this claim? (e.g., test command, compiler output, linter check).
+1. **IDENTIFY:** What exact command or output proves this claim? (For example, a test command, compiler output, or linter check.)
 2. **ESTABLISH FRESH EVIDENCE:** Use fresh evidence you personally observed in the primary session, or run the command now. "Fresh" means the output proves the current code state: full relevant command, visible output, exit code known, and no behavior-changing edits since it ran.
 3. **READ:** Review the full output, verify exit code is `0`, and check for warning logs.
 4. **VERIFY:** Does the output confirm success?
@@ -46,13 +46,13 @@ The Gate Function is your discipline at *every* completion claim — each "fixed
 
 Current-session evidence can count. Do **not** rerun a passing check merely because this skill loaded after you already ran the right command and nothing behavior-changing happened afterward. Do rerun when the evidence is inherited, stale, incomplete, or separated from the returned code by later behavior changes.
 
-**Unverifiable Claims:** Some claims may not be verifiable - you don't have access to the necessary output, it requires visual review and you lack that kind of reference, and so on. If you cannot verify a claim, clearly state so, and describe to the user what manual verification steps they need to take.
+**Unverifiable claims:** Some claims may not be verifiable — you might lack access to the necessary output or a reference for visual review. If you cannot verify a claim, state that limitation clearly and describe the manual verification steps the user needs to take.
 
 ---
 
-## Core Verification Types
+## Core verification types
 
-| Success Claim | What is Required | What is NOT Sufficient |
+| Success claim | What is required | What is not sufficient |
 | :--- | :--- | :--- |
 | **"Tests are passing"** | Current-session test output showing `0 failures` for the relevant suite. | "They should pass," someone else's paste, or a stale run. |
 | **"Linter is clean"** | Current-session linter output showing `0 errors` and `0 warnings`. | Assumed clean because it compiled. |
@@ -62,7 +62,7 @@ Current-session evidence can count. Do **not** rerun a passing check merely beca
 
 ---
 
-## When Existing Evidence Counts
+## When existing evidence counts
 
 Use already-produced evidence only when **all** of these are true:
 
@@ -75,7 +75,7 @@ Evidence does **not** count when it came from the user, a teammate, a subagent, 
 
 ---
 
-## Don't Finish the Branch Unilaterally
+## Don't finish the branch unilaterally
 
 Verified, reviewed work is still *your* checkpoint, not a decision to merge. Integrating, publishing, or discarding work is the user's call.
 
@@ -85,7 +85,7 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 
 ---
 
-## Common Rationalizations
+## Common rationalizations
 
 | Excuse | Reality |
 |--------|---------|
@@ -103,7 +103,7 @@ Verified, reviewed work is still *your* checkpoint, not a decision to merge. Int
 
 ---
 
-## Red Flags — STOP and Verify
+## Red flags — STOP and verify
 
 - "Should work now" / "probably fixed" / "seems correct" / "looks correct"
 - Claiming completion before establishing verification evidence

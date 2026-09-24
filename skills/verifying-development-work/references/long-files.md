@@ -1,4 +1,4 @@
-# Reviewing a File Your Change Made Long
+# Review a file your change grew past 500 lines
 
 This is a sub-process of **phase 1** of the finishing sequence in
 [the skill](../SKILL.md), reached from the [code-review reference](./code-review.md). It
@@ -117,7 +117,7 @@ refactor is the trap, not the fix.
 
 ---
 
-## Common Rationalizations
+## Common rationalizations
 
 | Excuse | Reality |
 |--------|---------|
@@ -130,7 +130,7 @@ refactor is the trap, not the fix.
 
 ---
 
-## Red Flags — STOP
+## Red flags — STOP
 
 - About to hand back a file your change grew past 500 lines without a change or a
   declared exception.

@@ -1,4 +1,4 @@
-# Condition-Based Waiting
+# Condition-based waiting
 
 ## Overview
 
@@ -6,13 +6,13 @@ Flaky tests often guess at timing with arbitrary delays. This creates race condi
 
 **Core principle:** Wait for the actual condition you care about, not a guess about how long it takes.
 
-## When to Use
+## When to use
 
 ```mermaid
 flowchart TD
     sleep{Test uses setTimeout/sleep?}
     timing{Testing timing behavior?}
-    document[Document WHY timeout needed]
+    document[Document why timeout is needed]
     use[Use condition-based waiting]
 
     sleep -->|yes| timing
@@ -30,38 +30,39 @@ flowchart TD
 - Testing actual timing behavior (debounce, throttle intervals)
 - Always document WHY if using arbitrary timeout
 
-## Core Pattern
+## Core pattern
 
 ```typescript
 // ❌ BEFORE: Guessing at timing
-await new Promise(r => setTimeout(r, 50));
+await new Promise((resolve) => setTimeout(resolve, 50));
 const result = getResult();
 expect(result).toBeDefined();
 
 // ✅ AFTER: Waiting for condition
-await waitFor(() => getResult() !== undefined);
+await waitFor(() => getResult() !== undefined, 'result to become available');
 const result = getResult();
 expect(result).toBeDefined();
 ```
 
-## Quick Patterns
+## Quick patterns
 
 | Scenario | Pattern |
 |----------|---------|
-| Wait for event | `waitFor(() => events.find(e => e.type === 'DONE'))` |
-| Wait for state | `waitFor(() => machine.state === 'ready')` |
-| Wait for count | `waitFor(() => items.length >= 5)` |
-| Wait for file | `waitFor(() => fs.existsSync(path))` |
-| Complex condition | `waitFor(() => obj.ready && obj.value > 10)` |
+| Wait for event | `waitFor(() => events.find((event) => event.type === 'DONE'), 'DONE event')` |
+| Wait for state | `waitFor(() => machine.state === 'ready', 'ready state')` |
+| Wait for count | `waitFor(() => items.length >= 5, 'at least five items')` |
+| Wait for file | `waitFor(() => fs.existsSync(path), 'file to exist')` |
+| Complex condition | `waitFor(() => obj.ready && obj.value > 10, 'ready object with value over 10')` |
 
 ## Implementation
 
-Generic polling function:
+The following generic polling function reports the condition it timed out waiting for:
+
 ```typescript
 async function waitFor<T>(
   condition: () => T | undefined | null | false,
   description: string,
-  timeoutMs = 5000
+  timeoutMs = 5000,
 ): Promise<T> {
   const startTime = Date.now();
 
@@ -70,37 +71,37 @@ async function waitFor<T>(
     if (result) return result;
 
     if (Date.now() - startTime > timeoutMs) {
-      throw new Error(`Timeout waiting for ${description} after ${timeoutMs}ms`);
+      throw new Error(`Timeout waiting for ${description} after ${timeoutMs} ms`);
     }
 
-    await new Promise(r => setTimeout(r, 10)); // Poll every 10ms
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
 }
 ```
 
-See the [complete condition-based waiting implementation](./condition-based-waiting-example.ts) for domain-specific helpers (`waitForEvent`, `waitForEventCount`, `waitForEventMatch`).
+See the [condition-based waiting reference implementation](./condition-based-waiting-example.ts) for domain-specific helpers (`waitForEvent`, `waitForEventCount`, `waitForEventMatch`).
 
-## Common Mistakes
+## Common mistakes
 
-**❌ Polling too fast:** `setTimeout(check, 1)` - wastes CPU
-**✅ Fix:** Poll every 10ms
+- **Problem:** Polling too fast with `setTimeout(check, 1)` wastes CPU.
+  **Fix:** Poll every 10 ms.
 
-**❌ No timeout:** Loop forever if condition never met
-**✅ Fix:** Always include timeout with clear error
+- **Problem:** Omitting a timeout can leave the loop running forever.
+  **Fix:** Include a timeout with a clear error.
 
-**❌ Stale data:** Cache state before loop
-**✅ Fix:** Call getter inside loop for fresh data
+- **Problem:** Caching state before the loop makes the condition stale.
+  **Fix:** Call the getter inside the loop.
 
-## When Arbitrary Timeout IS Correct
+## When an arbitrary timeout is correct
 
 ```typescript
-// Tool ticks every 100ms - need 2 ticks to verify partial output
-await waitForEvent(manager, 'TOOL_STARTED'); // First: wait for condition
-await new Promise(r => setTimeout(r, 200));   // Then: wait for timed behavior
-// 200ms = 2 ticks at 100ms intervals - documented and justified
+await waitForEvent(manager, 'TOOL_STARTED');
+// Wait for two 100 ms ticks after the tool starts.
+await new Promise((resolve) => setTimeout(resolve, 200));
 ```
 
-**Requirements:**
-1. First wait for triggering condition
-2. Based on known timing (not guessing)
-3. Comment explaining WHY
+Use an arbitrary timeout only when all of these requirements hold:
+
+- Wait for the triggering condition first.
+- Base the delay on known timing rather than a guess.
+- Explain why the delay is necessary in a comment.

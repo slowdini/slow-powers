@@ -29,7 +29,8 @@
       "!.worktrees",
       "!.claude",
       "!**/bun.lock",
-      "!skills-workspace"
+      "!skills-workspace",
+      "!!.eval-magic"
     ]
   }
 }

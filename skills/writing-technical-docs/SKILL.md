@@ -3,7 +3,7 @@ name: writing-technical-docs
 description: Use when writing or editing technical documentation of any size — code comments, doc blocks, commit messages, PR descriptions, review comments, READMEs, design docs, wikis, or user guides — whether drafting new content or revising existing text.
 ---
 
-# Writing Technical Docs
+# Writing technical docs
 
 ## Overview
 

@@ -1,4 +1,4 @@
-# Reviewing the Code
+# Review the code
 
 This is **phase 1** of the [finishing sequence](../SKILL.md) —
 the diff review. Review code and comments here, fix or flag the findings that
@@ -15,7 +15,7 @@ that's louder than the change it covers is the failure this guidance exists to
 prevent.
 
 Do the review however your harness makes natural — read the diff inline, or
-dispatch it to a general purpose subagent.
+dispatch it to a general-purpose subagent.
 
 ---
 
@@ -46,7 +46,7 @@ tend to hide. Spend attention where this particular diff warrants it.
 
 After reading the diff, check whether any file you added to is now over 500 lines.
 If one is, it must go through the long-file review in
-[long-file review](./long-files.md) before you finish — one file at a time. That's a
+[the long-file review](./long-files.md) before you finish — one file at a time. That's a
 mandate to *review*, which can conclude "no change needed"; what it forbids is handing
 back a newly-grown long file silently. Files you didn't grow are out of scope.
 
@@ -94,7 +94,7 @@ wrote them. Keep only comments that earn their place:
   rewritten tightly if needed, and delete the surrounding narration.
 
 When a comment you're keeping or writing needs structure or phrasing guidance —
-doc-block conventions, evergreen wording — `slow:powers:writing-technical-docs` owns it;
+doc-block conventions, evergreen wording — `slow-powers:writing-technical-docs` owns it;
 its references cover doc types and formatting.
 
 Comment-only edits do not change behavior. They do not require re-verification
@@ -103,7 +103,7 @@ human to read.
 
 ---
 
-## Then: address the findings — and freeze behavior
+## Address the findings and freeze behavior
 
 Fix or explicitly flag each finding you kept. Any behavior fix changes the code — so
 make all behavior-changing fixes *now*, in this phase. When you're done,

@@ -33,7 +33,7 @@ event but their lasting parts should still stand alone.
 
 ## Commit message
 
-- **Audience:** a future archaeologist running `git log` / `git blame` to understand
+- **Audience:** a future maintainer running `git log` / `git blame` to understand
   why this change exists.
 - **Structure:** subject line in the imperative, ~50 characters ("Fix race in cache
   invalidation") → blank line → body wrapped ~72: what changed and *why*, not a diff
@@ -48,7 +48,7 @@ event but their lasting parts should still stand alone.
 - **Structure:** what and why (linked issue) → how, at the level a reviewer needs →
   how it was verified → anything you're unsure about or want eyes on.
 - **Evergreen:** relaxed — a PR is anchored to a moment. But the "why" gets quoted into
-  merge commits and dug up later; write it to stand alone.
+  merge commits and consulted later; write it to stand alone.
 
 ## Review comment
 
@@ -62,7 +62,7 @@ event but their lasting parts should still stand alone.
 ## README
 
 - **Audience:** a first-time evaluator deciding whether to use the project, then a new
-  user trying to get running. Optimized for scanning.
+  user trying to start using it. Optimized for scanning.
 - **Structure:** what it is (one paragraph, no marketing) → quickstart / install →
   core usage → where to go deeper (links to docs, contributing, license). Badges and
   demos only where they help the evaluator.
@@ -73,7 +73,7 @@ event but their lasting parts should still stand alone.
 
 - **Audience:** peers who must understand, challenge, and later implement the design.
 - **Structure:** problem and context → goals and non-goals → proposal → alternatives
-  considered and why they lose → open questions.
+  considered and why they were rejected → open questions.
 - **Evergreen:** strict for the design description; the *decision record* part (what
   was decided, when, and why) is legitimately dated — label it as a decision, don't
   weave it into the description of the system.
@@ -84,8 +84,8 @@ event but their lasting parts should still stand alone.
 - **Structure:** per version: breaking changes → features → fixes, each entry linking
   its change.
 - **Evergreen:** this is the time-stamped genre — dates and versions are the point.
-  Entries still describe changes factually ("Add support for X"), not breathlessly
-  ("The long-awaited X is finally here!").
+  Entries still describe changes factually ("Add support for X"), not with marketing
+  language ("The long-awaited X is finally here!").
 
 ## Skill document (SKILL.md and references)
 

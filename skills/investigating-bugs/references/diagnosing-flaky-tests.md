@@ -1,4 +1,4 @@
-# Diagnosing Flaky Tests
+# Diagnosing flaky tests
 
 ## Overview
 
@@ -10,7 +10,7 @@ with the code, and find the mechanism before changing anything.
 **Core principle:** A test may only assume what the code under test actually guarantees.
 Flakiness is the gap between the two.
 
-## The Diagnostic Method
+## Diagnostic method
 
 Work these in order, before proposing a fix:
 
@@ -43,13 +43,13 @@ Work these in order, before proposing a fix:
 > A rerun that turns green tells you nothing about root cause. You have not found the cause until
 > you can make the test fail on demand.
 
-## Cause Catalog
+## Cause catalog
 
 | Cause class | How to recognize it | Where the fix lives |
 |---|---|---|
 | Timing guesses (arbitrary `sleep`/`setTimeout`) | Passes fast, fails under load/CI; fixed-delay waits in the test | [Condition-based waiting](./condition-based-waiting.md) |
-| Non-deterministic call count/order vs. order-dependent stubs/assertions | A mocked function returns `undefined`/its default mid-test; an assertion reads "the last call" / "call N" and gets the wrong one | "Non-deterministic call count/order" (below) + the `slow-powers:working-with-tdd` skill's [testing anti-patterns reference](../../working-with-tdd/references/testing-anti-patterns.md) → *Order-Dependent Mocks and Assertions* |
-| Cross-test state pollution | Passes alone, fails in-suite or under a particular order — depends on a neighbor test's leftover state | reset/isolate shared state per test (mocks, module/global singletons, DB, fake timers); make setup/teardown order-independent |
+| Non-deterministic call count/order vs. order-dependent stubs/assertions | A mocked function returns `undefined`/its default mid-test; an assertion reads "the last call" / "call N" and gets the wrong one | "Non-deterministic call count/order" (below) + the `slow-powers:working-with-tdd` skill's [testing anti-patterns reference](../../working-with-tdd/references/testing-anti-patterns.md) → *Order-dependent mocks and assertions* |
+| Cross-test state pollution | Passes alone, fails in-suite or under a particular order — depends on a neighbor test's leftover state | Reset or isolate shared state per test (mocks, module/global singletons, DB, fake timers); make setup and teardown order-independent |
 
 ### Non-deterministic call count / order
 
@@ -66,4 +66,4 @@ error/empty state — or the indexed assertion reads the wrong call. Both depend
 or an assertion that received a plausible-but-wrong value (the value from a *different* call than
 the one intended).
 
-**Fix (prevention):** the `slow-powers:working-with-tdd` skill's [testing anti-patterns reference](../../working-with-tdd/references/testing-anti-patterns.md) → *Order-Dependent Mocks and Assertions*. In short: stub by **input** (return the right value for any matching call, a sensible default otherwise, never fall through to `undefined`), and assert a matching call **happened** rather than reading a fixed index.
+**Prevention:** the `slow-powers:working-with-tdd` skill's [testing anti-patterns reference](../../working-with-tdd/references/testing-anti-patterns.md) → *Order-dependent mocks and assertions*. In short: stub by **input** (return the right value for any matching call, a sensible default otherwise, never fall through to `undefined`), and assert a matching call **happened** rather than reading a fixed index.

@@ -3,18 +3,18 @@ name: auditing-slow-powers-usage
 description: Use only when a slow-powers developer explicitly asks for a post-session audit of how slow-powers skills were used during the session just completed. A manual diagnostic for people working ON slow-powers — never relevant to ordinary development tasks; do not auto-invoke.
 ---
 
-# Auditing Slow-powers Usage
+# Auditing Slow-powers usage
 
 ## Why you're being asked this
 
 A slow-powers developer is running a deliberate, manual diagnostic. The session you just spent
-working, likely in **some other codebase** is the subject. They want to know how the slow-powers
+working, likely in **some other codebase**, is the subject. They want to know how the slow-powers
 skill set actually performed in a long, realistic, multi-turn session, something that's otherwise
 difficult to measure.
 
 This is a check on **slow-powers**, not on your work. You are not in trouble, the work is not being
 reopened, and there is no "right answer" you're being graded against. Report honestly and
-specifically. Your report seeds new pressure tests and live spot-checks of the plugin.
+specifically. Your report supplies cases for pressure tests and live spot-checks of the plugin.
 
 ## Scope — stay inside these lines
 
@@ -23,7 +23,7 @@ specifically. Your report seeds new pressure tests and live spot-checks of the p
 - Draw entirely on what's already in this conversation — your own decisions, what you read, what you skipped.
 
 **Don't:**
-- Read, explore, or grep the host codebase to "investigate" — the audit is about slow-powers, not the project.
+- Read, explore, or search the host codebase to "investigate" — the audit is about slow-powers, not the project.
 - Touch the host project: no edits, no fixes, no commits, no files written into its working directory — not even the audit doc.
 - Re-open, redo, second-guess, or "improve" the work you just delivered.
 - Propose changes to the host project. That's out of scope even if you spot something.
@@ -127,11 +127,11 @@ Tokens and wall time attributable to slow-powers specifically: skill bodies load
 extra steps a skill made you take that you otherwise wouldn't have.
 
 > Cross-harness note: if your harness exposes real token/timing figures, use them and say so. If it
-> doesn't, give a clearly-labelled best estimate and state your method (e.g. "≈X skills loaded at
+> doesn't, give a clearly labeled best estimate and state your method (e.g. "≈X skills loaded at
 > ≈Y tokens each; +Z tool calls for the worktree setup").
 
 ### 6. Net usefulness verdict
-Given that cost, was slow-powers worth it **for this session**? Don't hand-wave. Cite **specific
+Given that cost, was slow-powers worth it **for this session**? Give a concrete answer. Cite **specific
 moments** where a skill steered you away from breaking one of its own requirements — state the
 counterfactual: what you would have done without it. Then call out the neutral or net-negative
 moments too. Land on a clear verdict.
@@ -140,8 +140,8 @@ moments too. Land on a clear verdict.
 Moments you wanted guidance and no skill provided it. These are candidate new-skill ideas — include
 only if real.
 
-### 8. Confidence & caveats
-Where your recall is shaky or a figure is a guess. Be specific about what you're unsure of.
+### 8. Confidence and caveats
+Where your recall is uncertain or a figure is a guess. Be specific about what you're unsure of.
 
 ## Example: a good section-3 row vs. a bad one
 

@@ -53,6 +53,16 @@ function localMarkdownTargets(markdownPath: string): string[] {
     .filter((target): target is string => target !== undefined);
 }
 
+describe("repository tooling", () => {
+  test("Biome force-ignores eval-magic artifacts", () => {
+    const config = readJson("biome.json") as {
+      files?: { includes?: string[] };
+    };
+
+    expect(config.files?.includes).toContain("!!.eval-magic");
+  });
+});
+
 describe("shared assets (delivered by every harness)", () => {
   const bootstrap = fs.readFileSync(
     path.join(REPO_ROOT, "bootstrap.md"),
@@ -194,13 +204,17 @@ describe("shared assets (delivered by every harness)", () => {
     path: evalsPath,
   }) => {
     const config = JSON.parse(fs.readFileSync(evalsPath, "utf8")) as {
-      evals?: Array<{ files?: string[]; id?: string }>;
+      evals?: Array<{ files?: string[]; files_root?: string; id?: string }>;
     };
     const missing: string[] = [];
 
     for (const ev of config.evals ?? []) {
+      const filesRoot = path.join(
+        path.dirname(evalsPath),
+        ev.files_root ?? ".",
+      );
       for (const file of ev.files ?? []) {
-        if (!fs.existsSync(path.join(path.dirname(evalsPath), file))) {
+        if (!fs.existsSync(path.join(filesRoot, file))) {
           missing.push(`${ev.id ?? "(unknown eval)"}: ${file}`);
         }
       }

@@ -1,14 +1,14 @@
-# Persuasion Principles for Skill Design
+# Persuasion principles for skill design
 
-This reference supports the [Writing Skills](../SKILL.md) rationalization-proofing guidance.
+This reference supports the [Writing skills](../SKILL.md) rationalization-proofing guidance.
 
 ## Overview
 
-LLMs respond to the same persuasion principles as humans. Understanding this psychology helps you design more effective skills - not to manipulate, but to ensure critical practices are followed even under pressure.
+Social-persuasion cues can affect how a language model follows instructions. Understanding these cues helps you design more effective skills — not to manipulate, but to ensure critical practices are followed even under pressure.
 
-**Research foundation:** Meincke et al. (2025) tested 7 persuasion principles with N=28,000 AI conversations. Persuasion techniques more than doubled compliance rates (33% → 72%, p < .001).
+**Research foundation:** [Meincke et al.](https://www.pnas.org/doi/10.1073/pnas.2535868123) tested seven persuasion principles in 28,000 conversations with GPT-4o mini and two objectionable requests. In that setting, the cues increased average compliance from 33.3% to 72.0% (*p* < .001).
 
-## The Seven Principles
+## The seven principles
 
 ### 1. Authority
 **What it is:** Deference to expertise, credentials, or official sources.
@@ -67,7 +67,7 @@ LLMs respond to the same persuasion principles as humans. Understanding this psy
 ❌ You can review code when convenient.
 ```
 
-### 4. Social Proof
+### 4. Social proof
 **What it is:** Conformity to what others do or what's considered normal.
 
 **How it works in skills:**
@@ -108,7 +108,7 @@ LLMs respond to the same persuasion principles as humans. Understanding this psy
 **What it is:** Obligation to return benefits received.
 
 **How it works:**
-- Use sparingly - can feel manipulative
+- Use sparingly — it can feel manipulative
 - Rarely needed in skills
 
 **When to avoid:**
@@ -125,16 +125,16 @@ LLMs respond to the same persuasion principles as humans. Understanding this psy
 **When to avoid:**
 - Always for discipline enforcement
 
-## Principle Combinations by Skill Type
+## Principle combinations by skill type
 
-| Skill Type | Use | Avoid |
+| Skill type | Use | Avoid |
 |------------|-----|-------|
 | Discipline-enforcing | Authority + Commitment + Social Proof | Liking, Reciprocity |
 | Guidance/technique | Moderate Authority + Unity | Heavy authority |
 | Collaborative | Unity + Commitment | Authority, Liking |
 | Reference | Clarity only | All persuasion |
 
-## Why This Works: The Psychology
+## Why this works: the psychology
 
 **Bright-line rules reduce rationalization:**
 - "YOU MUST" removes decision fatigue
@@ -146,13 +146,12 @@ LLMs respond to the same persuasion principles as humans. Understanding this psy
 - "When X, do Y" more effective than "generally do Y"
 - Reduces cognitive load on compliance
 
-**LLMs are parahuman:**
-- Trained on human text containing these patterns
-- Authority language precedes compliance in training data
-- Commitment sequences (statement → action) frequently modeled
-- Social proof patterns (everyone does X) establish norms
+**Models learn these patterns from human language:**
+- Training data contains authority, commitment, and social-proof patterns.
+- Explicit cues can make those learned patterns salient during instruction following.
+- The effect depends on the model and context; treat the principles as design inputs, not guarantees.
 
-## Ethical Use
+## Ethical use
 
 **Legitimate:**
 - Ensuring critical practices are followed
@@ -166,19 +165,18 @@ LLMs respond to the same persuasion principles as humans. Understanding this psy
 
 **The test:** Would this technique serve the user's genuine interests if they fully understood it?
 
-## Research Citations
+## Research citations
 
 **Cialdini, R. B. (2021).** *Influence: The Psychology of Persuasion (New and Expanded).* Harper Business.
 - Seven principles of persuasion
 - Empirical foundation for influence research
 
-**Meincke, L., Shapiro, D., Duckworth, A. L., Mollick, E., Mollick, L., & Cialdini, R. (2025).** Call Me A Jerk: Persuading AI to Comply with Objectionable Requests. University of Pennsylvania.
-- Tested 7 principles with N=28,000 LLM conversations
-- Compliance increased 33% → 72% with persuasion techniques
-- Authority, commitment, scarcity most effective
-- Validates parahuman model of LLM behavior
+**Meincke, L., Shapiro, D., Duckworth, A. L., Mollick, E., Mollick, L., & Cialdini, R. (2026).** [*Call me a jerk: Persuading AI to comply with objectionable requests*](https://www.pnas.org/doi/10.1073/pnas.2535868123). *Proceedings of the National Academy of Sciences*.
+- Tested seven principles in 28,000 GPT-4o mini conversations.
+- Increased average compliance from 33.3% to 72.0% for the two tested requests.
+- Found authority, commitment, and scarcity most effective in that experiment.
 
-## Quick Reference
+## Quick reference
 
 When designing a skill, ask:
 

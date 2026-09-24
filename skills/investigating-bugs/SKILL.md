@@ -3,7 +3,7 @@ name: investigating-bugs
 description: Use when encountering any bug, test failure, build error, or unexpected behavior.
 ---
 
-# Investigating Bugs
+# Investigating bugs
 
 Avoid "guess-and-check" coding. Always identify the root cause before making changes.
 
@@ -17,52 +17,53 @@ Avoid "guess-and-check" coding. Always identify the root cause before making cha
 
 ---
 
-## Phase 1: Root Cause Investigation
+## Phase 1: root cause investigation
 
-Before changing any code:
-1. **Read Error Messages and Stack Traces:** Read every line of the error. Note the exact file, line number, and error codes.
-2. **Reproduce Consistently:** Identify the exact steps, inputs, or environment needed to trigger the bug. If it cannot be reproduced, gather more logs instead of guessing.
-   * For flaky tests (pass sometimes, fail under load or only in CI), find the non-determinism before changing anything — don't rerun until it goes green. Arbitrary `sleep`/timeout delays are one common cause (wait on the actual condition, not a guessed duration — see [condition-based waiting](references/condition-based-waiting.md)); a dependency called a non-deterministic number of times or in a non-deterministic order is another. Read [Diagnosing Flaky Tests](references/diagnosing-flaky-tests.md) for the general diagnostic method and cause catalog.
-3. **Check Recent Changes:** Run a git diff. Analyze recent commits, dependency additions, or config changes.
-4. **Gather Evidence (Multi-Component Systems):**
+Complete these steps before changing any code:
+
+1. **Read error messages and stack traces:** Read every line of the error. Note the exact file, line number, and error codes.
+2. **Reproduce consistently:** Identify the exact steps, inputs, or environment needed to trigger the bug. If it cannot be reproduced, gather more logs instead of guessing.
+   * For flaky tests (pass sometimes, fail under load or only in CI), find the non-determinism before changing anything — don't rerun until it goes green. Arbitrary `sleep`/timeout delays are one common cause (wait on the actual condition, not a guessed duration — see [condition-based waiting](references/condition-based-waiting.md)); a dependency called a non-deterministic number of times or in a non-deterministic order is another. Read [diagnosing flaky tests](references/diagnosing-flaky-tests.md) for the general diagnostic method and cause catalog.
+3. **Check recent changes:** Run `git diff`. Analyze recent commits, dependency additions, or configuration changes.
+4. **Gather evidence in multi-component systems:**
    * Log inputs and outputs at every component boundary.
-   * Instrument the layers step-by-step (e.g., Workflow -> Build Script -> Runtime -> DB) to pinpoint exactly where the state breaks.
-5. **Trace Data Flow:** Trace variables backward from the failure point to their source. Fix the bug at the source, not the symptom.
+   * Instrument the layers step by step (for example, workflow → build script → runtime → database) to pinpoint exactly where the state breaks.
+5. **Trace data flow:** Trace variables backward from the failure point to their source. Fix the bug at the source, not the symptom.
    * When manual tracing dead-ends, instrument the suspect operation: log the key inputs, relevant environment, and a captured stack trace (`new Error().stack`) *just before* it runs. In tests, write to stderr — a logger may be suppressed. Read the captured stack to find the original caller, then remove the instrumentation.
 
 ---
 
-## Phase 2: Pattern Analysis
+## Phase 2: pattern analysis
 
-1. **Find Working Examples:** Search the codebase for similar logic that functions correctly.
-2. **Compare Implementations:** Identify every difference between the working version and the failing version. Do not assume "that difference doesn't matter."
-3. **Verify Dependencies & Configs:** Ensure all required modules, configurations, and environment variables are present and correctly configured.
+1. **Find working examples:** Search the codebase for similar logic that functions correctly.
+2. **Compare implementations:** Identify every difference between the working version and the failing version. Do not assume "that difference doesn't matter."
+3. **Verify dependencies and configuration:** Ensure all required modules, configuration, and environment variables are present and correct.
 
 ---
 
-## Phase 3: Hypothesis and Testing
+## Phase 3: hypothesis and testing
 
-1. **Formulate a Single Hypothesis:** Write down a clear statement: *"I think X is the root cause because Y."*
-2. **Test Minimally:** Make the smallest possible change to verify the hypothesis (e.g., add a log, change one value).
-3. **Verify & Re-evaluate:** Did the test prove your hypothesis?
+1. **Formulate a single hypothesis:** Write down a clear statement: *"I think X is the root cause because Y."*
+2. **Test minimally:** Make the smallest possible change to verify the hypothesis (for example, add a log or change one value).
+3. **Verify and reevaluate:** Did the test prove your hypothesis?
    * **Yes:** Proceed to Phase 4.
    * **No:** Revert the test change completely and formulate a *new* hypothesis. Never stack guess-on-guess.
 
 ---
 
-## Phase 4: Implementation & Verification
+## Phase 4: implementation and verification
 
-1. **Write a Failing Test Case:** Create an automated test or simple script that consistently triggers the bug. Verify it fails.
-2. **Implement the Fix:** Make a single, targeted change that directly addresses the root cause. Do not bundle unrelated refactoring.
-3. **Verify the Fix:** Run the test suite. Ensure the new test passes and no regressions are introduced.
-4. **The Three-Fix Limit (Architectural Check):**
+1. **Write a failing test case:** Create an automated test or simple script that consistently triggers the bug. Verify it fails.
+2. **Implement the fix:** Make a single, targeted change that directly addresses the root cause. Do not bundle unrelated refactoring.
+3. **Verify the fix:** Run the test suite. Ensure the new test passes and no regressions are introduced.
+4. **Apply the three-fix limit (architectural check):**
    * If you attempt **three separate fixes** and the bug remains: **STOP.**
    * This is a strong signal that the issue is architectural (e.g., wrong model assumptions, coupled state, race conditions).
    * Re-evaluate the system architecture and discuss the approach with the user before attempting a fourth patch.
 
 ---
 
-## Common Rationalizations
+## Common rationalizations
 
 | Excuse | Reality |
 |--------|---------|
@@ -75,7 +76,7 @@ Before changing any code:
 
 ---
 
-## Red Flags — STOP and Reset
+## Red flags — STOP and reset
 
 - Writing a fix before reproducing the bug or reading the full stack trace
 - "Let's just try changing X to see if it works"
