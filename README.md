@@ -179,23 +179,24 @@ skill set itself:
 - [`writing-skills`](skills/writing-skills/SKILL.md) drafts concise,
   cross-harness skills with clear triggers and behavior-shaping instructions.
 - [`evaluating-skills`](skills/evaluating-skills/SKILL.md) designs realistic
-  comparisons that test whether a skill or revision improves agent behavior.
+  eval suites around a skill's goals, for regression checks and improvement benchmarks.
 - [`auditing-slow-powers-usage`](skills/auditing-slow-powers-usage/SKILL.md) helps
   Slow-powers maintainers audit how the skill set performed across a completed,
   real-world session.
 
 ## Why trust these skills?
 
-Agent instructions can sound convincing without changing behavior. Slow-powers
-treats that as an evaluation problem:
+Agent instructions can sound convincing without changing behavior. A skill's
+behavioral claims need a published baseline with inspectable evidence; treat them
+as unvalidated until that evidence exists.
 
-- Every shipped skill has inspectable evaluation (eval) cases under its `evals/`
-  directory.
-- `new-skill` evals compare the skill with a no-skill baseline; revision evals
-  compare proposed wording with the prior version.
-- Eval cases and notes stay beside each skill. A promoted baseline adds its
-  grading artifacts there too, so the result and its limitations can be
-  reviewed.
+- Evaluation (eval) suites measure the skill's intended goals. The same cases
+  support regression checks and improvement benchmarks as its prose changes.
+- Authored suites live in each skill's `evals/` directory with a goal coverage
+  map and reviewer notes. Promoted baselines retain results and evidence so
+  their conclusions and limitations can be reviewed.
+- Exploratory runs help authors design cases. Repeated runs of a calibrated
+  suite establish the evidence for behavioral claims.
 - A dedicated workflow validates all shipped skills against the Agent Skills
   specification. Repository tests exercise each harness integration.
 
