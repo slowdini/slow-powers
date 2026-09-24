@@ -1,6 +1,6 @@
 {
   "name": "slow-powers",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Agent skills to upgrade plan mode and debugging, enforce best practices, and enhance native features, not replace them.",
   "author": {
     "name": "Max Haarhaus",
